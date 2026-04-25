@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from '@/lib/store'
 import { STATUS_LABELS, STATUS_COLORS, Proposal, User, ProposalStatus, proposalCoversVerse, proposalVerseRef } from '@/lib/types'
 import { canAdvance, canSendBack, getNextStatus, getSendBackStatus, getAdvanceLabel } from '@/lib/state-machine'
@@ -8,78 +8,29 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
-import { X, ArrowRight, ArrowLeft, MessageSquare, Plus, Pencil } from 'lucide-react'
+import { X, ArrowRight, ArrowLeft, MessageSquare, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface VerseDetailPanelProps {
-  verseNumber: number | null
+  verseNumber: number
   onClose: () => void
-  onStartEdit?: (verseNum: number) => void
+  onStartEdit?: () => void
+  onRevert?: () => void
 }
 
-export function VerseDetailPanel({ verseNumber, onClose, onStartEdit }: VerseDetailPanelProps) {
-  const panelRef = useRef<HTMLDivElement>(null)
-  const isOpen = verseNumber !== null
-
+export function VerseDetailPanel({ verseNumber, onClose, onStartEdit, onRevert }: VerseDetailPanelProps) {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
     }
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown)
-      return () => document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [isOpen, onClose])
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        // Don't close if clicking on a verse in the chapter text
-        const target = e.target as HTMLElement
-        if (target.closest('article [role="button"]')) return
-        onClose()
-      }
-    }
-    if (isOpen) {
-      // Small delay to avoid closing on the same click that opened it
-      const timer = setTimeout(() => {
-        document.addEventListener('mousedown', handleClickOutside)
-      }, 100)
-      return () => {
-        clearTimeout(timer)
-        document.removeEventListener('mousedown', handleClickOutside)
-      }
-    }
-  }, [isOpen, onClose])
-
-  return (
-    <>
-      {/* Backdrop */}
-      <div
-        className={cn(
-          'fixed inset-0 bg-black/5 z-40 transition-opacity duration-200',
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        )}
-      />
-
-      {/* Panel */}
-      <div
-        ref={panelRef}
-        className={cn(
-          'fixed right-0 top-0 h-full z-50 bg-white border-l border-stone-200 shadow-lg overflow-y-auto',
-          'w-full sm:w-[520px] transition-transform duration-200 ease-out',
-          isOpen ? 'translate-x-0' : 'translate-x-full'
-        )}
-      >
-        {isOpen && verseNumber !== null && (
-          <PanelContent verseNumber={verseNumber} onClose={onClose} onStartEdit={onStartEdit} />
-        )}
-      </div>
-    </>
-  )
+  return <PanelContent verseNumber={verseNumber} onClose={onClose} onStartEdit={onStartEdit} onRevert={onRevert} />
 }
 
-function PanelContent({ verseNumber, onClose, onStartEdit }: { verseNumber: number; onClose: () => void; onStartEdit?: (verseNum: number) => void }) {
+function PanelContent({ verseNumber, onClose, onStartEdit, onRevert }: { verseNumber: number; onClose: () => void; onStartEdit?: () => void; onRevert?: () => void }) {
   const verses = useStore(s => s.verses)
   const proposals = useStore(s => s.proposals)
   const users = useStore(s => s.users)
@@ -99,8 +50,13 @@ function PanelContent({ verseNumber, onClose, onStartEdit }: { verseNumber: numb
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-stone-200 sticky top-0 bg-white z-10">
-        <h2 className="font-semibold text-stone-800">
+        <h2 className="font-semibold text-stone-800 flex items-center gap-2">
           Jae {verseNumber}
+          {onRevert && (
+            <span className="text-xs font-medium bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
+              Muokkaus
+            </span>
+          )}
         </h2>
         <button
           onClick={onClose}
@@ -134,20 +90,19 @@ function PanelContent({ verseNumber, onClose, onStartEdit }: { verseNumber: numb
           </div>
         )}
 
-        {(verseProposals.length > 0 || (currentUser.role === 'kaantaja' && !hasActiveProposal)) && (
-          <Separator />
+        {onStartEdit && (
+          <Button variant="outline" className="w-full" onClick={onStartEdit}>
+            <Pencil className="h-4 w-4 mr-2" />
+            Ehdota muutosta
+          </Button>
+        )}
+        {onRevert && (
+          <Button variant="outline" className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200" onClick={onRevert}>
+            Palauta alkuperäinen
+          </Button>
         )}
 
-        {/* Kääntäjä: start editing this verse */}
-        {currentUser.role === 'kaantaja' && !hasActiveProposal && onStartEdit && (
-          <button
-            onClick={() => onStartEdit(verseNumber)}
-            className="flex items-center gap-2 w-full rounded-lg border border-dashed border-stone-300 px-4 py-3 text-sm text-stone-600 hover:border-stone-400 hover:bg-stone-50 transition-colors"
-          >
-            <Pencil className="h-4 w-4 shrink-0" />
-            Aloita muokkaus
-          </button>
-        )}
+        {verseProposals.length > 0 && <Separator />}
 
         {/* Proposals */}
         {verseProposals.length > 0 ? (

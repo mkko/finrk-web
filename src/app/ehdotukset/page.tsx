@@ -39,7 +39,7 @@ export default function ProposalsPage() {
   )
 
   return (
-    <div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
+    <div className="h-full overflow-y-auto"><div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-semibold text-stone-800">Ehdotukset</h1>
         {currentUser.role === 'kaantaja' && (
@@ -122,6 +122,6 @@ export default function ProposalsPage() {
           </table>
         </div>
       )}
-    </div>
+    </div></div>
   )
 }

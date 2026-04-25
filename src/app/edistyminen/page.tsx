@@ -35,7 +35,7 @@ export default function ProgressPage() {
   const recentActivity = activity.slice(0, 10)
 
   return (
-    <div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
+    <div className="h-full overflow-y-auto"><div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
       <h1 className="text-xl font-semibold text-stone-800 mb-6">Edistyminen</h1>
 
       {/* Progress bar */}
@@ -108,6 +108,6 @@ export default function ProgressPage() {
           </div>
         )}
       </div>
-    </div>
+    </div></div>
   )
 }

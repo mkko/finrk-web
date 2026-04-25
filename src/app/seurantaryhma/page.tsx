@@ -19,16 +19,16 @@ export default function SeurantaryhmaPage() {
 
   if (currentUser.role !== 'seurantaryhma') {
     return (
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
+      <div className="h-full overflow-y-auto"><div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
         <p className="text-stone-500">Tämä näkymä on tarkoitettu seurantaryhmän jäsenille.</p>
-      </div>
+      </div></div>
     )
   }
 
   const reviewProposals = proposals.filter(p => p.status === 'seurantaryhman_arvioitavana')
 
   return (
-    <div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
+    <div className="h-full overflow-y-auto"><div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
       <h1 className="text-xl font-semibold text-stone-800 mb-2">Seurantaryhmän arviointi</h1>
       <p className="text-sm text-stone-500 mb-6">
         Alla olevat ehdotukset odottavat seurantaryhmän arviointia.
@@ -198,6 +198,6 @@ export default function SeurantaryhmaPage() {
           </div>
         </div>
       )}
-    </div>
+    </div></div>
   )
 }

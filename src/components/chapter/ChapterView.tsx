@@ -87,21 +87,46 @@ export function ChapterView() {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Chapter title bar */}
-      <div className="flex-none px-6 py-3 border-b border-stone-200 bg-white">
-        <h1 className="font-serif text-lg font-semibold text-stone-800 leading-tight">
-          1. Tessalonikalaiskirje
-        </h1>
-        <p className="text-xs text-stone-500">Luku 2</p>
-      </div>
+    <div className="h-full flex">
+      {/* Left column — draft action bar + article */}
+      <div className="flex-1 min-h-0 flex flex-col">
+        {/* Draft action bar — only visible while editing */}
+        {draft && (
+          <div className="flex-none border-b border-amber-200 bg-amber-50 px-6 py-3 flex flex-wrap items-center gap-3">
+            <span className="text-sm text-amber-800 font-medium shrink-0">Ehdotus:</span>
+            <input
+              type="text"
+              value={draft.rationale}
+              onChange={e => setDraft(d => d ? { ...d, rationale: e.target.value } : d)}
+              placeholder="Perustele muutos lyhyesti"
+              className="flex-1 min-w-[200px] text-sm border border-amber-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+            />
+            <button
+              onClick={submitDraft}
+              disabled={!draft.rationale.trim()}
+              className="shrink-0 text-sm rounded-md bg-stone-800 text-white px-4 py-1.5 hover:bg-stone-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Tallenna ehdotus
+            </button>
+            <button
+              onClick={() => setDraft(null)}
+              className="shrink-0 text-sm text-stone-500 hover:text-stone-700 border border-stone-300 rounded-md px-4 py-1.5 hover:bg-stone-50 transition-colors"
+            >
+              Peruuta
+            </button>
+          </div>
+        )}
 
-      {/* Content row */}
-      <div className="flex-1 min-h-0 flex">
         {/* Article */}
-        <div className={cn('flex-1 min-h-0 overflow-y-auto', draft ? 'pb-20' : '')}>
+        <div className="flex-1 min-h-0 overflow-y-auto">
           <div className="max-w-4xl mx-auto px-6 py-6">
             <div className="bg-white rounded-lg border border-stone-200 p-6 sm:p-8 shadow-sm">
+              <div className="mb-6 pb-6 border-b border-stone-100">
+                <h1 className="font-serif text-xl font-semibold text-stone-800 leading-tight">
+                  1. Tessalonikalaiskirje
+                </h1>
+                <p className="text-sm text-stone-500 mt-0.5">Luku 2</p>
+              </div>
               <ChapterText
                 selectedVerse={selectedVerse}
                 onVerseClick={handleVerseClick}
@@ -112,61 +137,34 @@ export function ChapterView() {
             </div>
           </div>
         </div>
-
-        {/* Sidebar — always visible */}
-        <div className="w-96 shrink-0 border-l border-stone-200 bg-white flex flex-col overflow-hidden">
-          {selectedVerse !== null
-            ? <VerseDetailPanel
-                verseNumber={selectedVerse}
-                onClose={() => setSelectedVerse(null)}
-                onStartEdit={
-                  currentUser.role === 'kaantaja'
-                  && !proposals.some(p => p.status !== 'hyvaksytty_lopullisesti' && proposalCoversVerse(p, selectedVerse))
-                  && !draft?.ranges.some(r => selectedVerse >= r.verseStart && selectedVerse <= r.verseEnd)
-                    ? () => startEdit(selectedVerse)
-                    : undefined
-                }
-                onRevert={
-                  draft?.ranges.some(r => selectedVerse >= r.verseStart && selectedVerse <= r.verseEnd)
-                    ? () => removeFromScope(selectedVerse)
-                    : undefined
-                }
-              />
-            : (
-              <div className="flex-1 flex items-center justify-center p-8 text-center">
-                <p className="text-sm text-stone-400">Valitse jae nähdäksesi tiedot</p>
-              </div>
-            )
-          }
-        </div>
       </div>
 
-      {/* Draft bar */}
-      {draft && (
-        <div className="flex-none border-t border-stone-200 bg-white shadow-[0_-1px_4px_rgba(0,0,0,0.06)] px-6 py-3 flex flex-wrap items-center gap-3">
-          <span className="text-sm text-stone-500 shrink-0">Perustelut:</span>
-          <input
-            type="text"
-            value={draft.rationale}
-            onChange={e => setDraft(d => d ? { ...d, rationale: e.target.value } : d)}
-            placeholder="Miksi ehdotat tätä muutosta?"
-            className="flex-1 min-w-[200px] text-sm border border-stone-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-stone-400"
-          />
-          <button
-            onClick={submitDraft}
-            disabled={!draft.rationale.trim()}
-            className="shrink-0 text-sm rounded-md bg-stone-800 text-white px-4 py-1.5 hover:bg-stone-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            Tallenna ehdotus
-          </button>
-          <button
-            onClick={() => setDraft(null)}
-            className="shrink-0 text-sm text-stone-500 hover:text-stone-700 border border-stone-300 rounded-md px-4 py-1.5 hover:bg-stone-50 transition-colors"
-          >
-            Peruuta
-          </button>
-        </div>
-      )}
+      {/* Sidebar — always visible, right */}
+      <div className="w-96 shrink-0 border-l border-stone-200 bg-white flex flex-col overflow-hidden">
+        {selectedVerse !== null
+          ? <VerseDetailPanel
+              verseNumber={selectedVerse}
+              onClose={() => setSelectedVerse(null)}
+              onStartEdit={
+                currentUser.role === 'kaantaja'
+                && !proposals.some(p => p.status !== 'hyvaksytty_lopullisesti' && proposalCoversVerse(p, selectedVerse))
+                && !draft?.ranges.some(r => selectedVerse >= r.verseStart && selectedVerse <= r.verseEnd)
+                  ? () => startEdit(selectedVerse)
+                  : undefined
+              }
+              onRevert={
+                draft?.ranges.some(r => selectedVerse >= r.verseStart && selectedVerse <= r.verseEnd)
+                  ? () => removeFromScope(selectedVerse)
+                  : undefined
+              }
+            />
+          : (
+            <div className="flex-1 flex items-center justify-center p-8 text-center">
+              <p className="text-sm text-stone-400">Valitse jae nähdäksesi tiedot</p>
+            </div>
+          )
+        }
+      </div>
     </div>
   )
 }

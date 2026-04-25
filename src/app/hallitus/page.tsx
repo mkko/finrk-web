@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useStore } from '@/lib/store'
-import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
+import { STATUS_LABELS, STATUS_COLORS, proposalVerseRef } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -40,15 +40,8 @@ export default function HallitusPage() {
         <div className="space-y-6">
           {ratificationProposals.map(proposal => {
             const author = users.find(u => u.id === proposal.authorId)!
-            const verseRef = proposal.verseStart === proposal.verseEnd
-              ? `Jae ${proposal.verseStart}`
-              : `Jakeet ${proposal.verseStart}–${proposal.verseEnd}`
+            const verseRef = proposalVerseRef(proposal)
             const sendBackText = sendBackTexts[proposal.id] || ''
-
-            const originalVerses = verses.filter(
-              v => v.number >= proposal.verseStart && v.number <= proposal.verseEnd
-            )
-            const originalText = originalVerses.map(v => v.baseText).join(' ')
 
             return (
               <div key={proposal.id} className="bg-white rounded-lg border border-stone-200 overflow-hidden">
@@ -63,17 +56,30 @@ export default function HallitusPage() {
                     </Badge>
                   </div>
 
-                  {/* Side by side comparison */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="rounded-md border border-stone-200 bg-stone-50 p-3">
-                      <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-1">Nykyinen</p>
-                      <p className="font-serif text-sm leading-6 text-stone-600">{originalText}</p>
-                    </div>
-                    <div className="rounded-md border border-emerald-200 bg-emerald-50/50 p-3">
-                      <p className="text-xs font-medium text-emerald-700 uppercase tracking-wide mb-1">Ehdotettu</p>
-                      <p className="font-serif text-sm leading-6 text-stone-800">{proposal.proposedText}</p>
-                    </div>
-                  </div>
+                  {/* Side by side comparison — one row per range */}
+                  {proposal.ranges.map((range, i) => {
+                    const originalVerses = verses.filter(v => v.number >= range.verseStart && v.number <= range.verseEnd)
+                    const originalText = originalVerses.map(v => v.baseText).join(' ')
+                    return (
+                      <div key={i}>
+                        {proposal.ranges.length > 1 && (
+                          <p className="text-xs font-medium text-stone-400 mb-1">
+                            {range.verseStart === range.verseEnd ? `Jae ${range.verseStart}` : `Jakeet ${range.verseStart}–${range.verseEnd}`}
+                          </p>
+                        )}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="rounded-md border border-stone-200 bg-stone-50 p-3">
+                            <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-1">Nykyinen</p>
+                            <p className="font-serif text-sm leading-6 text-stone-600">{originalText}</p>
+                          </div>
+                          <div className="rounded-md border border-emerald-200 bg-emerald-50/50 p-3">
+                            <p className="text-xs font-medium text-emerald-700 uppercase tracking-wide mb-1">Ehdotettu</p>
+                            <p className="font-serif text-sm leading-6 text-stone-800">{range.proposedText}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
 
                   <p className="text-sm text-stone-600">{proposal.rationale}</p>
 

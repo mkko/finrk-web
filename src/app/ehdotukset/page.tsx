@@ -2,7 +2,7 @@
 
 import { useStore } from '@/lib/store'
 import { useRouter } from 'next/navigation'
-import { STATUS_LABELS, STATUS_COLORS, ProposalStatus } from '@/lib/types'
+import { STATUS_LABELS, STATUS_COLORS, ProposalStatus, proposalVerseRef, proposalCoversVerse } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
@@ -44,10 +44,10 @@ export default function ProposalsPage() {
         <h1 className="text-xl font-semibold text-stone-800">Ehdotukset</h1>
         {currentUser.role === 'kaantaja' && (
           <Link
-            href="/ehdota"
+            href="/"
             className="inline-flex items-center gap-1.5 rounded-lg bg-stone-800 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 transition-colors"
           >
-            Uusi ehdotus
+            Kirjoitusnäkymä
           </Link>
         )}
       </div>
@@ -98,14 +98,12 @@ export default function ProposalsPage() {
                 const daysInState = Math.floor(
                   (Date.now() - new Date(proposal.statusChangedAt).getTime()) / (1000 * 60 * 60 * 24)
                 )
-                const verseRef = proposal.verseStart === proposal.verseEnd
-                  ? `Jae ${proposal.verseStart}`
-                  : `Jakeet ${proposal.verseStart}–${proposal.verseEnd}`
+                const verseRef = proposalVerseRef(proposal)
 
                 return (
                   <tr
                     key={proposal.id}
-                    onClick={() => router.push(`/?verse=${proposal.verseStart}`)}
+                    onClick={() => router.push(`/?verse=${proposal.ranges[0].verseStart}`)}
                     className="border-b border-stone-100 last:border-0 hover:bg-stone-50 cursor-pointer transition-colors"
                   >
                     <td className="px-4 py-3 font-medium text-stone-800">{verseRef}</td>

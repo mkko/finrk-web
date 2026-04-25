@@ -46,17 +46,35 @@ export interface Comment {
   isSendBack?: boolean
 }
 
-export interface Proposal {
-  id: string
+export interface ProposalRange {
   verseStart: number
   verseEnd: number
   proposedText: string
+}
+
+export interface Proposal {
+  id: string
+  ranges: ProposalRange[]
   rationale: string
   authorId: string
   status: ProposalStatus
   comments: Comment[]
   createdAt: string
   statusChangedAt: string
+}
+
+export function proposalVerseRef(proposal: Proposal): string {
+  if (proposal.ranges.length === 1) {
+    const r = proposal.ranges[0]
+    return r.verseStart === r.verseEnd
+      ? `Jae ${r.verseStart}`
+      : `Jakeet ${r.verseStart}–${r.verseEnd}`
+  }
+  return `Jakeet ${proposal.ranges.map(r => r.verseStart).join(', ')}`
+}
+
+export function proposalCoversVerse(proposal: Proposal, verseNum: number): boolean {
+  return proposal.ranges.some(r => verseNum >= r.verseStart && verseNum <= r.verseEnd)
 }
 
 export interface Verse {

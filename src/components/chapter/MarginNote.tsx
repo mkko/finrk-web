@@ -1,6 +1,6 @@
 'use client'
 
-import { Proposal, STATUS_LABELS, STATUS_INDICATOR_COLORS } from '@/lib/types'
+import { Proposal, STATUS_LABELS, STATUS_INDICATOR_COLORS, proposalVerseRef } from '@/lib/types'
 import { useStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import { MessageSquare } from 'lucide-react'
@@ -15,9 +15,7 @@ export function MarginNote({ proposal, isSelected, onClick }: MarginNoteProps) {
   const users = useStore(s => s.users)
   const author = users.find(u => u.id === proposal.authorId)
 
-  const verseRef = proposal.verseStart === proposal.verseEnd
-    ? `j. ${proposal.verseStart}`
-    : `j. ${proposal.verseStart}–${proposal.verseEnd}`
+  const verseRef = proposalVerseRef(proposal).replace('Jae ', 'j. ').replace('Jakeet ', 'j. ')
 
   return (
     <button

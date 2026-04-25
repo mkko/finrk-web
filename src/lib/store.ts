@@ -2,7 +2,7 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { AppState, Proposal, ProposalStatus } from './types'
+import { AppState, Proposal, ProposalStatus, proposalVerseRef } from './types'
 import { SEED_USERS, SEED_VERSES, SEED_PROPOSALS, SEED_ACTIVITY } from './seed-data'
 
 function getInitialVerses() {
@@ -10,15 +10,11 @@ function getInitialVerses() {
   const verses = SEED_VERSES.map(v => ({ ...v }))
   for (const p of SEED_PROPOSALS) {
     if (p.status === 'hyvaksytty_lopullisesti') {
-      if (p.verseStart === p.verseEnd) {
-        const verse = verses.find(v => v.number === p.verseStart)
-        if (verse) verse.text = p.proposedText
-      } else {
-        // Multi-verse: replace first verse with full proposed text, blank the rest
-        for (let i = p.verseStart; i <= p.verseEnd; i++) {
+      for (const range of p.ranges) {
+        for (let i = range.verseStart; i <= range.verseEnd; i++) {
           const verse = verses.find(v => v.number === i)
           if (verse) {
-            verse.text = i === p.verseStart ? p.proposedText : ''
+            verse.text = i === range.verseStart ? range.proposedText : ''
           }
         }
       }
@@ -54,6 +50,10 @@ export const useStore = create<AppState>()(
           createdAt: now,
           statusChangedAt: now,
         }
+        const r0 = proposal.ranges[0]
+        const verseRef = proposal.ranges.length === 1
+          ? (r0.verseStart === r0.verseEnd ? `Jae ${r0.verseStart}` : `Jakeet ${r0.verseStart}–${r0.verseEnd}`)
+          : `Jakeet ${proposal.ranges.map(r => r.verseStart).join(', ')}`
         set(state => ({
           proposals: [...state.proposals, newProposal],
           activity: [
@@ -63,7 +63,7 @@ export const useStore = create<AppState>()(
               userId: state.currentUserId,
               proposalId: id,
               action: 'Uusi ehdotus',
-              detail: `${proposal.verseStart === proposal.verseEnd ? `Jae ${proposal.verseStart}` : `Jakeet ${proposal.verseStart}–${proposal.verseEnd}`} — uusi ehdotus luotu`,
+              detail: `${verseRef} — uusi ehdotus luotu`,
             },
             ...state.activity,
           ],
@@ -93,9 +93,7 @@ export const useStore = create<AppState>()(
           })
 
           const proposal = state.proposals.find(p => p.id === proposalId)!
-          const verseRef = proposal.verseStart === proposal.verseEnd
-            ? `Jae ${proposal.verseStart}`
-            : `Jakeet ${proposal.verseStart}–${proposal.verseEnd}`
+          const verseRef = proposalVerseRef(proposal)
 
           const statusLabels: Record<ProposalStatus, string> = {
             luonnos: 'Luonnos',
@@ -108,12 +106,10 @@ export const useStore = create<AppState>()(
           let verses = state.verses
           if (newStatus === 'hyvaksytty_lopullisesti') {
             verses = state.verses.map(v => {
-              if (v.number >= proposal.verseStart && v.number <= proposal.verseEnd) {
-                if (proposal.verseStart === proposal.verseEnd) {
-                  return { ...v, text: proposal.proposedText }
+              for (const range of proposal.ranges) {
+                if (v.number >= range.verseStart && v.number <= range.verseEnd) {
+                  return { ...v, text: v.number === range.verseStart ? range.proposedText : '' }
                 }
-                // Multi-verse: first verse gets full text, rest blanked
-                return { ...v, text: v.number === proposal.verseStart ? proposal.proposedText : '' }
               }
               return v
             })
@@ -141,9 +137,7 @@ export const useStore = create<AppState>()(
         const now = new Date().toISOString()
         set(state => {
           const proposal = state.proposals.find(p => p.id === proposalId)!
-          const verseRef = proposal.verseStart === proposal.verseEnd
-            ? `Jae ${proposal.verseStart}`
-            : `Jakeet ${proposal.verseStart}–${proposal.verseEnd}`
+          const verseRef = proposalVerseRef(proposal)
           return {
             proposals: state.proposals.map(p =>
               p.id === proposalId
@@ -194,6 +188,8 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'raamattu-kaannostyo',
+      version: 2,
+      migrate: () => initialState(),
     }
   )
 )

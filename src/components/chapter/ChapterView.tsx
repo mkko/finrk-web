@@ -6,14 +6,23 @@ import { useStore } from '@/lib/store'
 import { Verse } from './Verse'
 import { MarginNote } from './MarginNote'
 import { VerseDetailPanel } from './VerseDetailPanel'
-import { Proposal } from '@/lib/types'
+import { proposalCoversVerse } from '@/lib/types'
+import type { VerseEditState } from './Verse'
 
 const NOTE_HEIGHT = 72
 const NOTE_GAP = 8
 
+export type DraftRange = { verseStart: number; verseEnd: number; proposedText: string }
+export type Draft = { ranges: DraftRange[]; rationale: string } | null
+
 export function ChapterView() {
   const searchParams = useSearchParams()
   const [selectedVerse, setSelectedVerse] = useState<number | null>(null)
+  const [draft, setDraft] = useState<Draft>(null)
+
+  const verses = useStore(s => s.verses)
+  const addProposal = useStore(s => s.addProposal)
+  const currentUserId = useStore(s => s.currentUserId)
 
   useEffect(() => {
     const v = searchParams.get('verse')
@@ -22,6 +31,38 @@ export function ChapterView() {
       if (num >= 1 && num <= 20) setSelectedVerse(num)
     }
   }, [searchParams])
+
+  function startEdit(verseNum: number) {
+    const verse = verses.find(v => v.number === verseNum)
+    if (!verse) return
+    setDraft({
+      ranges: [{ verseStart: verseNum, verseEnd: verseNum, proposedText: verse.text }],
+      rationale: '',
+    })
+    setSelectedVerse(null)
+  }
+
+  function addToScope(verseNum: number) {
+    const verse = verses.find(v => v.number === verseNum)
+    if (!verse || !draft) return
+    if (draft.ranges.some(r => r.verseStart === verseNum)) return
+    setDraft({ ...draft, ranges: [...draft.ranges, { verseStart: verseNum, verseEnd: verseNum, proposedText: verse.text }] })
+  }
+
+  function updateRangeText(verseStart: number, text: string) {
+    setDraft(d => d ? { ...d, ranges: d.ranges.map(r => r.verseStart === verseStart ? { ...r, proposedText: text } : r) } : d)
+  }
+
+  function submitDraft() {
+    if (!draft || !draft.rationale.trim()) return
+    addProposal({
+      ranges: draft.ranges,
+      rationale: draft.rationale.trim(),
+      authorId: currentUserId,
+      status: 'keskustelussa',
+    })
+    setDraft(null)
+  }
 
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
@@ -36,12 +77,19 @@ export function ChapterView() {
         <ChapterText
           selectedVerse={selectedVerse}
           onSelectVerse={setSelectedVerse}
+          draft={draft}
+          onAddToScope={addToScope}
+          onUpdateRangeText={updateRangeText}
+          onUpdateRationale={(text) => setDraft(d => d ? { ...d, rationale: text } : d)}
+          onSubmitDraft={submitDraft}
+          onCancelDraft={() => setDraft(null)}
         />
       </article>
 
       <VerseDetailPanel
         verseNumber={selectedVerse}
         onClose={() => setSelectedVerse(null)}
+        onStartEdit={startEdit}
       />
     </div>
   )
@@ -50,21 +98,34 @@ export function ChapterView() {
 function ChapterText({
   selectedVerse,
   onSelectVerse,
+  draft,
+  onAddToScope,
+  onUpdateRangeText,
+  onUpdateRationale,
+  onSubmitDraft,
+  onCancelDraft,
 }: {
   selectedVerse: number | null
   onSelectVerse: (v: number) => void
+  draft: Draft
+  onAddToScope: (verseNum: number) => void
+  onUpdateRangeText: (verseStart: number, text: string) => void
+  onUpdateRationale: (text: string) => void
+  onSubmitDraft: () => void
+  onCancelDraft: () => void
 }) {
   const verses = useStore(s => s.verses)
   const proposals = useStore(s => s.proposals)
+
   const containerRef = useRef<HTMLDivElement>(null)
   const verseRefs = useRef<Map<number, HTMLSpanElement>>(new Map())
   const [notePositions, setNotePositions] = useState<Map<string, number>>(new Map())
 
   const activeProposals = proposals
     .filter(p => p.status !== 'hyvaksytty_lopullisesti')
-    .sort((a, b) => a.verseStart - b.verseStart)
+    .sort((a, b) => a.ranges[0].verseStart - b.ranges[0].verseStart)
 
-  const proposalKey = activeProposals.map(p => `${p.id}:${p.verseStart}`).join(',')
+  const proposalKey = activeProposals.map(p => `${p.id}:${p.ranges[0].verseStart}`).join(',')
 
   function measure() {
     if (!containerRef.current) return
@@ -73,7 +134,7 @@ function ChapterText({
     let lastBottom = -Infinity
 
     for (const proposal of activeProposals) {
-      const el = verseRefs.current.get(proposal.verseStart)
+      const el = verseRefs.current.get(proposal.ranges[0].verseStart)
       if (!el) continue
       const desired = el.getBoundingClientRect().top - containerTop
       const top = Math.max(desired, lastBottom + NOTE_GAP)
@@ -84,11 +145,9 @@ function ChapterText({
     setNotePositions(resolved)
   }
 
-  // Measure before paint so notes never appear at wrong position
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(measure, [proposalKey])
 
-  // Re-measure on resize
   useEffect(() => {
     if (!containerRef.current) return
     const observer = new ResizeObserver(measure)
@@ -102,20 +161,46 @@ function ChapterText({
     else verseRefs.current.delete(num)
   }, [])
 
+  const primaryDraftVerseStart = draft ? Math.min(...draft.ranges.map(r => r.verseStart)) : null
+
   return (
     <div ref={containerRef} className="grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-x-6 relative">
       <div className="font-serif text-lg leading-8 text-stone-800">
         <p>
-          {verses.map(verse => (
-            <Verse
-              key={verse.number}
-              ref={el => setVerseRef(verse.number, el)}
-              verse={verse}
-              proposals={proposals.filter(p => verse.number >= p.verseStart && verse.number <= p.verseEnd)}
-              isSelected={selectedVerse === verse.number}
-              onSelect={() => onSelectVerse(verse.number)}
-            />
-          ))}
+          {verses.map(verse => {
+            const verseProposals = proposals.filter(p => proposalCoversVerse(p, verse.number))
+            const draftRange = draft?.ranges.find(r => verse.number >= r.verseStart && verse.number <= r.verseEnd)
+            const inDraft = Boolean(draftRange)
+            const draftActive = Boolean(draft)
+
+            let editState: VerseEditState | undefined
+            if (draftRange) {
+              editState = {
+                text: draftRange.proposedText,
+                onChange: (text) => onUpdateRangeText(draftRange.verseStart, text),
+                isPrimary: draftRange.verseStart === primaryDraftVerseStart,
+                rationale: draft!.rationale,
+                onRationaleChange: onUpdateRationale,
+                onSubmit: onSubmitDraft,
+                onCancel: onCancelDraft,
+              }
+            }
+
+            return (
+              <Verse
+                key={verse.number}
+                ref={el => setVerseRef(verse.number, el)}
+                verse={verse}
+                proposals={verseProposals}
+                isSelected={selectedVerse === verse.number && !inDraft}
+                onSelect={() => onSelectVerse(verse.number)}
+                draftActive={draftActive}
+                inDraft={inDraft}
+                onAddToScope={() => onAddToScope(verse.number)}
+                editState={editState}
+              />
+            )
+          })}
         </p>
       </div>
 
@@ -128,8 +213,8 @@ function ChapterText({
           >
             <MarginNote
               proposal={proposal}
-              isSelected={selectedVerse !== null && selectedVerse >= proposal.verseStart && selectedVerse <= proposal.verseEnd}
-              onClick={() => onSelectVerse(proposal.verseStart)}
+              isSelected={selectedVerse !== null && proposalCoversVerse(proposal, selectedVerse)}
+              onClick={() => onSelectVerse(proposal.ranges[0].verseStart)}
             />
           </div>
         ))}

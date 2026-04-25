@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useStore } from '@/lib/store'
-import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
+import { STATUS_LABELS, STATUS_COLORS, proposalVerseRef } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -42,9 +42,7 @@ export default function SeurantaryhmaPage() {
         <div className="space-y-6">
           {reviewProposals.map(proposal => {
             const author = users.find(u => u.id === proposal.authorId)!
-            const verseRef = proposal.verseStart === proposal.verseEnd
-              ? `Jae ${proposal.verseStart}`
-              : `Jakeet ${proposal.verseStart}–${proposal.verseEnd}`
+            const verseRef = proposalVerseRef(proposal)
             const commentText = commentTexts[proposal.id] || ''
             const sendBackText = sendBackTexts[proposal.id] || ''
 
@@ -61,11 +59,18 @@ export default function SeurantaryhmaPage() {
                     </Badge>
                   </div>
 
-                  <div className="bg-stone-50 rounded-md border border-stone-200 p-4">
-                    <p className="font-serif text-base leading-7 text-stone-800">
-                      {proposal.proposedText}
-                    </p>
-                  </div>
+                  {proposal.ranges.map((range, i) => (
+                    <div key={i} className="bg-stone-50 rounded-md border border-stone-200 p-4">
+                      {proposal.ranges.length > 1 && (
+                        <p className="text-xs font-medium text-stone-400 mb-1">
+                          {range.verseStart === range.verseEnd ? `Jae ${range.verseStart}` : `Jakeet ${range.verseStart}–${range.verseEnd}`}
+                        </p>
+                      )}
+                      <p className="font-serif text-base leading-7 text-stone-800">
+                        {range.proposedText}
+                      </p>
+                    </div>
+                  ))}
 
                   <p className="text-sm text-stone-600">{proposal.rationale}</p>
 

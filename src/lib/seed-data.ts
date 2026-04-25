@@ -118,9 +118,7 @@ export const SEED_PROPOSALS: Proposal[] = [
   // Proposal A: verse 7 (nursing-mother simile), in discussion
   {
     id: 'proposal-a',
-    verseStart: 7,
-    verseEnd: 7,
-    proposedText: 'Mutta me olimme teidän keskuudessanne lempeitä, niin kuin äiti hellään hoivaa pieniä lapsiaan.',
+    ranges: [{ verseStart: 7, verseEnd: 7, proposedText: 'Mutta me olimme teidän keskuudessanne lempeitä, niin kuin äiti hellään hoivaa pieniä lapsiaan.' }],
     rationale: 'Alkutekstin εἴπιος viittaa lempeään, hoivaavaan asenteeseen. Nykyinen "imettävä äiti" on turhan konkreettinen — "äiti hellään hoivaa" säilyttää metaforan lämmön mutta sopii paremmin nykysuomeen.',
     authorId: 'aimo',
     status: 'keskustelussa',
@@ -144,9 +142,7 @@ export const SEED_PROPOSALS: Proposal[] = [
   // Proposal B: verses 9–10 (working night and day), seurantaryhmä reviewing
   {
     id: 'proposal-b',
-    verseStart: 9,
-    verseEnd: 10,
-    proposedText: 'Muistattahan, veljet, meidän vaivannäkömme ja uurauksemme. Yötä päivää ahkeroiden julistimme teille Jumalan evankeliumia, jottei kukaan teistä joutuisi meitä elättämään. Te olette todistajina, samoin Jumala, kuinka pyhästi, oikeamielisesti ja nuhteettomasti me uskovia kohtaan elimme.',
+    ranges: [{ verseStart: 9, verseEnd: 10, proposedText: 'Muistattahan, veljet, meidän vaivannäkömme ja uurauksemme. Yötä päivää ahkeroiden julistimme teille Jumalan evankeliumia, jottei kukaan teistä joutuisi meitä elättämään. Te olette todistajina, samoin Jumala, kuinka pyhästi, oikeamielisesti ja nuhteettomasti me uskovia kohtaan elimme.' }],
     rationale: 'Kaksi muutosta: (1) "rasituksemme" → "uurauksemme" kuvaa paremmin vapaaehtoista uhrautumista; (2) "vaelsimme" → "elimme" on nykysuomessa luontevampi — "vaeltaminen" elämäntapana on vanhahtava.',
     authorId: 'eeva',
     status: 'seurantaryhman_arvioitavana',
@@ -164,9 +160,7 @@ export const SEED_PROPOSALS: Proposal[] = [
   // Proposal C: verse 13 (God's word at work), approved by working committee
   {
     id: 'proposal-c',
-    verseStart: 13,
-    verseEnd: 13,
-    proposedText: 'Sen vuoksi me myös lakkaamatta kiitämme Jumalaa siitä, että vastaanotettuanne meiltä Jumalan sanan ette ottaneet sitä vastaan ihmisten sanana vaan Jumalan sanana, joka se todellakin on. Tämä sana myös vaikuttaa teissä, jotka uskotte.',
+    ranges: [{ verseStart: 13, verseEnd: 13, proposedText: 'Sen vuoksi me myös lakkaamatta kiitämme Jumalaa siitä, että vastaanotettuanne meiltä Jumalan sanan ette ottaneet sitä vastaan ihmisten sanana vaan Jumalan sanana, joka se todellakin on. Tämä sana myös vaikuttaa teissä, jotka uskotte.' }],
     rationale: 'Lause on alkutekstissä pitkä ja monipolvinen. Ehdotus jakaa sen kahteen virkkeeseen lukemisen helpottamiseksi. "Vastaanotettuanne" on tarkempi käännös kreikan δεξάμενοι-partisiipista.',
     authorId: 'aimo',
     status: 'hyvaksytty_tyoryhmassa',
@@ -190,9 +184,7 @@ export const SEED_PROPOSALS: Proposal[] = [
   // Proposal D: verse 4 (entrusted with the gospel), fully ratified
   {
     id: 'proposal-d',
-    verseStart: 4,
-    verseEnd: 4,
-    proposedText: 'Jumala on katsonut meidät kelvollisiksi ja uskonut meille evankeliumin, ja sen mukaisesti me puhumme — emme miellyttääksemme ihmisiä vaan Jumalaa, joka tutkii sydämemme.',
+    ranges: [{ verseStart: 4, verseEnd: 4, proposedText: 'Jumala on katsonut meidät kelvollisiksi ja uskonut meille evankeliumin, ja sen mukaisesti me puhumme — emme miellyttääksemme ihmisiä vaan Jumalaa, joka tutkii sydämemme.' }],
     rationale: '"Hyväksynyt" → "katsonut kelvollisiksi" tarkentaa kreikan δοκιμάζω-verbin merkitystä (koetella ja todeta kelvolliseksi). Ajatusviiva selkeyttää vastakkainasettelua.',
     authorId: 'aimo',
     status: 'hyvaksytty_lopullisesti',

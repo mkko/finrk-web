@@ -2,21 +2,22 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '@/lib/store'
-import { STATUS_LABELS, STATUS_COLORS, Proposal, User, ProposalStatus } from '@/lib/types'
+import { STATUS_LABELS, STATUS_COLORS, Proposal, User, ProposalStatus, proposalCoversVerse, proposalVerseRef } from '@/lib/types'
 import { canAdvance, canSendBack, getNextStatus, getSendBackStatus, getAdvanceLabel } from '@/lib/state-machine'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
-import { X, ArrowRight, ArrowLeft, MessageSquare, Plus } from 'lucide-react'
+import { X, ArrowRight, ArrowLeft, MessageSquare, Plus, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface VerseDetailPanelProps {
   verseNumber: number | null
   onClose: () => void
+  onStartEdit?: (verseNum: number) => void
 }
 
-export function VerseDetailPanel({ verseNumber, onClose }: VerseDetailPanelProps) {
+export function VerseDetailPanel({ verseNumber, onClose, onStartEdit }: VerseDetailPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const isOpen = verseNumber !== null
 
@@ -71,14 +72,14 @@ export function VerseDetailPanel({ verseNumber, onClose }: VerseDetailPanelProps
         )}
       >
         {isOpen && verseNumber !== null && (
-          <PanelContent verseNumber={verseNumber} onClose={onClose} />
+          <PanelContent verseNumber={verseNumber} onClose={onClose} onStartEdit={onStartEdit} />
         )}
       </div>
     </>
   )
 }
 
-function PanelContent({ verseNumber, onClose }: { verseNumber: number; onClose: () => void }) {
+function PanelContent({ verseNumber, onClose, onStartEdit }: { verseNumber: number; onClose: () => void; onStartEdit?: (verseNum: number) => void }) {
   const verses = useStore(s => s.verses)
   const proposals = useStore(s => s.proposals)
   const users = useStore(s => s.users)
@@ -88,7 +89,7 @@ function PanelContent({ verseNumber, onClose }: { verseNumber: number; onClose: 
 
   const verse = verses.find(v => v.number === verseNumber)!
   const verseProposals = proposals
-    .filter(p => verseNumber >= p.verseStart && verseNumber <= p.verseEnd)
+    .filter(p => proposalCoversVerse(p, verseNumber))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
   const hasBeenRevised = verse.text !== verse.baseText
@@ -137,15 +138,15 @@ function PanelContent({ verseNumber, onClose }: { verseNumber: number; onClose: 
           <Separator />
         )}
 
-        {/* Propose change affordance for kääntäjä */}
-        {currentUser.role === 'kaantaja' && !hasActiveProposal && (
-          <a
-            href={`/ehdota?verse=${verseNumber}`}
-            className="flex items-center gap-2 rounded-lg border border-dashed border-stone-300 px-4 py-3 text-sm text-stone-600 hover:border-stone-400 hover:bg-stone-50 transition-colors"
+        {/* Kääntäjä: start editing this verse */}
+        {currentUser.role === 'kaantaja' && !hasActiveProposal && onStartEdit && (
+          <button
+            onClick={() => onStartEdit(verseNumber)}
+            className="flex items-center gap-2 w-full rounded-lg border border-dashed border-stone-300 px-4 py-3 text-sm text-stone-600 hover:border-stone-400 hover:bg-stone-50 transition-colors"
           >
-            <Plus className="h-4 w-4" />
-            Ehdota muutosta
-          </a>
+            <Pencil className="h-4 w-4 shrink-0" />
+            Aloita muokkaus
+          </button>
         )}
 
         {/* Proposals */}
@@ -233,22 +234,29 @@ function ProposalCard({
           </Badge>
         </div>
 
-        {/* Proposed text */}
-        <div className="bg-white rounded-md border border-stone-200 p-3">
-          <p className="font-serif text-sm leading-6 text-stone-800">
-            {proposal.proposedText}
-          </p>
-        </div>
+        {/* Proposed text — one block per range */}
+        {proposal.ranges.map((range, i) => (
+          <div key={i} className="bg-white rounded-md border border-stone-200 p-3">
+            {proposal.ranges.length > 1 && (
+              <p className="text-xs text-stone-400 mb-1">
+                {range.verseStart === range.verseEnd ? `Jae ${range.verseStart}` : `Jakeet ${range.verseStart}–${range.verseEnd}`}
+              </p>
+            )}
+            <p className="font-serif text-sm leading-6 text-stone-800">
+              {range.proposedText}
+            </p>
+          </div>
+        ))}
 
         {/* Rationale */}
         <p className="text-sm text-stone-600 leading-relaxed">
           {proposal.rationale}
         </p>
 
-        {/* Verse range indicator */}
-        {proposal.verseStart !== proposal.verseEnd && (
+        {/* Verse range indicator for multi-range or multi-verse proposals */}
+        {(proposal.ranges.length > 1 || proposal.ranges[0].verseStart !== proposal.ranges[0].verseEnd) && (
           <p className="text-xs text-stone-400">
-            Jakeet {proposal.verseStart}–{proposal.verseEnd}
+            {proposalVerseRef(proposal)}
           </p>
         )}
       </div>

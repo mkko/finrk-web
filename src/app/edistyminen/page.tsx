@@ -18,11 +18,13 @@ export default function ProgressPage() {
   const ratifiedVerses = new Set(
     proposals
       .filter(p => p.status === 'hyvaksytty_lopullisesti')
-      .flatMap(p => {
-        const nums: number[] = []
-        for (let i = p.verseStart; i <= p.verseEnd; i++) nums.push(i)
-        return nums
-      })
+      .flatMap(p =>
+        p.ranges.flatMap(r => {
+          const nums: number[] = []
+          for (let i = r.verseStart; i <= r.verseEnd; i++) nums.push(i)
+          return nums
+        })
+      )
   ).size
 
   const statusCounts = STATUS_ORDER.map(status => ({

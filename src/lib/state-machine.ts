@@ -2,19 +2,15 @@ import { ProposalStatus, PersonaRole } from './types'
 
 // Forward transitions: who can advance to the next state
 const FORWARD_TRANSITIONS: Record<ProposalStatus, { next: ProposalStatus; allowedRoles: PersonaRole[] } | null> = {
-  luonnos: { next: 'keskustelussa', allowedRoles: ['kaantaja'] },
-  keskustelussa: { next: 'seurantaryhman_arvioitavana', allowedRoles: ['kaantaja'] },
-  seurantaryhman_arvioitavana: { next: 'hyvaksytty_tyoryhmassa', allowedRoles: ['kaantaja'] },
-  hyvaksytty_tyoryhmassa: { next: 'hyvaksytty_lopullisesti', allowedRoles: ['hallitus'] },
+  luonnos: { next: 'ehdotettu', allowedRoles: ['kaantaja'] },
+  ehdotettu: { next: 'hyvaksytty_lopullisesti', allowedRoles: ['hallitus'] },
   hyvaksytty_lopullisesti: null, // terminal
 }
 
 // Send-back transitions: who can send back and where it goes
 const SEND_BACK_TRANSITIONS: Record<ProposalStatus, { prev: ProposalStatus; allowedRoles: PersonaRole[] } | null> = {
   luonnos: null,
-  keskustelussa: null,
-  seurantaryhman_arvioitavana: { prev: 'keskustelussa', allowedRoles: ['seurantaryhma'] },
-  hyvaksytty_tyoryhmassa: { prev: 'keskustelussa', allowedRoles: ['hallitus'] },
+  ehdotettu: { prev: 'luonnos', allowedRoles: ['hallitus'] },
   hyvaksytty_lopullisesti: null,
 }
 
@@ -38,10 +34,15 @@ export function getSendBackStatus(status: ProposalStatus): ProposalStatus | null
 
 export function getAdvanceLabel(status: ProposalStatus): string {
   switch (status) {
-    case 'luonnos': return 'Avaa keskustelu'
-    case 'keskustelussa': return 'Siirrä seurantaryhmälle'
-    case 'seurantaryhman_arvioitavana': return 'Hyväksy työryhmässä'
-    case 'hyvaksytty_tyoryhmassa': return 'Ratifioi'
+    case 'luonnos': return 'Lähetä ehdotukseksi'
+    case 'ehdotettu': return 'Hyväksy'
+    default: return ''
+  }
+}
+
+export function getSendBackLabel(status: ProposalStatus): string {
+  switch (status) {
+    case 'ehdotettu': return 'Palauta luonnokseksi'
     default: return ''
   }
 }

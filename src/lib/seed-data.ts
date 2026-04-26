@@ -115,73 +115,85 @@ export const SEED_USERS: User[] = [
 ]
 
 export const SEED_PROPOSALS: Proposal[] = [
-  // Proposal A: verse 7 (nursing-mother simile), in discussion
+  // Proposal A: verse 7 (nursing-mother simile), submitted as proposal
   {
     id: 'proposal-a',
     ranges: [{ verseStart: 7, verseEnd: 7, proposedText: 'Mutta me olimme teidän keskuudessanne lempeitä, niin kuin äiti hellään hoivaa pieniä lapsiaan.' }],
     rationale: 'Alkutekstin εἴπιος viittaa lempeään, hoivaavaan asenteeseen. Nykyinen "imettävä äiti" on turhan konkreettinen — "äiti hellään hoivaa" säilyttää metaforan lämmön mutta sopii paremmin nykysuomeen.',
     authorId: 'aimo',
-    status: 'keskustelussa',
+    status: 'ehdotettu',
     comments: [
       {
         id: 'comment-1',
         authorId: 'eeva',
         text: 'Sanavalinta "hellään hoivaa" tuntuu luontevalta. Mutta pitäisikö "pieniä lapsiaan" olla vain "lapsiaan"? Alkutekstissä ei korosteta lasten pienuutta.',
         createdAt: '2026-04-20T10:15:00Z',
+        thread: 'main',
       },
       {
         id: 'comment-2',
         authorId: 'aimo',
         text: 'Hyvä huomio. "Pieniä" tuo kyllä imeväisajatuksen takaisin. Ehkä pelkkä "lapsiaan" riittää.',
         createdAt: '2026-04-20T14:30:00Z',
+        thread: 'main',
       },
     ],
     createdAt: '2026-04-19T09:00:00Z',
     statusChangedAt: '2026-04-19T09:00:00Z',
   },
-  // Proposal B: verses 9–10 (working night and day), seurantaryhmä reviewing
+  // Proposal B: verses 9–10 (working night and day), submitted as proposal
   {
     id: 'proposal-b',
     ranges: [{ verseStart: 9, verseEnd: 10, proposedText: 'Muistattahan, veljet, meidän vaivannäkömme ja uurauksemme. Yötä päivää ahkeroiden julistimme teille Jumalan evankeliumia, jottei kukaan teistä joutuisi meitä elättämään. Te olette todistajina, samoin Jumala, kuinka pyhästi, oikeamielisesti ja nuhteettomasti me uskovia kohtaan elimme.' }],
     rationale: 'Kaksi muutosta: (1) "rasituksemme" → "uurauksemme" kuvaa paremmin vapaaehtoista uhrautumista; (2) "vaelsimme" → "elimme" on nykysuomessa luontevampi — "vaeltaminen" elämäntapana on vanhahtava.',
     authorId: 'eeva',
-    status: 'seurantaryhman_arvioitavana',
+    status: 'ehdotettu',
     comments: [
       {
         id: 'comment-3',
-        authorId: 'raija',
+        authorId: 'eeva',
         text: '"Elimme" on selkeä parannus. "Uurauksemme" sen sijaan on hieman harvinainen sana — ymmärtävätkö kaikki lukijat sen? Entä "ponnisteluamme"?',
         createdAt: '2026-04-22T11:00:00Z',
+        thread: 'main',
+      },
+      {
+        id: 'comment-3s',
+        authorId: 'raija',
+        text: '"Uurauksemme" on harvinainen — harkitkaa "ponnisteluamme" tai "vaivannäköämme".',
+        createdAt: '2026-04-23T09:00:00Z',
+        thread: 'seurantaryhma',
       },
     ],
     createdAt: '2026-04-17T14:00:00Z',
     statusChangedAt: '2026-04-21T08:00:00Z',
   },
-  // Proposal C: verse 13 (God's word at work), approved by working committee
+  // Proposal C: verse 13 (God's word at work), submitted as proposal (hallitus can act on it)
   {
     id: 'proposal-c',
     ranges: [{ verseStart: 13, verseEnd: 13, proposedText: 'Sen vuoksi me myös lakkaamatta kiitämme Jumalaa siitä, että vastaanotettuanne meiltä Jumalan sanan ette ottaneet sitä vastaan ihmisten sanana vaan Jumalan sanana, joka se todellakin on. Tämä sana myös vaikuttaa teissä, jotka uskotte.' }],
     rationale: 'Lause on alkutekstissä pitkä ja monipolvinen. Ehdotus jakaa sen kahteen virkkeeseen lukemisen helpottamiseksi. "Vastaanotettuanne" on tarkempi käännös kreikan δεξάμενοι-partisiipista.',
     authorId: 'aimo',
-    status: 'hyvaksytty_tyoryhmassa',
+    status: 'ehdotettu',
     comments: [
       {
         id: 'comment-4',
         authorId: 'eeva',
         text: 'Kahteen virkkeeseen jakaminen selkeyttää huomattavasti. Kannatan.',
         createdAt: '2026-04-15T09:00:00Z',
+        thread: 'main',
       },
       {
-        id: 'comment-5',
+        id: 'comment-5s',
         authorId: 'raija',
         text: 'Seurantaryhmä on tarkistanut — ei huomautettavaa.',
         createdAt: '2026-04-18T15:00:00Z',
+        thread: 'seurantaryhma',
       },
     ],
     createdAt: '2026-04-12T10:00:00Z',
     statusChangedAt: '2026-04-20T12:00:00Z',
   },
-  // Proposal D: verse 4 (entrusted with the gospel), fully ratified
+  // Proposal D: verse 4 (entrusted with the gospel), fully approved
   {
     id: 'proposal-d',
     ranges: [{ verseStart: 4, verseEnd: 4, proposedText: 'Jumala on katsonut meidät kelvollisiksi ja uskonut meille evankeliumin, ja sen mukaisesti me puhumme — emme miellyttääksemme ihmisiä vaan Jumalaa, joka tutkii sydämemme.' }],
@@ -194,12 +206,14 @@ export const SEED_PROPOSALS: Proposal[] = [
         authorId: 'eeva',
         text: '"Katsonut kelvollisiksi" on tarkka ja silti luonteva. Hyvä muutos.',
         createdAt: '2026-04-08T10:00:00Z',
+        thread: 'main',
       },
       {
         id: 'comment-7',
         authorId: 'pekka',
-        text: 'Hallitus on ratifioinut muutoksen.',
+        text: 'Hallitus on hyväksynyt muutoksen.',
         createdAt: '2026-04-14T16:00:00Z',
+        thread: 'main',
       },
     ],
     createdAt: '2026-04-05T08:00:00Z',
@@ -214,31 +228,31 @@ export const SEED_ACTIVITY: ActivityEntry[] = [
     userId: 'pekka',
     proposalId: 'proposal-d',
     action: 'Hyväksytty lopullisesti',
-    detail: 'Jae 4 — hallitus ratifioi muutoksen',
+    detail: 'Jae 4 — hallitus hyväksyi muutoksen',
   },
   {
     id: 'act-2',
     timestamp: '2026-04-20T12:00:00Z',
     userId: 'aimo',
     proposalId: 'proposal-c',
-    action: 'Hyväksytty työryhmässä',
-    detail: 'Jae 13 — työryhmä hyväksyi ehdotuksen',
+    action: 'Lähetetty ehdotukseksi',
+    detail: 'Jae 13 — lähetetty ehdotukseksi',
   },
   {
     id: 'act-3',
     timestamp: '2026-04-21T08:00:00Z',
     userId: 'eeva',
     proposalId: 'proposal-b',
-    action: 'Siirretty seurantaryhmälle',
-    detail: 'Jakeet 9–10 — ehdotus siirretty arvioitavaksi',
+    action: 'Lähetetty ehdotukseksi',
+    detail: 'Jakeet 9–10 — lähetetty ehdotukseksi',
   },
   {
     id: 'act-4',
     timestamp: '2026-04-22T11:00:00Z',
-    userId: 'raija',
+    userId: 'eeva',
     proposalId: 'proposal-b',
-    action: 'Seurantaryhmän palaute',
-    detail: 'Jakeet 9–10 — Raija Lehto kommentoi ehdotusta',
+    action: 'Uusi kommentti',
+    detail: 'Jakeet 9–10 — uusi kommentti',
   },
   {
     id: 'act-5',

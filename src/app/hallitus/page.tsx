@@ -23,18 +23,18 @@ export default function HallitusPage() {
     )
   }
 
-  const ratificationProposals = proposals.filter(p => p.status === 'hyvaksytty_tyoryhmassa')
+  const ratificationProposals = proposals.filter(p => p.status === 'ehdotettu')
 
   return (
     <div className="h-full overflow-y-auto"><div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
-      <h1 className="text-xl font-semibold text-stone-800 mb-2">Hallituksen ratifiointi</h1>
+      <h1 className="text-xl font-semibold text-stone-800 mb-2">Hallituksen hyväksyntä</h1>
       <p className="text-sm text-stone-500 mb-6">
-        Alla olevat ehdotukset on hyväksytty työryhmässä ja odottavat hallituksen ratifiointia.
+        Alla olevat ehdotukset odottavat hallituksen hyväksyntää.
       </p>
 
       {ratificationProposals.length === 0 ? (
         <div className="text-center py-12 text-stone-400">
-          Ei ratifioitavia ehdotuksia tällä hetkellä.
+          Ei hyväksyttäviä ehdotuksia tällä hetkellä.
         </div>
       ) : (
         <div className="space-y-6">
@@ -42,6 +42,7 @@ export default function HallitusPage() {
             const author = users.find(u => u.id === proposal.authorId)!
             const verseRef = proposalVerseRef(proposal)
             const sendBackText = sendBackTexts[proposal.id] || ''
+            const mainComments = proposal.comments.filter(c => c.thread === 'main')
 
             return (
               <div key={proposal.id} className="bg-white rounded-lg border border-stone-200 overflow-hidden">
@@ -83,14 +84,14 @@ export default function HallitusPage() {
 
                   <p className="text-sm text-stone-600">{proposal.rationale}</p>
 
-                  {/* Key comments */}
-                  {proposal.comments.length > 0 && (
+                  {/* Main thread comments */}
+                  {mainComments.length > 0 && (
                     <details className="text-sm">
                       <summary className="cursor-pointer text-stone-500 hover:text-stone-700">
-                        {proposal.comments.length} kommenttia
+                        {mainComments.length} kommenttia
                       </summary>
                       <div className="mt-2 space-y-2 pl-3 border-l-2 border-stone-200">
-                        {proposal.comments.map(comment => {
+                        {mainComments.map(comment => {
                           const commentAuthor = users.find(u => u.id === comment.authorId)!
                           return (
                             <div key={comment.id}>
@@ -128,7 +129,7 @@ export default function HallitusPage() {
                           variant="outline"
                           onClick={() => {
                             if (sendBackText.trim()) {
-                              updateProposalStatus(proposal.id, 'keskustelussa', sendBackText.trim())
+                              updateProposalStatus(proposal.id, 'luonnos', sendBackText.trim())
                               setSendBackTexts({ ...sendBackTexts, [proposal.id]: '' })
                               setShowSendBack({ ...showSendBack, [proposal.id]: false })
                             }
@@ -148,7 +149,7 @@ export default function HallitusPage() {
                         className="text-amber-700"
                       >
                         <ArrowLeft className="h-4 w-4 mr-1" />
-                        Palauta keskusteluun
+                        Palauta luonnokseksi
                       </Button>
                       <Button
                         size="sm"
@@ -156,7 +157,7 @@ export default function HallitusPage() {
                         className="ml-auto bg-emerald-700 hover:bg-emerald-600"
                       >
                         <Check className="h-4 w-4 mr-1" />
-                        Ratifioi
+                        Hyväksy
                       </Button>
                     </div>
                   )}

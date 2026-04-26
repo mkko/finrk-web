@@ -7,15 +7,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { MessageSquare, ArrowLeft } from 'lucide-react'
+import { MessageSquare } from 'lucide-react'
 
 export default function SeurantaryhmaPage() {
-  const { proposals, users, currentUserId, addComment, updateProposalStatus, addBatchFeedback } = useStore()
+  const { proposals, users, currentUserId, addComment, addBatchFeedback } = useStore()
   const currentUser = users.find(u => u.id === currentUserId)!
   const [batchFeedback, setBatchFeedback] = useState('')
   const [commentTexts, setCommentTexts] = useState<Record<string, string>>({})
-  const [sendBackTexts, setSendBackTexts] = useState<Record<string, string>>({})
-  const [showSendBack, setShowSendBack] = useState<Record<string, boolean>>({})
 
   if (currentUser.role !== 'seurantaryhma') {
     return (
@@ -25,13 +23,13 @@ export default function SeurantaryhmaPage() {
     )
   }
 
-  const reviewProposals = proposals.filter(p => p.status === 'seurantaryhman_arvioitavana')
+  const reviewProposals = proposals.filter(p => p.status === 'ehdotettu' || p.status === 'hyvaksytty_lopullisesti')
 
   return (
     <div className="h-full overflow-y-auto"><div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
       <h1 className="text-xl font-semibold text-stone-800 mb-2">Seurantaryhmän arviointi</h1>
       <p className="text-sm text-stone-500 mb-6">
-        Alla olevat ehdotukset odottavat seurantaryhmän arviointia.
+        Alla olevat ehdotukset ovat seurantaryhmän nähtävillä.
       </p>
 
       {reviewProposals.length === 0 ? (
@@ -44,7 +42,7 @@ export default function SeurantaryhmaPage() {
             const author = users.find(u => u.id === proposal.authorId)!
             const verseRef = proposalVerseRef(proposal)
             const commentText = commentTexts[proposal.id] || ''
-            const sendBackText = sendBackTexts[proposal.id] || ''
+            const visibleComments = proposal.comments.filter(c => c.thread === 'seurantaryhma')
 
             return (
               <div key={proposal.id} className="bg-white rounded-lg border border-stone-200 overflow-hidden">
@@ -74,13 +72,13 @@ export default function SeurantaryhmaPage() {
 
                   <p className="text-sm text-stone-600">{proposal.rationale}</p>
 
-                  {/* Existing comments */}
-                  {proposal.comments.length > 0 && (
+                  {/* Seurantaryhmä thread comments only */}
+                  {visibleComments.length > 0 && (
                     <div className="space-y-2 pt-2">
-                      {proposal.comments.map(comment => {
+                      {visibleComments.map(comment => {
                         const commentAuthor = users.find(u => u.id === comment.authorId)!
                         return (
-                          <div key={comment.id} className={cn('text-sm', comment.isSendBack && 'border-l-2 border-amber-400 pl-3')}>
+                          <div key={comment.id} className="text-sm">
                             <span className="font-medium text-stone-700">{commentAuthor.name}</span>
                             <span className="text-stone-400 ml-2 text-xs">
                               {new Date(comment.createdAt).toLocaleDateString('fi-FI')}
@@ -93,79 +91,34 @@ export default function SeurantaryhmaPage() {
                   )}
                 </div>
 
-                {/* Actions */}
-                <div className="border-t border-stone-200 px-6 py-4 space-y-3">
-                  {/* Add comment */}
-                  <div className="flex gap-2">
-                    <Textarea
-                      placeholder="Kirjoita palaute tästä ehdotuksesta..."
-                      value={commentText}
-                      onChange={e => setCommentTexts({ ...commentTexts, [proposal.id]: e.target.value })}
-                      className="min-h-[60px] text-sm resize-none"
-                      rows={2}
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        if (commentText.trim()) {
-                          addComment(proposal.id, { authorId: currentUserId, text: commentText.trim() })
-                          setCommentTexts({ ...commentTexts, [proposal.id]: '' })
-                        }
-                      }}
-                      disabled={!commentText.trim()}
-                      className="self-end shrink-0"
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  {/* Send back */}
-                  {showSendBack[proposal.id] ? (
-                    <div className="space-y-2">
+                {/* Add comment — only on non-final proposals */}
+                {proposal.status !== 'hyvaksytty_lopullisesti' && (
+                  <div className="border-t border-stone-200 px-6 py-4">
+                    <div className="flex gap-2">
                       <Textarea
-                        placeholder="Perustele palautus..."
-                        value={sendBackText}
-                        onChange={e => setSendBackTexts({ ...sendBackTexts, [proposal.id]: e.target.value })}
+                        placeholder="Kirjoita palaute tästä ehdotuksesta..."
+                        value={commentText}
+                        onChange={e => setCommentTexts({ ...commentTexts, [proposal.id]: e.target.value })}
                         className="min-h-[60px] text-sm resize-none"
                         rows={2}
                       />
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setShowSendBack({ ...showSendBack, [proposal.id]: false })}
-                        >
-                          Peruuta
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            if (sendBackText.trim()) {
-                              updateProposalStatus(proposal.id, 'keskustelussa', sendBackText.trim())
-                              setSendBackTexts({ ...sendBackTexts, [proposal.id]: '' })
-                              setShowSendBack({ ...showSendBack, [proposal.id]: false })
-                            }
-                          }}
-                          disabled={!sendBackText.trim()}
-                        >
-                          Palauta
-                        </Button>
-                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          if (commentText.trim()) {
+                            addComment(proposal.id, { authorId: currentUserId, text: commentText.trim(), thread: 'seurantaryhma' })
+                            setCommentTexts({ ...commentTexts, [proposal.id]: '' })
+                          }
+                        }}
+                        disabled={!commentText.trim()}
+                        className="self-end shrink-0"
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                      </Button>
                     </div>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setShowSendBack({ ...showSendBack, [proposal.id]: true })}
-                      className="text-amber-700"
-                    >
-                      <ArrowLeft className="h-4 w-4 mr-1" />
-                      Palauta keskusteluun
-                    </Button>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             )
           })}

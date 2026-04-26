@@ -2,7 +2,7 @@
 
 import { useStore } from '@/lib/store'
 import { useRouter } from 'next/navigation'
-import { STATUS_LABELS, STATUS_COLORS, ProposalStatus, proposalVerseRef, proposalCoversVerse } from '@/lib/types'
+import { STATUS_LABELS, STATUS_COLORS, ProposalStatus, proposalVerseRef } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
@@ -10,10 +10,9 @@ import Link from 'next/link'
 
 const STATUS_FILTER_OPTIONS: { value: string; label: string }[] = [
   { value: 'kaikki', label: 'Kaikki' },
-  { value: 'keskustelussa', label: 'Keskustelussa' },
-  { value: 'seurantaryhman_arvioitavana', label: 'Seurantaryhmän arvioitavana' },
-  { value: 'hyvaksytty_tyoryhmassa', label: 'Hyväksytty työryhmässä' },
-  { value: 'hyvaksytty_lopullisesti', label: 'Hyväksytty lopullisesti' },
+  { value: 'luonnos', label: 'Luonnos' },
+  { value: 'ehdotettu', label: 'Ehdotettu' },
+  { value: 'hyvaksytty_lopullisesti', label: 'Hyväksytty' },
 ]
 
 export default function ProposalsPage() {
@@ -22,10 +21,10 @@ export default function ProposalsPage() {
   const currentUser = users.find(u => u.id === currentUserId)!
 
   // Default filter per role
-  const defaultFilter = currentUser.role === 'seurantaryhma'
-    ? 'seurantaryhman_arvioitavana'
-    : currentUser.role === 'hallitus'
-      ? 'hyvaksytty_tyoryhmassa'
+  const defaultFilter = currentUser.role === 'hallitus'
+    ? 'ehdotettu'
+    : currentUser.role === 'seurantaryhma'
+      ? 'ehdotettu'
       : 'kaikki'
 
   const [filter, setFilter] = useState(defaultFilter)

@@ -8,10 +8,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ChevronDown, RotateCcw } from 'lucide-react'
+import { ChevronDown, RotateCcw, DatabaseZap } from 'lucide-react'
 
 export function PersonaSwitcher() {
-  const { currentUserId, users, setCurrentUser, resetState } = useStore()
+  const { currentUserId, users, setCurrentUser, resetState, loadDemoData } = useStore()
   const currentUser = users.find(u => u.id === currentUserId)!
 
   // Show one user per role for switching
@@ -42,11 +42,18 @@ export function PersonaSwitcher() {
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem
+          onClick={() => loadDemoData()}
+          className="text-muted-foreground py-3 cursor-pointer"
+        >
+          <DatabaseZap className="h-4 w-4 mr-2" />
+          Lataa esimerkkidata
+        </DropdownMenuItem>
+        <DropdownMenuItem
           onClick={() => resetState()}
           className="text-muted-foreground py-3 cursor-pointer"
         >
           <RotateCcw className="h-4 w-4 mr-2" />
-          Aloita alusta
+          Tyhjennä data
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

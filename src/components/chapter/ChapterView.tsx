@@ -81,7 +81,7 @@ export function ChapterView() {
       ranges: draft.ranges,
       rationale: draft.rationale.trim(),
       authorId: currentUserId,
-      status: 'keskustelussa',
+      status: 'luonnos',
     })
     setDraft(null)
   }
@@ -120,13 +120,11 @@ export function ChapterView() {
         {/* Article */}
         <div className="flex-1 min-h-0 overflow-y-auto">
           <div className="max-w-4xl mx-auto px-6 py-6">
+            <div className="mb-4">
+              <p className="font-serif text-base text-stone-500">1. Tessalonikalaiskirje</p>
+              <h1 className="font-serif text-3xl font-semibold text-stone-800 leading-tight mt-1">Luku 2</h1>
+            </div>
             <div className="bg-white rounded-lg border border-stone-200 p-6 sm:p-8 shadow-sm">
-              <div className="mb-6 pb-6 border-b border-stone-100">
-                <h1 className="font-serif text-xl font-semibold text-stone-800 leading-tight">
-                  1. Tessalonikalaiskirje
-                </h1>
-                <p className="text-sm text-stone-500 mt-0.5">Luku 2</p>
-              </div>
               <ChapterText
                 selectedVerse={selectedVerse}
                 onVerseClick={handleVerseClick}

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useStore } from '@/lib/store'
 import { STATUS_LABELS, STATUS_COLORS, Proposal, User, ProposalStatus, proposalCoversVerse, proposalVerseRef } from '@/lib/types'
-import { canAdvance, canSendBack, getNextStatus, getSendBackStatus, getAdvanceLabel } from '@/lib/state-machine'
+import { canAdvance, canSendBack, getNextStatus, getSendBackStatus, getAdvanceLabel, getSendBackLabel } from '@/lib/state-machine'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -44,7 +44,6 @@ function PanelContent({ verseNumber, onClose, onStartEdit, onRevert }: { verseNu
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
   const hasBeenRevised = verse.text !== verse.baseText
-  const hasActiveProposal = verseProposals.some(p => p.status !== 'hyvaksytty_lopullisesti')
 
   return (
     <div className="flex flex-col h-full">
@@ -141,13 +140,17 @@ function ProposalCard({
   proposal: Proposal
   users: User[]
   currentUser: User
-  onAddComment: (proposalId: string, comment: { authorId: string; text: string }) => void
+  onAddComment: (proposalId: string, comment: { authorId: string; text: string; thread: 'main' | 'seurantaryhma' }) => void
   onUpdateStatus: (proposalId: string, status: ProposalStatus, comment?: string) => void
 }) {
   const [commentText, setCommentText] = useState('')
   const [sendBackText, setSendBackText] = useState('')
   const [showSendBack, setShowSendBack] = useState(false)
   const author = users.find(u => u.id === proposal.authorId)!
+
+  const isSeurantaryhma = currentUser.role === 'seurantaryhma'
+  const commentThread = isSeurantaryhma ? 'seurantaryhma' : 'main'
+  const visibleComments = proposal.comments.filter(c => c.thread === commentThread)
 
   const showAdvance = canAdvance(proposal.status, currentUser.role)
   const showSendBackBtn = canSendBack(proposal.status, currentUser.role)
@@ -168,7 +171,7 @@ function ProposalCard({
 
   function handleAddComment() {
     if (commentText.trim()) {
-      onAddComment(proposal.id, { authorId: currentUser.id, text: commentText.trim() })
+      onAddComment(proposal.id, { authorId: currentUser.id, text: commentText.trim(), thread: commentThread })
       setCommentText('')
     }
   }
@@ -216,21 +219,16 @@ function ProposalCard({
         )}
       </div>
 
-      {/* Comments */}
-      {proposal.comments.length > 0 && (
+      {/* Comments (thread-filtered) */}
+      {visibleComments.length > 0 && (
         <div className="border-t border-stone-200 px-4 py-3 space-y-3">
-          {proposal.comments.map(comment => {
+          {visibleComments.map(comment => {
             const commentAuthor = users.find(u => u.id === comment.authorId)!
             return (
-              <div key={comment.id} className={cn('text-sm', comment.isSendBack && 'border-l-2 border-amber-400 pl-3')}>
+              <div key={comment.id} className="text-sm">
                 <div className="flex items-baseline gap-2">
                   <span className="font-medium text-stone-700">{commentAuthor.name}</span>
                   <span className="text-xs text-stone-400">{formatDate(comment.createdAt)}</span>
-                  {comment.isSendBack && (
-                    <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
-                      Palautettu
-                    </Badge>
-                  )}
                 </div>
                 <p className="text-stone-600 mt-0.5 leading-relaxed">{comment.text}</p>
               </div>
@@ -239,8 +237,8 @@ function ProposalCard({
         </div>
       )}
 
-      {/* Add comment (for kääntäjä and seurantaryhmä) */}
-      {(currentUser.role === 'kaantaja' || currentUser.role === 'seurantaryhma') && proposal.status !== 'hyvaksytty_lopullisesti' && (
+      {/* Add comment */}
+      {proposal.status !== 'hyvaksytty_lopullisesti' && (
         <div className="border-t border-stone-200 px-4 py-3">
           <div className="flex gap-2">
             <Textarea
@@ -263,7 +261,7 @@ function ProposalCard({
         </div>
       )}
 
-      {/* Actions */}
+      {/* Actions (kääntäjä and hallitus only) */}
       {(showAdvance || showSendBackBtn) && (
         <div className="border-t border-stone-200 px-4 py-3 space-y-2">
           {showSendBack && (
@@ -296,7 +294,7 @@ function ProposalCard({
                   className="text-amber-700"
                 >
                   <ArrowLeft className="h-4 w-4 mr-1" />
-                  Palauta
+                  {getSendBackLabel(proposal.status)}
                 </Button>
               )}
               {showAdvance && (

@@ -27,6 +27,16 @@ function initialState() {
   return {
     currentUserId: 'aimo',
     users: SEED_USERS,
+    verses: SEED_VERSES.map(v => ({ ...v })),
+    proposals: [] as typeof SEED_PROPOSALS,
+    activity: [] as typeof SEED_ACTIVITY,
+  }
+}
+
+function demoState() {
+  return {
+    currentUserId: 'aimo',
+    users: SEED_USERS,
     verses: getInitialVerses(),
     proposals: [...SEED_PROPOSALS],
     activity: [...SEED_ACTIVITY],
@@ -84,7 +94,7 @@ export const useStore = create<AppState>()(
                   authorId: state.currentUserId,
                   text: comment,
                   createdAt: now,
-                  isSendBack: newStatus === 'keskustelussa' && (p.status === 'seurantaryhman_arvioitavana' || p.status === 'hyvaksytty_tyoryhmassa'),
+                  thread: 'main' as const,
                 },
               ]
             }
@@ -96,10 +106,8 @@ export const useStore = create<AppState>()(
           const verseRef = proposalVerseRef(proposal)
 
           const statusLabels: Record<ProposalStatus, string> = {
-            luonnos: 'Luonnos',
-            keskustelussa: 'Palautettu keskusteluun',
-            seurantaryhman_arvioitavana: 'Siirretty seurantaryhmälle',
-            hyvaksytty_tyoryhmassa: 'Hyväksytty työryhmässä',
+            luonnos: 'Palautettu luonnokseksi',
+            ehdotettu: 'Lähetetty ehdotukseksi',
             hyvaksytty_lopullisesti: 'Hyväksytty lopullisesti',
           }
 
@@ -185,10 +193,14 @@ export const useStore = create<AppState>()(
       resetState: () => {
         set(initialState())
       },
+
+      loadDemoData: () => {
+        set(demoState())
+      },
     }),
     {
       name: 'raamattu-kaannostyo',
-      version: 2,
+      version: 4,
       migrate: () => initialState(),
     }
   )

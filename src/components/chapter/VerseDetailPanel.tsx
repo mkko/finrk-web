@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useStore } from '@/lib/store'
-import { STATUS_LABELS, STATUS_COLORS, Proposal, User, ProposalStatus, proposalCoversVerse, proposalVerseRef } from '@/lib/types'
+import { STATUS_LABELS, STATUS_COLORS, Proposal, User, ProposalStatus, Verse, proposalCoversVerse, proposalVerseRef } from '@/lib/types'
 import { canAdvance, canSendBack, getNextStatus, getSendBackStatus, getAdvanceLabel, getSendBackLabel } from '@/lib/state-machine'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -115,6 +115,7 @@ function PanelContent({ verseNumber, onClose, onStartEdit, onRevert }: { verseNu
                 proposal={proposal}
                 users={users}
                 currentUser={currentUser}
+                verses={verses}
                 onAddComment={addComment}
                 onUpdateStatus={updateProposalStatus}
               />
@@ -134,12 +135,14 @@ function ProposalCard({
   proposal,
   users,
   currentUser,
+  verses,
   onAddComment,
   onUpdateStatus,
 }: {
   proposal: Proposal
   users: User[]
   currentUser: User
+  verses: Verse[]
   onAddComment: (proposalId: string, comment: { authorId: string; text: string; thread: 'main' | 'seurantaryhma' }) => void
   onUpdateStatus: (proposalId: string, status: ProposalStatus, comment?: string) => void
 }) {
@@ -193,18 +196,27 @@ function ProposalCard({
         </div>
 
         {/* Proposed text — one block per range */}
-        {proposal.ranges.map((range, i) => (
-          <div key={i} className="bg-white rounded-md border border-stone-200 p-3">
-            {proposal.ranges.length > 1 && (
-              <p className="text-xs text-stone-400 mb-1">
-                {range.verseStart === range.verseEnd ? `Jae ${range.verseStart}` : `Jakeet ${range.verseStart}–${range.verseEnd}`}
+        {proposal.ranges.map((range, i) => {
+          const originalText = verses
+            .filter(v => v.number >= range.verseStart && v.number <= range.verseEnd)
+            .map(v => v.text)
+            .join(' ')
+          return (
+            <div key={i} className="bg-white rounded-md border border-stone-200 p-3">
+              {proposal.ranges.length > 1 && (
+                <p className="text-xs text-stone-400 mb-1">
+                  {range.verseStart === range.verseEnd ? `Jae ${range.verseStart}` : `Jakeet ${range.verseStart}–${range.verseEnd}`}
+                </p>
+              )}
+              <p className="font-serif text-sm leading-6 text-stone-800">
+                {proposal.status === 'hyvaksytty_lopullisesti'
+                  ? range.proposedText
+                  : <DiffText oldText={originalText} newText={range.proposedText} />
+                }
               </p>
-            )}
-            <p className="font-serif text-sm leading-6 text-stone-800">
-              {range.proposedText}
-            </p>
-          </div>
-        ))}
+            </div>
+          )
+        })}
 
         {/* Rationale */}
         <p className="text-sm text-stone-600 leading-relaxed">
@@ -312,6 +324,22 @@ function ProposalCard({
         </div>
       )}
     </div>
+  )
+}
+
+function DiffText({ oldText, newText }: { oldText: string; newText: string }) {
+  const { diffWords } = require('diff') as typeof import('diff')
+  const parts: import('diff').Change[] = diffWords(oldText, newText)
+  return (
+    <>
+      {parts.map((part, i) => (
+        part.added
+          ? <span key={i} className="bg-emerald-100 text-emerald-900 rounded px-0.5">{part.value}</span>
+          : part.removed
+            ? <span key={i} className="bg-red-100 text-red-800 line-through rounded px-0.5">{part.value}</span>
+            : <span key={i}>{part.value}</span>
+      ))}
+    </>
   )
 }
 

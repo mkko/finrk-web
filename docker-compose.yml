@@ -1,0 +1,11 @@
+services:
+  finrk-web:
+    container_name: finrk-web
+    image: ghcr.io/mkko/finrk-web:latest
+    networks:
+      - web
+    restart: unless-stopped
+
+networks:
+  web:
+    external: true

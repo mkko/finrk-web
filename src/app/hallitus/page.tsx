@@ -7,13 +7,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { Check, ArrowLeft } from 'lucide-react'
+import { Check, X, PlayCircle } from 'lucide-react'
 
 export default function HallitusPage() {
-  const { proposals, users, verses, currentUserId, updateProposalStatus } = useStore()
+  const { proposals, users, verses, currentUserId, updateProposalStatus, castVote } = useStore()
   const currentUser = users.find(u => u.id === currentUserId)!
-  const [sendBackTexts, setSendBackTexts] = useState<Record<string, string>>({})
-  const [showSendBack, setShowSendBack] = useState<Record<string, boolean>>({})
+  const [rejectTexts, setRejectTexts] = useState<Record<string, string>>({})
+  const [showReject, setShowReject] = useState<Record<string, boolean>>({})
 
   if (currentUser.role !== 'hallitus') {
     return (
@@ -23,26 +23,30 @@ export default function HallitusPage() {
     )
   }
 
-  const ratificationProposals = proposals.filter(p => p.status === 'ehdotettu')
+  const hallitusMembers = users.filter(u => u.role === 'hallitus')
+  const actionableProposals = proposals.filter(
+    p => p.status === 'ehdotettu' || p.status === 'hallituksen_kasittelyssa'
+  )
 
   return (
     <div className="h-full overflow-y-auto"><div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
       <h1 className="text-xl font-semibold text-stone-800 mb-2">Hallituksen hyväksyntä</h1>
       <p className="text-sm text-stone-500 mb-6">
-        Alla olevat ehdotukset odottavat hallituksen hyväksyntää.
+        Alla olevat ehdotukset odottavat hallituksen käsittelyä. Kaikkien jäsenten ääni vaaditaan.
       </p>
 
-      {ratificationProposals.length === 0 ? (
+      {actionableProposals.length === 0 ? (
         <div className="text-center py-12 text-stone-400">
-          Ei hyväksyttäviä ehdotuksia tällä hetkellä.
+          Ei käsiteltäviä ehdotuksia tällä hetkellä.
         </div>
       ) : (
         <div className="space-y-6">
-          {ratificationProposals.map(proposal => {
+          {actionableProposals.map(proposal => {
             const author = users.find(u => u.id === proposal.authorId)!
             const verseRef = proposalVerseRef(proposal)
-            const sendBackText = sendBackTexts[proposal.id] || ''
             const mainComments = proposal.comments.filter(c => c.thread === 'main')
+            const currentUserVote = proposal.votes.find(v => v.userId === currentUserId)
+            const rejectText = rejectTexts[proposal.id] || ''
 
             return (
               <div key={proposal.id} className="bg-white rounded-lg border border-stone-200 overflow-hidden">
@@ -57,7 +61,7 @@ export default function HallitusPage() {
                     </Badge>
                   </div>
 
-                  {/* Side by side comparison — one row per range */}
+                  {/* Side by side comparison */}
                   {proposal.ranges.map((range, i) => {
                     const originalVerses = verses.filter(v => v.number >= range.verseStart && v.number <= range.verseEnd)
                     const originalText = originalVerses.map(v => v.baseText).join(' ')
@@ -103,63 +107,114 @@ export default function HallitusPage() {
                       </div>
                     </details>
                   )}
+
+                  {/* Voting progress for hallituksen_kasittelyssa */}
+                  {proposal.status === 'hallituksen_kasittelyssa' && (
+                    <div className="rounded-md border border-violet-200 bg-violet-50/50 p-3 space-y-2">
+                      <p className="text-sm font-medium text-violet-800">
+                        Äänestys: {proposal.votes.length}/{hallitusMembers.length} äänestänyt
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {hallitusMembers.map(member => {
+                          const vote = proposal.votes.find(v => v.userId === member.id)
+                          return (
+                            <span
+                              key={member.id}
+                              className={cn(
+                                'inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full',
+                                vote
+                                  ? 'bg-violet-200 text-violet-800'
+                                  : 'bg-stone-100 text-stone-500'
+                              )}
+                            >
+                              {member.name}
+                              {vote && <Check className="h-3 w-3" />}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Actions */}
                 <div className="border-t border-stone-200 px-6 py-4">
-                  {showSendBack[proposal.id] ? (
-                    <div className="space-y-2">
-                      <Textarea
-                        placeholder="Perustele palautus..."
-                        value={sendBackText}
-                        onChange={e => setSendBackTexts({ ...sendBackTexts, [proposal.id]: e.target.value })}
-                        className="min-h-[60px] text-sm resize-none"
-                        rows={2}
-                      />
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setShowSendBack({ ...showSendBack, [proposal.id]: false })}
-                        >
-                          Peruuta
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            if (sendBackText.trim()) {
-                              updateProposalStatus(proposal.id, 'luonnos', sendBackText.trim())
-                              setSendBackTexts({ ...sendBackTexts, [proposal.id]: '' })
-                              setShowSendBack({ ...showSendBack, [proposal.id]: false })
-                            }
-                          }}
-                          disabled={!sendBackText.trim()}
-                        >
-                          Palauta
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setShowSendBack({ ...showSendBack, [proposal.id]: true })}
-                        className="text-amber-700"
-                      >
-                        <ArrowLeft className="h-4 w-4 mr-1" />
-                        Palauta luonnokseksi
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => updateProposalStatus(proposal.id, 'hyvaksytty_lopullisesti')}
-                        className="ml-auto bg-emerald-700 hover:bg-emerald-600"
-                      >
-                        <Check className="h-4 w-4 mr-1" />
-                        Hyväksy
-                      </Button>
-                    </div>
+                  {proposal.status === 'ehdotettu' && (
+                    <Button
+                      size="sm"
+                      onClick={() => updateProposalStatus(proposal.id, 'hallituksen_kasittelyssa')}
+                      className="bg-violet-700 hover:bg-violet-600"
+                    >
+                      <PlayCircle className="h-4 w-4 mr-1" />
+                      Aloita käsittely
+                    </Button>
+                  )}
+
+                  {proposal.status === 'hallituksen_kasittelyssa' && !currentUserVote && (
+                    <>
+                      {showReject[proposal.id] ? (
+                        <div className="space-y-2">
+                          <Textarea
+                            placeholder="Perustele hylkäys..."
+                            value={rejectText}
+                            onChange={e => setRejectTexts({ ...rejectTexts, [proposal.id]: e.target.value })}
+                            className="min-h-[60px] text-sm resize-none"
+                            rows={2}
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setShowReject({ ...showReject, [proposal.id]: false })}
+                            >
+                              Peruuta
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-700"
+                              onClick={() => {
+                                if (rejectText.trim()) {
+                                  castVote(proposal.id, 'reject', rejectText.trim())
+                                  setRejectTexts({ ...rejectTexts, [proposal.id]: '' })
+                                  setShowReject({ ...showReject, [proposal.id]: false })
+                                }
+                              }}
+                              disabled={!rejectText.trim()}
+                            >
+                              Hylkää
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-700"
+                            onClick={() => setShowReject({ ...showReject, [proposal.id]: true })}
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Hylkää
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => castVote(proposal.id, 'approve')}
+                            className="ml-auto bg-emerald-700 hover:bg-emerald-600"
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Hyväksy
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {proposal.status === 'hallituksen_kasittelyssa' && currentUserVote && (
+                    <p className="text-sm text-violet-700 flex items-center gap-1">
+                      <Check className="h-4 w-4" />
+                      Olet äänestänyt: {currentUserVote.decision === 'approve' ? 'Hyväksy' : 'Hylkää'}
+                    </p>
                   )}
                 </div>
               </div>

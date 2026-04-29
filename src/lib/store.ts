@@ -2,7 +2,7 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { AppState, Proposal, ProposalStatus, proposalVerseRef } from './types'
+import { AppState, Proposal, ProposalStatus, Vote, proposalVerseRef } from './types'
 import { SEED_USERS, SEED_VERSES, SEED_PROPOSALS, SEED_ACTIVITY } from './seed-data'
 
 function getInitialVerses() {
@@ -25,7 +25,7 @@ function getInitialVerses() {
 
 function initialState() {
   return {
-    currentUserId: 'aimo',
+    currentUserId: 'kaantaja-a',
     users: SEED_USERS,
     verses: SEED_VERSES.map(v => ({ ...v })),
     proposals: [] as typeof SEED_PROPOSALS,
@@ -35,7 +35,7 @@ function initialState() {
 
 function demoState() {
   return {
-    currentUserId: 'aimo',
+    currentUserId: 'kaantaja-a',
     users: SEED_USERS,
     verses: getInitialVerses(),
     proposals: [...SEED_PROPOSALS],
@@ -57,6 +57,7 @@ export const useStore = create<AppState>()(
           ...proposal,
           id,
           comments: [],
+          votes: [],
           createdAt: now,
           statusChangedAt: now,
         }
@@ -85,7 +86,7 @@ export const useStore = create<AppState>()(
         set(state => {
           const proposals = state.proposals.map(p => {
             if (p.id !== proposalId) return p
-            const updated = { ...p, status: newStatus, statusChangedAt: now }
+            const updated = { ...p, status: newStatus, statusChangedAt: now, votes: [] as Vote[] }
             if (comment) {
               updated.comments = [
                 ...p.comments,
@@ -108,6 +109,7 @@ export const useStore = create<AppState>()(
           const statusLabels: Record<ProposalStatus, string> = {
             luonnos: 'Palautettu luonnokseksi',
             ehdotettu: 'Lähetetty ehdotukseksi',
+            hallituksen_kasittelyssa: 'Otettu käsittelyyn',
             hyvaksytty_lopullisesti: 'Hyväksytty lopullisesti',
           }
 
@@ -137,6 +139,120 @@ export const useStore = create<AppState>()(
               },
               ...state.activity,
             ],
+          }
+        })
+      },
+
+      castVote: (proposalId: string, decision: 'approve' | 'reject', comment?: string) => {
+        const now = new Date().toISOString()
+        set(state => {
+          const proposal = state.proposals.find(p => p.id === proposalId)
+          if (!proposal || proposal.status !== 'hallituksen_kasittelyssa') return state
+
+          // Don't allow duplicate votes
+          if (proposal.votes.some(v => v.userId === state.currentUserId)) return state
+
+          const newVote: Vote = {
+            userId: state.currentUserId,
+            decision,
+            comment,
+            createdAt: now,
+          }
+          const updatedVotes = [...proposal.votes, newVote]
+
+          const hallitusMembers = state.users.filter(u => u.role === 'hallitus')
+          const allVoted = hallitusMembers.every(m => updatedVotes.some(v => v.userId === m.id))
+
+          if (!allVoted) {
+            // Just record the vote, no status change yet
+            return {
+              proposals: state.proposals.map(p =>
+                p.id === proposalId ? { ...p, votes: updatedVotes } : p
+              ),
+              activity: [
+                {
+                  id: `act-${Date.now()}`,
+                  timestamp: now,
+                  userId: state.currentUserId,
+                  proposalId,
+                  action: 'Äänestetty',
+                  detail: `${proposalVerseRef(proposal)} — ääni annettu`,
+                },
+                ...state.activity,
+              ],
+            }
+          }
+
+          // All voted — tally
+          const allApproved = updatedVotes.every(v => v.decision === 'approve')
+
+          if (allApproved) {
+            // Unanimous approval
+            const verses = state.verses.map(v => {
+              for (const range of proposal.ranges) {
+                if (v.number >= range.verseStart && v.number <= range.verseEnd) {
+                  return { ...v, text: v.number === range.verseStart ? range.proposedText : '' }
+                }
+              }
+              return v
+            })
+            return {
+              proposals: state.proposals.map(p =>
+                p.id === proposalId
+                  ? { ...p, status: 'hyvaksytty_lopullisesti' as const, statusChangedAt: now, votes: updatedVotes }
+                  : p
+              ),
+              verses,
+              activity: [
+                {
+                  id: `act-${Date.now()}`,
+                  timestamp: now,
+                  userId: state.currentUserId,
+                  proposalId,
+                  action: 'Hyväksytty lopullisesti',
+                  detail: `${proposalVerseRef(proposal)} — hallitus hyväksyi yksimielisesti`,
+                },
+                ...state.activity,
+              ],
+            }
+          } else {
+            // At least one rejection — add rejection comments to main thread and reset to luonnos
+            const rejectionComments = updatedVotes
+              .filter(v => v.decision === 'reject' && v.comment)
+              .map((v, i) => {
+                const voter = state.users.find(u => u.id === v.userId)
+                return {
+                  id: `comment-${Date.now()}-${i}`,
+                  authorId: v.userId,
+                  text: `[Hallituksen palautus] ${voter?.name ?? 'Tuntematon'}: ${v.comment}`,
+                  createdAt: now,
+                  thread: 'main' as const,
+                }
+              })
+            return {
+              proposals: state.proposals.map(p =>
+                p.id === proposalId
+                  ? {
+                      ...p,
+                      status: 'luonnos' as const,
+                      statusChangedAt: now,
+                      votes: [],
+                      comments: [...p.comments, ...rejectionComments],
+                    }
+                  : p
+              ),
+              activity: [
+                {
+                  id: `act-${Date.now()}`,
+                  timestamp: now,
+                  userId: state.currentUserId,
+                  proposalId,
+                  action: 'Palautettu luonnokseksi',
+                  detail: `${proposalVerseRef(proposal)} — hallitus palautti ehdotuksen`,
+                },
+                ...state.activity,
+              ],
+            }
           }
         })
       },
@@ -200,7 +316,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'raamattu-kaannostyo',
-      version: 4,
+      version: 6,
       migrate: () => initialState(),
     }
   )

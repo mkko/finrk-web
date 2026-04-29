@@ -12,6 +12,7 @@ const STATUS_FILTER_OPTIONS: { value: string; label: string }[] = [
   { value: 'kaikki', label: 'Kaikki' },
   { value: 'luonnos', label: 'Luonnos' },
   { value: 'ehdotettu', label: 'Ehdotettu' },
+  { value: 'hallituksen_kasittelyssa', label: 'Käsittelyssä' },
   { value: 'hyvaksytty_lopullisesti', label: 'Hyväksytty' },
 ]
 

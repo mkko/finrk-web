@@ -37,6 +37,8 @@ function PanelContent({ verseNumber, onClose, onStartEdit, onRevert }: { verseNu
   const currentUser = useStore(s => s.users.find(u => u.id === s.currentUserId)!)
   const addComment = useStore(s => s.addComment)
   const updateProposalStatus = useStore(s => s.updateProposalStatus)
+  const castVote = useStore(s => s.castVote)
+  const allUsers = useStore(s => s.users)
 
   const verse = verses.find(v => v.number === verseNumber)!
   const verseProposals = proposals
@@ -118,6 +120,8 @@ function PanelContent({ verseNumber, onClose, onStartEdit, onRevert }: { verseNu
                 verses={verses}
                 onAddComment={addComment}
                 onUpdateStatus={updateProposalStatus}
+                onCastVote={castVote}
+                allUsers={allUsers}
               />
             ))}
           </div>
@@ -138,6 +142,8 @@ function ProposalCard({
   verses,
   onAddComment,
   onUpdateStatus,
+  onCastVote,
+  allUsers,
 }: {
   proposal: Proposal
   users: User[]
@@ -145,10 +151,14 @@ function ProposalCard({
   verses: Verse[]
   onAddComment: (proposalId: string, comment: { authorId: string; text: string; thread: 'main' | 'seurantaryhma' }) => void
   onUpdateStatus: (proposalId: string, status: ProposalStatus, comment?: string) => void
+  onCastVote: (proposalId: string, decision: 'approve' | 'reject', comment?: string) => void
+  allUsers: User[]
 }) {
   const [commentText, setCommentText] = useState('')
   const [sendBackText, setSendBackText] = useState('')
   const [showSendBack, setShowSendBack] = useState(false)
+  const [rejectText, setRejectText] = useState('')
+  const [showRejectForm, setShowRejectForm] = useState(false)
   const author = users.find(u => u.id === proposal.authorId)!
 
   const isSeurantaryhma = currentUser.role === 'seurantaryhma'
@@ -273,7 +283,77 @@ function ProposalCard({
         </div>
       )}
 
-      {/* Actions (kääntäjä and hallitus only) */}
+      {/* Voting UI for hallituksen_kasittelyssa */}
+      {proposal.status === 'hallituksen_kasittelyssa' && currentUser.role === 'hallitus' && (() => {
+        const hallitusMembers = allUsers.filter(u => u.role === 'hallitus')
+        const currentUserVote = proposal.votes.find(v => v.userId === currentUser.id)
+        return (
+          <div className="border-t border-stone-200 px-4 py-3 space-y-2">
+            <p className="text-xs text-violet-700 font-medium">
+              Äänestys: {proposal.votes.length}/{hallitusMembers.length} äänestänyt
+            </p>
+            {!currentUserVote ? (
+              showRejectForm ? (
+                <div className="space-y-2">
+                  <Textarea
+                    placeholder="Perustele hylkäys..."
+                    value={rejectText}
+                    onChange={e => setRejectText(e.target.value)}
+                    className="min-h-[60px] text-sm resize-none"
+                    rows={2}
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setShowRejectForm(false)}>
+                      Peruuta
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-red-700"
+                      onClick={() => {
+                        if (rejectText.trim()) {
+                          onCastVote(proposal.id, 'reject', rejectText.trim())
+                          setRejectText('')
+                          setShowRejectForm(false)
+                        }
+                      }}
+                      disabled={!rejectText.trim()}
+                    >
+                      Hylkää
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-red-700"
+                    onClick={() => setShowRejectForm(true)}
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-1" />
+                    Hylkää
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => onCastVote(proposal.id, 'approve')}
+                    className="ml-auto"
+                  >
+                    Hyväksy
+                    <ArrowRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              )
+            ) : (
+              <p className="text-xs text-violet-600">
+                Olet äänestänyt: {currentUserVote.decision === 'approve' ? 'Hyväksy' : 'Hylkää'}
+              </p>
+            )}
+          </div>
+        )
+      })()}
+
+      {/* Actions (kääntäjä advance: luonnos → ehdotettu, hallitus: ehdotettu → hallituksen_kasittelyssa) */}
       {(showAdvance || showSendBackBtn) && (
         <div className="border-t border-stone-200 px-4 py-3 space-y-2">
           {showSendBack && (

@@ -106,12 +106,13 @@ export const SEED_VERSES: Verse[] = [
 ]
 
 export const SEED_USERS: User[] = [
-  { id: 'aimo', name: 'Aimo Virtanen', role: 'kaantaja', roleLabel: 'Kääntäjä' },
-  { id: 'eeva', name: 'Eeva Korhonen', role: 'kaantaja', roleLabel: 'Kääntäjä' },
-  { id: 'raija', name: 'Raija Lehto', role: 'seurantaryhma', roleLabel: 'Seurantaryhmän jäsen' },
-  { id: 'liisa', name: 'Liisa Niemi', role: 'seurantaryhma', roleLabel: 'Seurantaryhmän jäsen' },
-  { id: 'pekka', name: 'Pekka Mäkinen', role: 'hallitus', roleLabel: 'Hallituksen jäsen' },
-  { id: 'matti', name: 'Matti Järvinen', role: 'hallitus', roleLabel: 'Hallituksen jäsen' },
+  { id: 'kaantaja-a', name: 'Kääntäjä A', role: 'kaantaja', roleLabel: 'Kääntäjä' },
+  { id: 'kaantaja-b', name: 'Kääntäjä B', role: 'kaantaja', roleLabel: 'Kääntäjä' },
+  { id: 'seurantaryhma-a', name: 'Seurantaryhmän jäsen A', role: 'seurantaryhma', roleLabel: 'Seurantaryhmän jäsen' },
+  { id: 'seurantaryhma-b', name: 'Seurantaryhmän jäsen B', role: 'seurantaryhma', roleLabel: 'Seurantaryhmän jäsen' },
+  { id: 'hallitus-a', name: 'Hallituksen jäsen A', role: 'hallitus', roleLabel: 'Hallituksen jäsen' },
+  { id: 'hallitus-b', name: 'Hallituksen jäsen B', role: 'hallitus', roleLabel: 'Hallituksen jäsen' },
+  { id: 'hallitus-c', name: 'Hallituksen jäsen C', role: 'hallitus', roleLabel: 'Hallituksen jäsen' },
 ]
 
 export const SEED_PROPOSALS: Proposal[] = [
@@ -120,19 +121,20 @@ export const SEED_PROPOSALS: Proposal[] = [
     id: 'proposal-a',
     ranges: [{ verseStart: 7, verseEnd: 7, proposedText: 'Mutta me olimme teidän keskuudessanne lempeitä, niin kuin äiti hellään hoivaa pieniä lapsiaan.' }],
     rationale: 'Alkutekstin εἴπιος viittaa lempeään, hoivaavaan asenteeseen. Nykyinen "imettävä äiti" on turhan konkreettinen — "äiti hellään hoivaa" säilyttää metaforan lämmön mutta sopii paremmin nykysuomeen.',
-    authorId: 'aimo',
+    authorId: 'kaantaja-a',
     status: 'ehdotettu',
+    votes: [],
     comments: [
       {
         id: 'comment-1',
-        authorId: 'eeva',
+        authorId: 'kaantaja-b',
         text: 'Sanavalinta "hellään hoivaa" tuntuu luontevalta. Mutta pitäisikö "pieniä lapsiaan" olla vain "lapsiaan"? Alkutekstissä ei korosteta lasten pienuutta.',
         createdAt: '2026-04-20T10:15:00Z',
         thread: 'main',
       },
       {
         id: 'comment-2',
-        authorId: 'aimo',
+        authorId: 'kaantaja-a',
         text: 'Hyvä huomio. "Pieniä" tuo kyllä imeväisajatuksen takaisin. Ehkä pelkkä "lapsiaan" riittää.',
         createdAt: '2026-04-20T14:30:00Z',
         thread: 'main',
@@ -146,19 +148,20 @@ export const SEED_PROPOSALS: Proposal[] = [
     id: 'proposal-b',
     ranges: [{ verseStart: 9, verseEnd: 10, proposedText: 'Muistattahan, veljet, meidän vaivannäkömme ja uurauksemme. Yötä päivää ahkeroiden julistimme teille Jumalan evankeliumia, jottei kukaan teistä joutuisi meitä elättämään. Te olette todistajina, samoin Jumala, kuinka pyhästi, oikeamielisesti ja nuhteettomasti me uskovia kohtaan elimme.' }],
     rationale: 'Kaksi muutosta: (1) "rasituksemme" → "uurauksemme" kuvaa paremmin vapaaehtoista uhrautumista; (2) "vaelsimme" → "elimme" on nykysuomessa luontevampi — "vaeltaminen" elämäntapana on vanhahtava.',
-    authorId: 'eeva',
+    authorId: 'kaantaja-b',
     status: 'ehdotettu',
+    votes: [],
     comments: [
       {
         id: 'comment-3',
-        authorId: 'eeva',
+        authorId: 'kaantaja-b',
         text: '"Elimme" on selkeä parannus. "Uurauksemme" sen sijaan on hieman harvinainen sana — ymmärtävätkö kaikki lukijat sen? Entä "ponnisteluamme"?',
         createdAt: '2026-04-22T11:00:00Z',
         thread: 'main',
       },
       {
         id: 'comment-3s',
-        authorId: 'raija',
+        authorId: 'seurantaryhma-a',
         text: '"Uurauksemme" on harvinainen — harkitkaa "ponnisteluamme" tai "vaivannäköämme".',
         createdAt: '2026-04-23T09:00:00Z',
         thread: 'seurantaryhma',
@@ -172,45 +175,49 @@ export const SEED_PROPOSALS: Proposal[] = [
     id: 'proposal-c',
     ranges: [{ verseStart: 13, verseEnd: 13, proposedText: 'Sen vuoksi me myös lakkaamatta kiitämme Jumalaa siitä, että vastaanotettuanne meiltä Jumalan sanan ette ottaneet sitä vastaan ihmisten sanana vaan Jumalan sanana, joka se todellakin on. Tämä sana myös vaikuttaa teissä, jotka uskotte.' }],
     rationale: 'Lause on alkutekstissä pitkä ja monipolvinen. Ehdotus jakaa sen kahteen virkkeeseen lukemisen helpottamiseksi. "Vastaanotettuanne" on tarkempi käännös kreikan δεξάμενοι-partisiipista.',
-    authorId: 'aimo',
-    status: 'ehdotettu',
+    authorId: 'kaantaja-a',
+    status: 'hallituksen_kasittelyssa',
+    votes: [
+      { userId: 'hallitus-a', decision: 'approve', createdAt: '2026-04-25T10:00:00Z' },
+    ],
     comments: [
       {
         id: 'comment-4',
-        authorId: 'eeva',
+        authorId: 'kaantaja-b',
         text: 'Kahteen virkkeeseen jakaminen selkeyttää huomattavasti. Kannatan.',
         createdAt: '2026-04-15T09:00:00Z',
         thread: 'main',
       },
       {
         id: 'comment-5s',
-        authorId: 'raija',
+        authorId: 'seurantaryhma-a',
         text: 'Seurantaryhmä on tarkistanut — ei huomautettavaa.',
         createdAt: '2026-04-18T15:00:00Z',
         thread: 'seurantaryhma',
       },
     ],
     createdAt: '2026-04-12T10:00:00Z',
-    statusChangedAt: '2026-04-20T12:00:00Z',
+    statusChangedAt: '2026-04-24T12:00:00Z',
   },
   // Proposal D: verse 4 (entrusted with the gospel), fully approved
   {
     id: 'proposal-d',
     ranges: [{ verseStart: 4, verseEnd: 4, proposedText: 'Jumala on katsonut meidät kelvollisiksi ja uskonut meille evankeliumin, ja sen mukaisesti me puhumme — emme miellyttääksemme ihmisiä vaan Jumalaa, joka tutkii sydämemme.' }],
     rationale: '"Hyväksynyt" → "katsonut kelvollisiksi" tarkentaa kreikan δοκιμάζω-verbin merkitystä (koetella ja todeta kelvolliseksi). Ajatusviiva selkeyttää vastakkainasettelua.',
-    authorId: 'aimo',
+    authorId: 'kaantaja-a',
     status: 'hyvaksytty_lopullisesti',
+    votes: [],
     comments: [
       {
         id: 'comment-6',
-        authorId: 'eeva',
+        authorId: 'kaantaja-b',
         text: '"Katsonut kelvollisiksi" on tarkka ja silti luonteva. Hyvä muutos.',
         createdAt: '2026-04-08T10:00:00Z',
         thread: 'main',
       },
       {
         id: 'comment-7',
-        authorId: 'pekka',
+        authorId: 'hallitus-a',
         text: 'Hallitus on hyväksynyt muutoksen.',
         createdAt: '2026-04-14T16:00:00Z',
         thread: 'main',
@@ -225,7 +232,7 @@ export const SEED_ACTIVITY: ActivityEntry[] = [
   {
     id: 'act-1',
     timestamp: '2026-04-14T16:00:00Z',
-    userId: 'pekka',
+    userId: 'hallitus-a',
     proposalId: 'proposal-d',
     action: 'Hyväksytty lopullisesti',
     detail: 'Jae 4 — hallitus hyväksyi muutoksen',
@@ -233,7 +240,7 @@ export const SEED_ACTIVITY: ActivityEntry[] = [
   {
     id: 'act-2',
     timestamp: '2026-04-20T12:00:00Z',
-    userId: 'aimo',
+    userId: 'kaantaja-a',
     proposalId: 'proposal-c',
     action: 'Lähetetty ehdotukseksi',
     detail: 'Jae 13 — lähetetty ehdotukseksi',
@@ -241,7 +248,7 @@ export const SEED_ACTIVITY: ActivityEntry[] = [
   {
     id: 'act-3',
     timestamp: '2026-04-21T08:00:00Z',
-    userId: 'eeva',
+    userId: 'kaantaja-b',
     proposalId: 'proposal-b',
     action: 'Lähetetty ehdotukseksi',
     detail: 'Jakeet 9–10 — lähetetty ehdotukseksi',
@@ -249,7 +256,7 @@ export const SEED_ACTIVITY: ActivityEntry[] = [
   {
     id: 'act-4',
     timestamp: '2026-04-22T11:00:00Z',
-    userId: 'eeva',
+    userId: 'kaantaja-b',
     proposalId: 'proposal-b',
     action: 'Uusi kommentti',
     detail: 'Jakeet 9–10 — uusi kommentti',
@@ -257,7 +264,7 @@ export const SEED_ACTIVITY: ActivityEntry[] = [
   {
     id: 'act-5',
     timestamp: '2026-04-19T09:00:00Z',
-    userId: 'aimo',
+    userId: 'kaantaja-a',
     proposalId: 'proposal-a',
     action: 'Uusi ehdotus',
     detail: 'Jae 7 — uusi ehdotus luotu',

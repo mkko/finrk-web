@@ -3,14 +3,16 @@ import { ProposalStatus, PersonaRole } from './types'
 // Forward transitions: who can advance to the next state
 const FORWARD_TRANSITIONS: Record<ProposalStatus, { next: ProposalStatus; allowedRoles: PersonaRole[] } | null> = {
   luonnos: { next: 'ehdotettu', allowedRoles: ['kaantaja'] },
-  ehdotettu: { next: 'hyvaksytty_lopullisesti', allowedRoles: ['hallitus'] },
+  ehdotettu: { next: 'hallituksen_kasittelyssa', allowedRoles: ['hallitus'] },
+  hallituksen_kasittelyssa: null, // resolved by voting, not manual advance
   hyvaksytty_lopullisesti: null, // terminal
 }
 
 // Send-back transitions: who can send back and where it goes
 const SEND_BACK_TRANSITIONS: Record<ProposalStatus, { prev: ProposalStatus; allowedRoles: PersonaRole[] } | null> = {
   luonnos: null,
-  ehdotettu: { prev: 'luonnos', allowedRoles: ['hallitus'] },
+  ehdotettu: null, // rejection now goes through voting
+  hallituksen_kasittelyssa: null, // resolved by voting
   hyvaksytty_lopullisesti: null,
 }
 
@@ -35,14 +37,13 @@ export function getSendBackStatus(status: ProposalStatus): ProposalStatus | null
 export function getAdvanceLabel(status: ProposalStatus): string {
   switch (status) {
     case 'luonnos': return 'Lähetä ehdotukseksi'
-    case 'ehdotettu': return 'Hyväksy'
+    case 'ehdotettu': return 'Aloita käsittely'
     default: return ''
   }
 }
 
 export function getSendBackLabel(status: ProposalStatus): string {
   switch (status) {
-    case 'ehdotettu': return 'Palauta luonnokseksi'
     default: return ''
   }
 }

@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 const STATUS_ORDER: ProposalStatus[] = [
   'luonnos',
   'ehdotettu',
+  'hallituksen_kasittelyssa',
   'hyvaksytty_lopullisesti',
 ]
 
@@ -57,7 +58,7 @@ export default function ProgressPage() {
       </div>
 
       {/* Status breakdown */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {statusCounts.map(({ status, count }) => (
           <div key={status} className="bg-white rounded-lg border border-stone-200 p-4">
             <div className="flex items-center gap-2 mb-1">

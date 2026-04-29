@@ -71,12 +71,17 @@ export function ChapterView() {
     setDraft(d => {
       if (!d) return d
       const newRanges = d.ranges.filter(r => r.verseStart !== verseNum)
-      return newRanges.length === 0 ? null : { ...d, ranges: newRanges }
+      return newRanges.length === 0 ? { ...d, ranges: [] } : { ...d, ranges: newRanges }
     })
   }
 
+  const hasChanges = draft !== null && draft.ranges.some(r => {
+    const verse = verses.find(v => v.number === r.verseStart)
+    return verse && r.proposedText !== verse.text
+  })
+
   function submitDraft() {
-    if (!draft || !draft.rationale.trim()) return
+    if (!draft || !hasChanges || !draft.rationale.trim()) return
     addProposal({
       ranges: draft.ranges,
       rationale: draft.rationale.trim(),
@@ -103,7 +108,7 @@ export function ChapterView() {
             />
             <button
               onClick={submitDraft}
-              disabled={!draft.rationale.trim()}
+              disabled={!hasChanges || !draft.rationale.trim()}
               className="shrink-0 text-sm rounded-md bg-stone-800 text-white px-4 py-1.5 hover:bg-stone-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               Tallenna ehdotus

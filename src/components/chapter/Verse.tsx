@@ -3,7 +3,7 @@
 import { forwardRef, useRef, useCallback, useState } from 'react'
 import { Verse as VerseType, Proposal } from '@/lib/types'
 import { cn } from '@/lib/utils'
-import { Pencil } from 'lucide-react'
+import { Plus } from 'lucide-react'
 
 export interface VerseEditState {
   text: string
@@ -105,7 +105,7 @@ export const Verse = forwardRef<HTMLSpanElement, VerseProps>(
             {draftActive && !inDraft && hovered && (
               <span className="relative inline-block w-0 overflow-visible">
                 <span className="absolute left-1 bottom-0 z-10 inline-flex items-center justify-center w-5 h-5 rounded bg-lime-200 text-lime-800 border border-lime-400">
-                  <Pencil className="w-3 h-3" />
+                  <Plus className="w-3 h-3" />
                 </span>
               </span>
             )}

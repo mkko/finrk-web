@@ -81,6 +81,14 @@ export function proposalCoversVerse(proposal: Proposal, verseNum: number): boole
   return proposal.ranges.some(r => verseNum >= r.verseStart && verseNum <= r.verseEnd)
 }
 
+export interface Merkinta {
+  id: string
+  verses: { verseNumber: number; text: string }[]
+  authorId: string
+  note?: string
+  createdAt: string
+}
+
 export interface Verse {
   number: number
   text: string
@@ -101,6 +109,7 @@ export interface AppState {
   users: User[]
   verses: Verse[]
   proposals: Proposal[]
+  merkinnat: Merkinta[]
   activity: ActivityEntry[]
   setCurrentUser: (userId: string) => void
   addProposal: (proposal: Omit<Proposal, 'id' | 'createdAt' | 'statusChangedAt' | 'comments' | 'votes'>) => void
@@ -108,6 +117,9 @@ export interface AppState {
   castVote: (proposalId: string, decision: 'approve' | 'reject', comment?: string) => void
   addComment: (proposalId: string, comment: Omit<Comment, 'id' | 'createdAt'>) => void
   addBatchFeedback: (text: string) => void
+  addMerkinta: (verses: { verseNumber: number; text: string }[], note?: string) => void
+  updateMerkintaNote: (id: string, note: string) => void
+  deleteMerkinta: (id: string) => void
   resetState: () => void
   loadDemoData: () => void
 }

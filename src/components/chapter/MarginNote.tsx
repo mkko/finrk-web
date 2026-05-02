@@ -1,45 +1,33 @@
 'use client'
 
-import { Proposal, STATUS_LABELS, STATUS_INDICATOR_COLORS, proposalVerseRef } from '@/lib/types'
-import { useStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
-import { MessageSquare } from 'lucide-react'
 
 interface MarginNoteProps {
-  proposal: Proposal
+  highlights: { verseLabel: string; text: string; note?: string }[]
   isSelected: boolean
   onClick: () => void
 }
 
-export function MarginNote({ proposal, isSelected, onClick }: MarginNoteProps) {
-  const users = useStore(s => s.users)
-  const author = users.find(u => u.id === proposal.authorId)
-
-  const verseRef = proposalVerseRef(proposal).replace('Jae ', 'j. ').replace('Jakeet ', 'j. ')
-
+export function MarginNote({ highlights, isSelected, onClick }: MarginNoteProps) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        'w-full text-left rounded-md border px-3 py-2 transition-colors text-xs',
+        'w-full text-left rounded-md border px-3 py-2 transition-colors',
         isSelected
-          ? 'border-stone-400 bg-stone-100'
-          : 'border-stone-200 bg-stone-50/80 hover:border-stone-300 hover:bg-stone-50'
+          ? 'border-amber-300 bg-amber-100'
+          : 'border-amber-200 bg-amber-50/80 hover:border-amber-300 hover:bg-amber-50'
       )}
     >
-      <div className="flex items-center gap-1.5 mb-1">
-        <span className={cn('w-2 h-2 rounded-full shrink-0', STATUS_INDICATOR_COLORS[proposal.status])} />
-        <span className="font-medium text-stone-700 truncate">{verseRef}</span>
+      <div className="space-y-0.5">
+        {highlights.map((h, i) => (
+          <div key={i}>
+            <p className="text-stone-500 text-[10px] font-sans mb-0.5">j. {h.verseLabel}</p>
+            <p className="text-xs text-stone-600 font-medium">{h.text}</p>
+            {h.note && <p className="text-[10px] text-stone-400 leading-tight">{h.note}</p>}
+          </div>
+        ))}
       </div>
-      <p className="text-stone-500 leading-snug line-clamp-2">
-        {STATUS_LABELS[proposal.status]}
-      </p>
-      {proposal.comments.length > 0 && (
-        <div className="flex items-center gap-1 mt-1.5 text-stone-400">
-          <MessageSquare className="w-3 h-3" />
-          <span>{proposal.comments.length}</span>
-        </div>
-      )}
     </button>
   )
 }

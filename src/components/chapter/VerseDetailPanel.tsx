@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { X, ArrowRight, ArrowLeft, MessageSquare, Pencil } from 'lucide-react'
+import { renderWithHighlights } from '@/lib/highlight'
 import { cn } from '@/lib/utils'
 
 interface VerseDetailPanelProps {
@@ -39,6 +40,9 @@ function PanelContent({ verseNumber, onClose, onStartEdit, onRevert }: { verseNu
   const updateProposalStatus = useStore(s => s.updateProposalStatus)
   const castVote = useStore(s => s.castVote)
   const allUsers = useStore(s => s.users)
+  const merkinnat = useStore(s => s.merkinnat)
+  const deleteMerkinta = useStore(s => s.deleteMerkinta)
+  const updateMerkintaNote = useStore(s => s.updateMerkintaNote)
 
   const verse = verses.find(v => v.number === verseNumber)!
   const verseProposals = proposals
@@ -46,6 +50,21 @@ function PanelContent({ verseNumber, onClose, onStartEdit, onRevert }: { verseNu
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
   const hasBeenRevised = verse.text !== verse.baseText
+
+  const isKaantaja = currentUser.role === 'kaantaja'
+  const verseHighlights = isKaantaja
+    ? merkinnat.filter(m => m.verses.some(v => v.verseNumber === verseNumber) && m.authorId === currentUser.id)
+    : []
+  const highlightTexts = verseHighlights.flatMap(m =>
+    m.verses.filter(v => v.verseNumber === verseNumber).map(v => v.text)
+  )
+
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
+  const [editingNoteText, setEditingNoteText] = useState('')
+
+  useEffect(() => {
+    setEditingNoteId(null)
+  }, [verseNumber])
 
   return (
     <div className="flex flex-col h-full">
@@ -75,7 +94,7 @@ function PanelContent({ verseNumber, onClose, onStartEdit, onRevert }: { verseNu
             Nykyinen teksti
           </h3>
           <p className="font-serif text-base leading-7 text-stone-800">
-            {verse.text}
+            {isKaantaja ? renderWithHighlights(verse.text, highlightTexts) : verse.text}
           </p>
         </div>
 
@@ -101,6 +120,62 @@ function PanelContent({ verseNumber, onClose, onStartEdit, onRevert }: { verseNu
           <Button variant="outline" className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200" onClick={onRevert}>
             Palauta alkuperäinen
           </Button>
+        )}
+
+        {verseHighlights.length > 0 && (
+          <div>
+            <h3 className="text-xs font-medium text-amber-700 uppercase tracking-wide mb-2">
+              Korostukset
+            </h3>
+            <div className="space-y-2">
+              {verseHighlights.map(m => (
+                <div key={m.id} className="bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                  <div className="flex items-center justify-between">
+                    <mark className="bg-amber-100/70 rounded-sm text-sm">{m.verses.map(v => v.text).join(' ')}</mark>
+                    <button
+                      onClick={() => deleteMerkinta(m.id)}
+                      className="text-stone-400 hover:text-red-600"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  {editingNoteId === m.id ? (
+                    <div className="mt-1.5 space-y-1">
+                      <textarea
+                        value={editingNoteText}
+                        onChange={e => setEditingNoteText(e.target.value)}
+                        className="w-full text-xs border border-amber-200 rounded px-2 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-amber-400"
+                        rows={2}
+                        autoFocus
+                        placeholder="Muistiinpano..."
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { updateMerkintaNote(m.id, editingNoteText.trim()); setEditingNoteId(null) }}
+                          className="text-xs text-amber-800 hover:text-amber-900 font-medium"
+                        >
+                          Tallenna
+                        </button>
+                        <button
+                          onClick={() => setEditingNoteId(null)}
+                          className="text-xs text-stone-400 hover:text-stone-600"
+                        >
+                          Peruuta
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => { setEditingNoteId(m.id); setEditingNoteText(m.note ?? '') }}
+                      className={cn("mt-1 text-xs text-left w-full", m.note ? "text-stone-600 hover:text-stone-800" : "text-stone-400 hover:text-amber-700 italic")}
+                    >
+                      {m.note || 'Lisää muistiinpano...'}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {verseProposals.length > 0 && <Separator />}

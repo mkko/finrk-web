@@ -2,8 +2,8 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { AppState, Proposal, ProposalStatus, Vote, proposalVerseRef } from './types'
-import { SEED_USERS, SEED_VERSES, SEED_PROPOSALS, SEED_ACTIVITY } from './seed-data'
+import { AppState, Proposal, ProposalStatus, Vote, Merkinta, proposalVerseRef } from './types'
+import { SEED_USERS, SEED_VERSES, SEED_PROPOSALS, SEED_ACTIVITY, SEED_MERKINNAT } from './seed-data'
 
 function getInitialVerses() {
   // Apply ratified proposals to verse text
@@ -29,6 +29,7 @@ function initialState() {
     users: SEED_USERS,
     verses: SEED_VERSES.map(v => ({ ...v })),
     proposals: [] as typeof SEED_PROPOSALS,
+    merkinnat: [] as Merkinta[],
     activity: [] as typeof SEED_ACTIVITY,
   }
 }
@@ -39,6 +40,7 @@ function demoState() {
     users: SEED_USERS,
     verses: getInitialVerses(),
     proposals: [...SEED_PROPOSALS],
+    merkinnat: [...SEED_MERKINNAT],
     activity: [...SEED_ACTIVITY],
   }
 }
@@ -306,6 +308,35 @@ export const useStore = create<AppState>()(
         }))
       },
 
+      addMerkinta: (verses: { verseNumber: number; text: string }[], note?: string) => {
+        set(state => ({
+          merkinnat: [
+            ...state.merkinnat,
+            {
+              id: `merkinta-${Date.now()}`,
+              verses,
+              authorId: state.currentUserId,
+              ...(note ? { note } : {}),
+              createdAt: new Date().toISOString(),
+            },
+          ],
+        }))
+      },
+
+      updateMerkintaNote: (id: string, note: string) => {
+        set(state => ({
+          merkinnat: state.merkinnat.map(m =>
+            m.id === id ? { ...m, note: note || undefined } : m
+          ),
+        }))
+      },
+
+      deleteMerkinta: (id: string) => {
+        set(state => ({
+          merkinnat: state.merkinnat.filter(m => m.id !== id),
+        }))
+      },
+
       resetState: () => {
         set(initialState())
       },
@@ -316,7 +347,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'raamattu-kaannostyo',
-      version: 6,
+      version: 10,
       migrate: () => initialState(),
     }
   )

@@ -1,4 +1,4 @@
-import { User, Verse, Proposal, ActivityEntry } from './types'
+import { User, Verse, Proposal, ActivityEntry, Merkinta } from './types'
 
 // TODO: Replace this placeholder text with the actual RK12 translation of 1. Tessalonikalaiskirje 2.
 // Mikko will provide the real text before the demo. The verse count (20) and structure match the actual chapter.
@@ -225,6 +225,56 @@ export const SEED_PROPOSALS: Proposal[] = [
     ],
     createdAt: '2026-04-05T08:00:00Z',
     statusChangedAt: '2026-04-14T16:00:00Z',
+  },
+]
+
+export const SEED_MERKINNAT: Merkinta[] = [
+  {
+    id: 'merkinta-1',
+    verses: [{ verseNumber: 3, text: 'Kehotuksemme' }],
+    authorId: 'kaantaja-a',
+    note: 'kr. paraklesis, voi tarkoittaa myös lohdutusta',
+    createdAt: '2026-04-16T08:00:00Z',
+  },
+  {
+    id: 'merkinta-2',
+    verses: [{ verseNumber: 3, text: 'epäpuhtaista vaikuttimista' }],
+    authorId: 'kaantaja-a',
+    createdAt: '2026-04-16T08:30:00Z',
+  },
+  {
+    id: 'merkinta-3',
+    verses: [{ verseNumber: 7, text: 'imettävä' }],
+    authorId: 'kaantaja-a',
+    note: 'Tekstikriittinen: ēpioi vs. nēpioi — NA28 lukee ēpioi',
+    createdAt: '2026-04-17T10:30:00Z',
+  },
+  {
+    id: 'merkinta-4',
+    verses: [{ verseNumber: 7, text: 'lempeät' }],
+    authorId: 'kaantaja-a',
+    createdAt: '2026-04-17T10:35:00Z',
+  },
+  {
+    id: 'merkinta-5',
+    verses: [{ verseNumber: 12, text: 'vaatineet' }],
+    authorId: 'kaantaja-a',
+    note: 'kr. martyromenoi — vertaa: todistaneet, vakuuttaneet',
+    createdAt: '2026-04-19T09:15:00Z',
+  },
+  {
+    id: 'merkinta-6',
+    verses: [{ verseNumber: 16, text: 'viha' }],
+    authorId: 'kaantaja-a',
+    note: 'eis telos — eschatologinen vai historiallinen viittaus?',
+    createdAt: '2026-04-20T11:00:00Z',
+  },
+  {
+    id: 'merkinta-7',
+    verses: [{ verseNumber: 9, text: 'Yötä päivää' }],
+    authorId: 'kaantaja-b',
+    note: 'Heprealainen sanajärjestys (ilta ensin)',
+    createdAt: '2026-04-18T16:00:00Z',
   },
 ]
 

@@ -4,6 +4,7 @@ import { forwardRef, useRef, useCallback, useState } from 'react'
 import { Verse as VerseType, Proposal } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { Plus } from 'lucide-react'
+import { renderWithHighlights } from '@/lib/highlight'
 
 export interface VerseEditState {
   text: string
@@ -20,10 +21,11 @@ interface VerseProps {
   inDraft?: boolean
   onRemoveFromScope?: () => void
   editState?: VerseEditState
+  highlights?: string[]
 }
 
 export const Verse = forwardRef<HTMLSpanElement, VerseProps>(
-  function Verse({ verse, proposals, isSelected, onSelect, draftActive, inDraft, onRemoveFromScope, editState }, ref) {
+  function Verse({ verse, proposals, isSelected, onSelect, draftActive, inDraft, onRemoveFromScope, editState, highlights }, ref) {
     const activeProposal = proposals.find(p => p.status !== 'hyvaksytty_lopullisesti')
     const hasBeenRevised = verse.text !== verse.baseText
     const [hovered, setHovered] = useState(false)
@@ -69,7 +71,11 @@ export const Verse = forwardRef<HTMLSpanElement, VerseProps>(
           draftActive && !editState && hovered && 'bg-lime-100',
           !activeProposal && !isSelected && !editState && !hovered && 'hover:bg-stone-50',
         )}
-        onClick={onSelect}
+        onClick={() => {
+          // Skip verse selection when the user just finished a drag selection
+          if (window.getSelection()?.isCollapsed === false) return
+          onSelect()
+        }}
         role={editState ? undefined : 'button'}
         tabIndex={editState ? undefined : 0}
         onKeyDown={editState ? undefined : (e => { if (e.key === 'Enter' || e.key === ' ') onSelect() })}
@@ -97,6 +103,8 @@ export const Verse = forwardRef<HTMLSpanElement, VerseProps>(
               <mark className="bg-lime-300 text-stone-900 rounded-sm px-0.5 -mx-0.5">
                 {proposedText}
               </mark>
+            ) : highlights?.length ? (
+              renderWithHighlights(verse.text, highlights)
             ) : (
               verse.text
             )}

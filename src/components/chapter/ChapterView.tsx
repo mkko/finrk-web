@@ -9,8 +9,8 @@ import { VerseDetailPanel } from './VerseDetailPanel'
 import { proposalCoversVerse } from '@/lib/types'
 import type { VerseEditState } from './Verse'
 import { cn } from '@/lib/utils'
+import { X } from 'lucide-react'
 
-const NOTE_HEIGHT = 72
 const NOTE_GAP = 8
 
 export type DraftRange = { verseStart: number; verseEnd: number; proposedText: string }
@@ -187,35 +187,77 @@ function ChapterText({
 }) {
   const verses = useStore(s => s.verses)
   const proposals = useStore(s => s.proposals)
+  const merkinnat = useStore(s => s.merkinnat)
+  const currentUserId = useStore(s => s.currentUserId)
+  const users = useStore(s => s.users)
+  const currentUser = users.find(u => u.id === currentUserId)
 
   const containerRef = useRef<HTMLDivElement>(null)
+  const formRef = useRef<HTMLDivElement>(null)
   const verseRefs = useRef<Map<number, HTMLSpanElement>>(new Map())
-  const [notePositions, setNotePositions] = useState<Map<string, number>>(new Map())
+  const noteRefs = useRef<Map<number, HTMLDivElement>>(new Map())
+  const [notePositions, setNotePositions] = useState<Map<number, number>>(new Map())
+  const addMerkinta = useStore(s => s.addMerkinta)
+  const [highlightSelection, setHighlightSelection] = useState<{
+    matches: { verseNumber: number; text: string }[]
+    displayText: string
+    top: number
+    left: number
+  } | null>(null)
+  const [highlightNote, setHighlightNote] = useState('')
+  const draftRef = useRef(draft)
+  draftRef.current = draft
+  const versesRef = useRef(verses)
+  versesRef.current = verses
 
-  const activeProposals = proposals
-    .filter(p => p.status !== 'hyvaksytty_lopullisesti')
-    .sort((a, b) => a.ranges[0].verseStart - b.ranges[0].verseStart)
+  const userMerkinnat = currentUser?.role === 'kaantaja'
+    ? merkinnat.filter(m => m.authorId === currentUserId)
+    : []
 
-  const proposalKey = activeProposals.map(p => `${p.id}:${p.ranges[0].verseStart}`).join(',')
+  // Per-verse highlight texts for inline rendering
+  const highlightByVerse = new Map<number, string[]>()
+  for (const m of userMerkinnat) {
+    for (const v of m.verses) {
+      const arr = highlightByVerse.get(v.verseNumber) ?? []
+      arr.push(v.text)
+      highlightByVerse.set(v.verseNumber, arr)
+    }
+  }
+
+  // Sidebar notes grouped by anchor verse (first verse of each merkintä)
+  const notesByAnchor = new Map<number, { verseLabel: string; text: string; note?: string }[]>()
+  for (const m of userMerkinnat) {
+    const anchor = m.verses[0].verseNumber
+    const arr = notesByAnchor.get(anchor) ?? []
+    const nums = m.verses.map(v => v.verseNumber)
+    const verseLabel = nums.length === 1 ? `${nums[0]}` : `${nums[0]}–${nums[nums.length - 1]}`
+    arr.push({ verseLabel, text: m.verses.map(v => v.text).join(' '), note: m.note })
+    notesByAnchor.set(anchor, arr)
+  }
+  const highlightedVerses = [...notesByAnchor.keys()].sort((a, b) => a - b)
+
+  const merkintaKey = userMerkinnat.map(m => `${m.id}:${m.verses.map(v => v.verseNumber).join('-')}`).join(',')
 
   function measure() {
     if (!containerRef.current) return
     const containerTop = containerRef.current.getBoundingClientRect().top
-    const resolved = new Map<string, number>()
+    const resolved = new Map<number, number>()
     let lastBottom = -Infinity
-    for (const proposal of activeProposals) {
-      const el = verseRefs.current.get(proposal.ranges[0].verseStart)
-      if (!el) continue
-      const desired = el.getBoundingClientRect().top - containerTop
+    for (const vNum of highlightedVerses) {
+      const verseEl = verseRefs.current.get(vNum)
+      const noteEl = noteRefs.current.get(vNum)
+      if (!verseEl) continue
+      const desired = verseEl.getBoundingClientRect().top - containerTop
       const top = Math.max(desired, lastBottom + NOTE_GAP)
-      resolved.set(proposal.id, top)
-      lastBottom = top + NOTE_HEIGHT
+      resolved.set(vNum, top)
+      const height = noteEl?.offsetHeight ?? 60
+      lastBottom = top + height
     }
     setNotePositions(resolved)
   }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useLayoutEffect(measure, [proposalKey])
+  useLayoutEffect(measure, [merkintaKey])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -223,12 +265,123 @@ function ChapterText({
     observer.observe(containerRef.current)
     return () => observer.disconnect()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proposalKey])
+  }, [merkintaKey])
 
   const setVerseRef = useCallback((num: number, el: HTMLSpanElement | null) => {
     if (el) verseRefs.current.set(num, el)
     else verseRefs.current.delete(num)
   }, [])
+
+  const setNoteRef = useCallback((vNum: number, el: HTMLDivElement | null) => {
+    if (el) noteRefs.current.set(vNum, el)
+    else noteRefs.current.delete(vNum)
+  }, [])
+
+  useEffect(() => {
+    let isMouseDown = false
+    let timerId: ReturnType<typeof setTimeout>
+
+    function checkSelection() {
+      if (currentUser?.role !== 'kaantaja') return
+      const selection = window.getSelection()
+      if (!selection || selection.isCollapsed || !containerRef.current) return
+      const text = selection.toString().trim()
+      if (!text) return
+
+      const allVerses = versesRef.current
+      const matches: { verseNumber: number; text: string }[] = []
+
+      // Try single verse first
+      for (const v of allVerses) {
+        if (v.text && v.text.includes(text)) {
+          matches.push({ verseNumber: v.number, text })
+          break
+        }
+      }
+
+      // If no single-verse match, try multi-verse
+      if (!matches.length) {
+        const nonEmpty = allVerses.filter(v => v.text)
+        const fullText = nonEmpty.map(v => v.text).join(' ')
+        const idx = fullText.indexOf(text)
+        if (idx !== -1) {
+          let pos = 0
+          const selEnd = idx + text.length
+          for (const v of nonEmpty) {
+            const vStart = pos
+            const vEnd = pos + v.text.length
+            const oStart = Math.max(idx, vStart)
+            const oEnd = Math.min(selEnd, vEnd)
+            if (oStart < oEnd) {
+              const part = fullText.slice(oStart, oEnd).trim()
+              if (part) matches.push({ verseNumber: v.number, text: part })
+            }
+            pos = vEnd + 1 // +1 for the space between verses
+          }
+        }
+      }
+
+      if (!matches.length) return
+      // Don't highlight in verses being edited
+      if (matches.some(m => draftRef.current?.ranges.some(r => m.verseNumber >= r.verseStart && m.verseNumber <= r.verseEnd))) return
+      const range = selection.getRangeAt(0)
+      const rect = range.getBoundingClientRect()
+      const containerRect = containerRef.current.getBoundingClientRect()
+      setHighlightNote('')
+      setHighlightSelection({
+        matches,
+        displayText: text,
+        top: rect.bottom - containerRect.top + 4,
+        left: rect.left - containerRect.left + rect.width / 2,
+      })
+    }
+
+    function onMouseDown(e: MouseEvent) {
+      if (formRef.current?.contains(e.target as Node)) return
+      isMouseDown = true
+      setHighlightSelection(null)
+      setHighlightNote('')
+    }
+
+    function onMouseUp() {
+      if (!isMouseDown) return
+      isMouseDown = false
+      checkSelection()
+    }
+
+    function onSelectionChange() {
+      if (isMouseDown) return
+      clearTimeout(timerId)
+      timerId = setTimeout(checkSelection, 50)
+    }
+
+    document.addEventListener('mousedown', onMouseDown)
+    document.addEventListener('mouseup', onMouseUp)
+    document.addEventListener('selectionchange', onSelectionChange)
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown)
+      document.removeEventListener('mouseup', onMouseUp)
+      document.removeEventListener('selectionchange', onSelectionChange)
+      clearTimeout(timerId)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.role])
+
+  function handleHighlight() {
+    if (highlightSelection) {
+      const note = highlightNote.trim() || undefined
+      addMerkinta(highlightSelection.matches.map(m => ({ verseNumber: m.verseNumber, text: m.text })), note)
+      setHighlightSelection(null)
+      setHighlightNote('')
+      window.getSelection()?.removeAllRanges()
+    }
+  }
+
+  function dismissHighlightForm() {
+    setHighlightSelection(null)
+    setHighlightNote('')
+    window.getSelection()?.removeAllRanges()
+  }
 
   const primaryDraftVerseStart = draft ? Math.min(...draft.ranges.map(r => r.verseStart)) : null
 
@@ -263,6 +416,7 @@ function ChapterText({
                 inDraft={inDraft}
                 onRemoveFromScope={() => onRemoveFromScope(verse.number)}
                 editState={editState}
+                highlights={highlightByVerse.get(verse.number)}
               />
             )
           })}
@@ -270,20 +424,58 @@ function ChapterText({
       </div>
 
       <div className="hidden lg:block relative" aria-hidden="true">
-        {activeProposals.map(proposal => (
+        {highlightedVerses.map(vNum => (
           <div
-            key={proposal.id}
+            key={vNum}
+            ref={el => setNoteRef(vNum, el)}
             className="absolute left-0 right-0"
-            style={{ top: notePositions.get(proposal.id) ?? -9999 }}
+            style={{ top: notePositions.get(vNum) ?? -9999 }}
           >
             <MarginNote
-              proposal={proposal}
-              isSelected={selectedVerse !== null && proposalCoversVerse(proposal, selectedVerse)}
-              onClick={() => onVerseClick(proposal.ranges[0].verseStart)}
+              highlights={notesByAnchor.get(vNum)!}
+              isSelected={selectedVerse === vNum}
+              onClick={() => onVerseClick(vNum)}
             />
           </div>
         ))}
       </div>
+
+      {highlightSelection && (
+        <div
+          className="absolute z-20"
+          style={{
+            top: highlightSelection.top,
+            left: highlightSelection.left,
+            transform: 'translateX(-50%)',
+          }}
+        >
+          <div ref={formRef} className="bg-white rounded-lg border border-amber-300 shadow-lg p-3 w-64">
+            <div className="flex items-center justify-between mb-2">
+              <mark className="bg-amber-100/70 rounded-sm text-sm px-1 truncate">{highlightSelection.displayText}</mark>
+              <button
+                onClick={dismissHighlightForm}
+                className="text-stone-400 hover:text-stone-600 ml-2 shrink-0"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <textarea
+              value={highlightNote}
+              onChange={e => setHighlightNote(e.target.value)}
+              placeholder="Muistiinpano (valinnainen)"
+              className="w-full text-sm border border-stone-200 rounded px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-amber-400"
+              rows={2}
+            />
+            <button
+              onMouseDown={e => e.preventDefault()}
+              onClick={handleHighlight}
+              className="mt-2 w-full text-sm rounded-md bg-amber-100 text-amber-800 px-3 py-1.5 hover:bg-amber-200 border border-amber-300 transition-colors"
+            >
+              Lisää merkintä
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

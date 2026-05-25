@@ -95,6 +95,15 @@ export interface Verse {
   baseText: string // Original RK12 text
 }
 
+export interface Snapshot {
+  id: string
+  name: string
+  createdAt: string
+  createdBy: string
+  verseTexts: { number: number; text: string }[]
+  includedProposalIds: string[]
+}
+
 export interface ActivityEntry {
   id: string
   timestamp: string
@@ -104,6 +113,8 @@ export interface ActivityEntry {
   detail: string
 }
 
+export type AppVersion = '1.0' | '2.0'
+
 export interface AppState {
   currentUserId: string
   users: User[]
@@ -111,6 +122,9 @@ export interface AppState {
   proposals: Proposal[]
   merkinnat: Merkinta[]
   activity: ActivityEntry[]
+  snapshots: Snapshot[]
+  viewingSnapshotId: string | null
+  appVersion: AppVersion
   setCurrentUser: (userId: string) => void
   addProposal: (proposal: Omit<Proposal, 'id' | 'createdAt' | 'statusChangedAt' | 'comments' | 'votes'>) => void
   updateProposalStatus: (proposalId: string, newStatus: ProposalStatus, comment?: string) => void
@@ -120,6 +134,9 @@ export interface AppState {
   addMerkinta: (verses: { verseNumber: number; text: string }[], note?: string) => void
   updateMerkintaNote: (id: string, note: string) => void
   deleteMerkinta: (id: string) => void
+  createSnapshot: (name: string) => void
+  viewSnapshot: (snapshotId: string | null) => void
+  setAppVersion: (version: AppVersion) => void
   resetState: () => void
   loadDemoData: () => void
 }

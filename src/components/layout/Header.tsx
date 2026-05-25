@@ -12,6 +12,38 @@ const NAV_ITEMS = [
   { href: '/edistyminen', label: 'Edistyminen' },
 ]
 
+function VersionTabs() {
+  const { appVersion, setAppVersion } = useStore()
+  return (
+    <div className="border-b border-stone-100 bg-stone-50">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 flex items-center gap-0.5 h-9">
+        <button
+          onClick={() => setAppVersion('1.0')}
+          className={cn(
+            'text-xs px-3 py-1 -mb-px relative z-10 rounded-t transition-colors',
+            appVersion === '1.0'
+              ? 'font-semibold text-stone-800 bg-white border border-stone-200 border-b-white'
+              : 'text-stone-400 hover:text-stone-600'
+          )}
+        >
+          Versio 1.0
+        </button>
+        <button
+          onClick={() => setAppVersion('2.0')}
+          className={cn(
+            'text-xs px-3 py-1 -mb-px relative z-10 rounded-t transition-colors',
+            appVersion === '2.0'
+              ? 'font-semibold text-stone-800 bg-white border border-stone-200 border-b-white'
+              : 'text-stone-400 hover:text-stone-600'
+          )}
+        >
+          Versio 2.0
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function Header() {
   const pathname = usePathname()
   const { currentUserId, users } = useStore()
@@ -28,6 +60,8 @@ export function Header() {
 
   return (
     <header className="border-b border-stone-200 bg-white">
+      {/* Version tabs */}
+      <VersionTabs />
       <div className="mx-auto max-w-5xl px-4 sm:px-6">
         <div className="flex h-14 items-center justify-between">
           <div className="flex items-center gap-6">

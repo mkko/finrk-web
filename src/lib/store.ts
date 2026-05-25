@@ -2,8 +2,8 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { AppState, Proposal, ProposalStatus, Vote, Merkinta, proposalVerseRef } from './types'
-import { SEED_USERS, SEED_VERSES, SEED_PROPOSALS, SEED_ACTIVITY, SEED_MERKINNAT } from './seed-data'
+import { AppState, AppVersion, Proposal, ProposalStatus, Vote, Merkinta, Snapshot, proposalVerseRef } from './types'
+import { SEED_USERS, SEED_VERSES, SEED_PROPOSALS, SEED_ACTIVITY, SEED_MERKINNAT, SEED_SNAPSHOTS } from './seed-data'
 
 function getInitialVerses() {
   // Apply ratified proposals to verse text
@@ -31,6 +31,9 @@ function initialState() {
     proposals: [] as typeof SEED_PROPOSALS,
     merkinnat: [] as Merkinta[],
     activity: [] as typeof SEED_ACTIVITY,
+    snapshots: [] as Snapshot[],
+    viewingSnapshotId: null as string | null,
+    appVersion: '1.0' as AppVersion,
   }
 }
 
@@ -42,6 +45,9 @@ function demoState() {
     proposals: [...SEED_PROPOSALS],
     merkinnat: [...SEED_MERKINNAT],
     activity: [...SEED_ACTIVITY],
+    snapshots: [...SEED_SNAPSHOTS],
+    viewingSnapshotId: null as string | null,
+    appVersion: '1.0' as AppVersion,
   }
 }
 
@@ -337,6 +343,48 @@ export const useStore = create<AppState>()(
         }))
       },
 
+      createSnapshot: (name: string) => {
+        const now = new Date().toISOString()
+        const state = get()
+        const approvedIds = state.proposals
+          .filter(p => p.status === 'hyvaksytty_lopullisesti')
+          .map(p => p.id)
+        // Include proposals already captured in previous snapshots
+        const previouslyIncluded = state.snapshots.flatMap(s => s.includedProposalIds)
+        const allIncluded = [...new Set([...previouslyIncluded, ...approvedIds])]
+
+        const snapshot: Snapshot = {
+          id: `snapshot-${Date.now()}`,
+          name,
+          createdAt: now,
+          createdBy: state.currentUserId,
+          verseTexts: state.verses.map(v => ({ number: v.number, text: v.text })),
+          includedProposalIds: allIncluded,
+        }
+        set(state => ({
+          snapshots: [...state.snapshots, snapshot],
+          activity: [
+            {
+              id: `act-${Date.now()}`,
+              timestamp: now,
+              userId: state.currentUserId,
+              proposalId: '',
+              action: 'Tilannekuva luotu',
+              detail: `Tilannekuva "${name}" — ${approvedIds.length} hyväksyttyä ehdotusta`,
+            },
+            ...state.activity,
+          ],
+        }))
+      },
+
+      viewSnapshot: (snapshotId: string | null) => {
+        set({ viewingSnapshotId: snapshotId })
+      },
+
+      setAppVersion: (version: AppVersion) => {
+        set({ appVersion: version })
+      },
+
       resetState: () => {
         set(initialState())
       },
@@ -347,7 +395,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'raamattu-kaannostyo',
-      version: 10,
+      version: 11,
       migrate: () => initialState(),
     }
   )

@@ -1,4 +1,4 @@
-import { User, Verse, Proposal, ActivityEntry, Merkinta } from './types'
+import { User, Verse, Proposal, ActivityEntry, Merkinta, Snapshot } from './types'
 
 // TODO: Replace this placeholder text with the actual RK12 translation of 1. Tessalonikalaiskirje 2.
 // Mikko will provide the real text before the demo. The verse count (20) and structure match the actual chapter.
@@ -275,6 +275,22 @@ export const SEED_MERKINNAT: Merkinta[] = [
     authorId: 'kaantaja-b',
     note: 'Heprealainen sanajärjestys (ilta ensin)',
     createdAt: '2026-04-18T16:00:00Z',
+  },
+]
+
+export const SEED_SNAPSHOTS: Snapshot[] = [
+  {
+    id: 'snapshot-1',
+    name: 'Ensimmäinen luonnoskierros',
+    createdAt: '2026-04-14T17:00:00Z',
+    createdBy: 'kaantaja-a',
+    verseTexts: SEED_VERSES.map(v => {
+      if (v.number === 4) {
+        return { number: 4, text: 'Jumala on katsonut meidät kelvollisiksi ja uskonut meille evankeliumin, ja sen mukaisesti me puhumme — emme miellyttääksemme ihmisiä vaan Jumalaa, joka tutkii sydämemme.' }
+      }
+      return { number: v.number, text: v.baseText }
+    }),
+    includedProposalIds: ['proposal-d'],
   },
 ]
 

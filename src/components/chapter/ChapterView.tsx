@@ -21,12 +21,21 @@ export function ChapterView() {
   const [selectedVerse, setSelectedVerse] = useState<number | null>(null)
   const [draft, setDraft] = useState<Draft>(null)
 
-  const verses = useStore(s => s.verses)
+  const storeVerses = useStore(s => s.verses)
   const proposals = useStore(s => s.proposals)
   const users = useStore(s => s.users)
   const addProposal = useStore(s => s.addProposal)
   const currentUserId = useStore(s => s.currentUserId)
   const currentUser = users.find(u => u.id === currentUserId)!
+  const viewingSnapshotId = useStore(s => s.viewingSnapshotId)
+  const snapshots = useStore(s => s.snapshots)
+  const viewedSnapshot = viewingSnapshotId ? snapshots.find(s => s.id === viewingSnapshotId) : null
+  const verses = viewedSnapshot
+    ? storeVerses.map(v => {
+        const snapshotVerse = viewedSnapshot.verseTexts.find(sv => sv.number === v.number)
+        return snapshotVerse ? { ...v, text: snapshotVerse.text } : v
+      })
+    : storeVerses
 
   useEffect(() => {
     const v = searchParams.get('verse')
@@ -91,12 +100,64 @@ export function ChapterView() {
     setDraft(null)
   }
 
+  const viewSnapshotAction = useStore(s => s.viewSnapshot)
+
+  const appVersion = useStore(s => s.appVersion)
+
   return (
     <div className="h-full flex">
+      {/* Reference text panel — v2.0 only */}
+      {appVersion === '2.0' && (
+        <div className="w-96 shrink-0 border-r border-stone-200 bg-stone-100/50 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto">
+            <div className="max-w-4xl mx-auto px-6 py-6">
+              <div className="mb-4">
+                <p className="font-serif text-base text-stone-400">Vertailuteksti</p>
+                <h1 className="font-serif text-3xl font-semibold text-stone-400 leading-tight mt-1">RK 1933/38</h1>
+              </div>
+              <div className="bg-white/70 rounded-lg border border-stone-200 p-6 sm:p-8">
+                <div className="font-serif text-lg leading-8 text-stone-500">
+                  <p>
+                    {storeVerses.map(v => (
+                      <span
+                        key={v.number}
+                        className={cn(
+                          'transition-colors',
+                          selectedVerse === v.number && 'bg-stone-200/60 rounded text-stone-700'
+                        )}
+                      >
+                        <sup className="text-xs text-stone-400 mr-0.5 font-sans">{v.number}</sup>
+                        {v.baseText}{' '}
+                      </span>
+                    ))}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Left column — draft action bar + article */}
       <div className="flex-1 min-h-0 flex flex-col">
+        {/* Snapshot viewing banner */}
+        {viewedSnapshot && (
+          <div className="flex-none border-b border-blue-200 bg-blue-50 px-6 py-2.5 flex items-center justify-between">
+            <p className="text-sm text-blue-800">
+              <span className="font-medium">Tilannekuva:</span> {viewedSnapshot.name}
+              <span className="text-blue-600 ml-2">
+                ({new Date(viewedSnapshot.createdAt).toLocaleDateString('fi-FI', { day: 'numeric', month: 'long', year: 'numeric' })})
+              </span>
+            </p>
+            <button
+              onClick={() => viewSnapshotAction(null)}
+              className="text-sm text-blue-700 hover:text-blue-900 font-medium px-3 py-1 rounded hover:bg-blue-100 transition-colors"
+            >
+              Sulje
+            </button>
+          </div>
+        )}
         {/* Draft action bar — only visible while editing */}
-        {draft && (
+        {draft && !viewedSnapshot && (
           <div className="flex-none border-b border-amber-200 bg-amber-50 px-6 py-3 flex flex-wrap items-center gap-3">
             <span className="text-sm text-amber-800 font-medium shrink-0">Ehdotus:</span>
             <input
@@ -185,12 +246,21 @@ function ChapterText({
   onUpdateRangeText: (verseStart: number, text: string) => void
   onRemoveFromScope: (verseNum: number) => void
 }) {
-  const verses = useStore(s => s.verses)
+  const storeVerses = useStore(s => s.verses)
   const proposals = useStore(s => s.proposals)
   const merkinnat = useStore(s => s.merkinnat)
   const currentUserId = useStore(s => s.currentUserId)
   const users = useStore(s => s.users)
   const currentUser = users.find(u => u.id === currentUserId)
+  const viewingSnapshotId = useStore(s => s.viewingSnapshotId)
+  const snapshots = useStore(s => s.snapshots)
+  const viewedSnapshot = viewingSnapshotId ? snapshots.find(s => s.id === viewingSnapshotId) : null
+  const verses = viewedSnapshot
+    ? storeVerses.map(v => {
+        const sv = viewedSnapshot.verseTexts.find(sv => sv.number === v.number)
+        return sv ? { ...v, text: sv.text } : v
+      })
+    : storeVerses
 
   const containerRef = useRef<HTMLDivElement>(null)
   const formRef = useRef<HTMLDivElement>(null)
@@ -385,8 +455,10 @@ function ChapterText({
 
   const primaryDraftVerseStart = draft ? Math.min(...draft.ranges.map(r => r.verseStart)) : null
 
+  const appVersion = useStore(s => s.appVersion)
+
   return (
-    <div ref={containerRef} className="grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-x-6 relative">
+    <div ref={containerRef} className={cn('grid gap-x-6 relative', appVersion === '2.0' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[1fr_200px]')}>
       <div className="font-serif text-lg leading-8 text-stone-800">
         <p>
           {verses.map(verse => {
@@ -423,22 +495,24 @@ function ChapterText({
         </p>
       </div>
 
-      <div className="hidden lg:block relative" aria-hidden="true">
-        {highlightedVerses.map(vNum => (
-          <div
-            key={vNum}
-            ref={el => setNoteRef(vNum, el)}
-            className="absolute left-0 right-0"
-            style={{ top: notePositions.get(vNum) ?? -9999 }}
-          >
-            <MarginNote
-              highlights={notesByAnchor.get(vNum)!}
-              isSelected={selectedVerse === vNum}
-              onClick={() => onVerseClick(vNum)}
-            />
-          </div>
-        ))}
-      </div>
+      {appVersion !== '2.0' && (
+        <div className="hidden lg:block relative" aria-hidden="true">
+          {highlightedVerses.map(vNum => (
+            <div
+              key={vNum}
+              ref={el => setNoteRef(vNum, el)}
+              className="absolute left-0 right-0"
+              style={{ top: notePositions.get(vNum) ?? -9999 }}
+            >
+              <MarginNote
+                highlights={notesByAnchor.get(vNum)!}
+                isSelected={selectedVerse === vNum}
+                onClick={() => onVerseClick(vNum)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
 
       {highlightSelection && (
         <div

@@ -141,6 +141,8 @@ export interface AppState {
   addMerkinta: (verses: { verseNumber: number; text: string }[], note?: string) => void
   updateMerkintaNote: (id: string, note: string) => void
   deleteMerkinta: (id: string) => void
+  editProposalText: (proposalId: string, newText: string) => void
+  deleteProposal: (proposalId: string) => void
   createSnapshot: (name: string) => void
   viewSnapshot: (snapshotId: string | null) => void
   setAppVersion: (version: AppVersion) => void

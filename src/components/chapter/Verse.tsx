@@ -1,6 +1,6 @@
 'use client'
 
-import { forwardRef, useState } from 'react'
+import { forwardRef, useState, useRef } from 'react'
 import { Verse as VerseType, Footnote, ProposalStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { Pencil } from 'lucide-react'
@@ -11,6 +11,8 @@ export interface ProposalAnnotation {
   authorName: string
   status: ProposalStatus
   verseLabel: string
+  onEdit: (newText: string) => void
+  onDelete: () => void
 }
 
 export interface ReviewComment {
@@ -131,14 +133,9 @@ export const Verse = forwardRef<HTMLDivElement, VerseProps>(
           </div>
         )}
 
-        {/* Existing proposal (green, read-only) — styled like a Word highlight */}
+        {/* Existing proposal (green, editable) — styled like a Word highlight */}
         {proposalAnnotation && showProposals && !draftState && (
-          <div className="py-0.5">
-            <span className="bg-green-200/70">
-              <sup className="text-xs text-green-700 font-sans mr-0.5">{verse.number}</sup>
-              {proposalAnnotation.proposedText}
-            </span>
-          </div>
+          <ProposalEditor annotation={proposalAnnotation} verseNumber={verse.number} />
         )}
 
         {/* Seurantaryhmä comments (yellow) — styled like a Word highlight */}
@@ -159,3 +156,64 @@ export const Verse = forwardRef<HTMLDivElement, VerseProps>(
     )
   }
 )
+
+function ProposalEditor({ annotation, verseNumber }: { annotation: ProposalAnnotation; verseNumber: number }) {
+  const [editing, setEditing] = useState(false)
+  const spanRef = useRef<HTMLSpanElement>(null)
+  const editTextRef = useRef(annotation.proposedText)
+
+  function save() {
+    const text = editTextRef.current.trim()
+    if (!text) {
+      annotation.onDelete()
+    } else if (text !== annotation.proposedText) {
+      annotation.onEdit(text)
+    }
+    setEditing(false)
+  }
+
+  function cancel() {
+    editTextRef.current = annotation.proposedText
+    if (spanRef.current) spanRef.current.textContent = annotation.proposedText
+    setEditing(false)
+  }
+
+  return (
+    <div className="py-0.5">
+      <sup className="text-xs text-green-700 font-sans mr-0.5">{verseNumber}</sup>
+      <span
+        ref={spanRef}
+        contentEditable={editing}
+        suppressContentEditableWarning
+        className={cn('bg-green-200/70', editing ? 'focus:outline-none cursor-text' : 'cursor-pointer')}
+        onClick={() => {
+          if (!editing) {
+            setEditing(true)
+            requestAnimationFrame(() => {
+              spanRef.current?.focus()
+            })
+          }
+        }}
+        onInput={e => { editTextRef.current = e.currentTarget.textContent ?? '' }}
+      >
+        {annotation.proposedText}
+      </span>
+      {editing && (
+        <div className="flex items-center gap-2 mt-0.5">
+          <button
+            onClick={save}
+            className="text-xs font-medium px-2 py-0.5 rounded bg-green-600 text-white hover:bg-green-700 transition-colors"
+          >
+            Tallenna
+          </button>
+          <button
+            onClick={cancel}
+            className="text-xs text-stone-400 hover:text-stone-600"
+          >
+            Peruuta
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}

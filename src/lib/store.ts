@@ -343,6 +343,22 @@ export const useStore = create<AppState>()(
         }))
       },
 
+      editProposalText: (proposalId: string, newText: string) => {
+        set(state => ({
+          proposals: state.proposals.map(p =>
+            p.id === proposalId
+              ? { ...p, ranges: p.ranges.map(r => ({ ...r, proposedText: newText })) }
+              : p
+          ),
+        }))
+      },
+
+      deleteProposal: (proposalId: string) => {
+        set(state => ({
+          proposals: state.proposals.filter(p => p.id !== proposalId),
+        }))
+      },
+
       createSnapshot: (name: string) => {
         const now = new Date().toISOString()
         const state = get()

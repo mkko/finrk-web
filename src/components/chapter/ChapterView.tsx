@@ -24,6 +24,8 @@ export function ChapterView() {
   const proposals = useStore(s => s.proposals)
   const users = useStore(s => s.users)
   const addProposal = useStore(s => s.addProposal)
+  const editProposalText = useStore(s => s.editProposalText)
+  const deleteProposal = useStore(s => s.deleteProposal)
   const currentUserId = useStore(s => s.currentUserId)
   const currentUser = users.find(u => u.id === currentUserId)!
   const viewingSnapshotId = useStore(s => s.viewingSnapshotId)
@@ -89,12 +91,15 @@ export function ChapterView() {
         const range = activeProposal.ranges.find(r => verse.number >= r.verseStart && verse.number <= r.verseEnd)
         if (range && verse.number === range.verseStart) {
           const author = users.find(u => u.id === activeProposal.authorId)
+          const proposalId = activeProposal.id
           proposalAnnotation = {
-            id: activeProposal.id,
+            id: proposalId,
             proposedText: range.proposedText,
             authorName: author?.name ?? 'Tuntematon',
             status: activeProposal.status,
             verseLabel: proposalVerseRef(activeProposal),
+            onEdit: (newText: string) => editProposalText(proposalId, newText),
+            onDelete: () => deleteProposal(proposalId),
           }
         }
       }
@@ -108,7 +113,7 @@ export function ChapterView() {
 
       return { proposalAnnotation, reviewComments: reviewComments.length > 0 ? reviewComments : undefined }
     })
-  }, [verses, proposals, users])()
+  }, [verses, proposals, users, editProposalText, deleteProposal])()
 
   const setVerseRef = useCallback((_num: number, _el: HTMLDivElement | null) => {
     // placeholder for future scroll-to-verse

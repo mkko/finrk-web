@@ -89,10 +89,17 @@ export interface Merkinta {
   createdAt: string
 }
 
+export interface Footnote {
+  marker: string
+  text: string
+}
+
 export interface Verse {
   number: number
   text: string
   baseText: string // Original RK12 text
+  sectionHeader?: string
+  footnotes?: Footnote[]
 }
 
 export interface Snapshot {

@@ -395,7 +395,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'raamattu-kaannostyo',
-      version: 11,
+      version: 12,
       migrate: () => initialState(),
     }
   )

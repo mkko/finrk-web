@@ -1,7 +1,7 @@
 'use client'
 
 import { forwardRef, useState, useRef } from 'react'
-import { Verse as VerseType, Footnote, ProposalStatus } from '@/lib/types'
+import { Verse as VerseType, ProposalStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { Pencil } from 'lucide-react'
 
@@ -29,12 +29,25 @@ export interface DraftState {
   onCancel: () => void
 }
 
+export interface FootnoteAnnotation {
+  marker: string
+  text: string
+  baseText: string
+  onEdit: (newText: string) => void
+  onDelete: () => void
+}
+
+export interface FootnoteActions {
+  onAdd: (text: string) => void
+}
+
 interface VerseProps {
   verse: VerseType
   isSelected: boolean
   onSelect: () => void
   sectionHeader?: string
-  footnotes?: Footnote[]
+  footnotes?: FootnoteAnnotation[]
+  footnoteActions?: FootnoteActions
   proposalAnnotation?: ProposalAnnotation
   reviewComments?: ReviewComment[]
   onStartDraft?: () => void
@@ -45,7 +58,7 @@ interface VerseProps {
 
 export const Verse = forwardRef<HTMLDivElement, VerseProps>(
   function Verse({
-    verse, isSelected, onSelect, sectionHeader, footnotes,
+    verse, isSelected, onSelect, sectionHeader, footnotes, footnoteActions,
     proposalAnnotation, reviewComments, onStartDraft, draftState,
     showProposals, showReviewComments,
   }, ref) {
@@ -145,58 +158,65 @@ export const Verse = forwardRef<HTMLDivElement, VerseProps>(
           </div>
         ))}
 
-        {/* Footnotes */}
+        {/* Footnotes — read-only original + green proposed change, like verses */}
+        {footnoteActions && (
+          <AddPen className="ml-8" onAdd={footnoteActions.onAdd} />
+        )}
         {footnotes?.map(fn => (
-          <p key={fn.marker} className="ml-8 text-sm text-stone-400 leading-relaxed">
-            <sup className="text-xs font-sans mr-0.5">{fn.marker}</sup>
-            {fn.text}
-          </p>
+          <div key={fn.marker}>
+            <FootnoteRow footnote={fn} verseNumber={verse.number} />
+            {footnoteActions && (
+              <AddPen className="ml-8" onAdd={footnoteActions.onAdd} />
+            )}
+          </div>
         ))}
       </div>
     )
   }
 )
 
-function ProposalEditor({ annotation, verseNumber }: { annotation: ProposalAnnotation; verseNumber: number }) {
+function InlineEditor({ text, className, onSave, onDelete }: {
+  text: string
+  className?: string
+  onSave: (newText: string) => void
+  onDelete: () => void
+}) {
   const [editing, setEditing] = useState(false)
   const spanRef = useRef<HTMLSpanElement>(null)
-  const editTextRef = useRef(annotation.proposedText)
+  const editTextRef = useRef(text)
 
   function save() {
-    const text = editTextRef.current.trim()
-    if (!text) {
-      annotation.onDelete()
-    } else if (text !== annotation.proposedText) {
-      annotation.onEdit(text)
+    const newText = editTextRef.current.trim()
+    if (!newText) {
+      onDelete()
+    } else if (newText !== text) {
+      onSave(newText)
     }
     setEditing(false)
   }
 
   function cancel() {
-    editTextRef.current = annotation.proposedText
-    if (spanRef.current) spanRef.current.textContent = annotation.proposedText
+    editTextRef.current = text
+    if (spanRef.current) spanRef.current.textContent = text
     setEditing(false)
   }
 
   return (
-    <div className="py-0.5">
-      <sup className="text-xs text-green-700 font-sans mr-0.5">{verseNumber}</sup>
+    <>
       <span
         ref={spanRef}
         contentEditable={editing}
         suppressContentEditableWarning
-        className={cn('bg-green-200/70', editing ? 'focus:outline-none cursor-text' : 'cursor-pointer')}
+        className={cn(className, editing ? 'focus:outline-none cursor-text' : 'cursor-pointer')}
         onClick={() => {
           if (!editing) {
             setEditing(true)
-            requestAnimationFrame(() => {
-              spanRef.current?.focus()
-            })
+            requestAnimationFrame(() => spanRef.current?.focus())
           }
         }}
         onInput={e => { editTextRef.current = e.currentTarget.textContent ?? '' }}
       >
-        {annotation.proposedText}
+        {text}
       </span>
       {editing && (
         <div className="flex items-center gap-2 mt-0.5">
@@ -214,6 +234,178 @@ function ProposalEditor({ annotation, verseNumber }: { annotation: ProposalAnnot
           </button>
         </div>
       )}
+    </>
+  )
+}
+
+function ProposalEditor({ annotation, verseNumber }: { annotation: ProposalAnnotation; verseNumber: number }) {
+  return (
+    <div className="py-0.5">
+      <sup className="text-xs text-green-700 font-sans mr-0.5">{verseNumber}</sup>
+      <InlineEditor
+        text={annotation.proposedText}
+        className="bg-green-200/70"
+        onSave={annotation.onEdit}
+        onDelete={annotation.onDelete}
+      />
+    </div>
+  )
+}
+
+function FootnoteRow({ footnote, verseNumber }: { footnote: FootnoteAnnotation; verseNumber: number }) {
+  const [drafting, setDrafting] = useState(false)
+  const spanRef = useRef<HTMLSpanElement>(null)
+  const textRef = useRef('')
+  const [hovered, setHovered] = useState(false)
+
+  const isChanged = footnote.text !== footnote.baseText
+
+  function startEdit() {
+    textRef.current = footnote.text
+    setDrafting(true)
+    requestAnimationFrame(() => spanRef.current?.focus())
+  }
+
+  function save() {
+    const text = textRef.current.trim()
+    if (!text) {
+      footnote.onDelete()
+    } else if (text !== footnote.text) {
+      footnote.onEdit(text)
+    }
+    setDrafting(false)
+  }
+
+  function cancel() {
+    setDrafting(false)
+  }
+
+  return (
+    <>
+      {/* Original footnote (read-only) + pen */}
+      <div
+        className={cn('ml-8 text-sm text-stone-400 leading-relaxed group/fn', hovered && 'bg-stone-50 rounded-sm')}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <sup className="text-xs font-sans mr-0.5">{footnote.marker}</sup>
+        {footnote.baseText}
+        {!drafting && !isChanged && (
+          <button
+            onClick={e => { e.stopPropagation(); startEdit() }}
+            className={cn(
+              'inline-flex items-center justify-center w-4 h-4 rounded ml-1 align-middle transition-opacity',
+              'text-stone-300 hover:text-stone-500',
+              hovered ? 'opacity-100' : 'opacity-0',
+            )}
+          >
+            <Pencil className="w-2.5 h-2.5" />
+          </button>
+        )}
+      </div>
+
+      {/* Saved change (green, clickable) — uses InlineEditor like proposals */}
+      {isChanged && !drafting && (
+        <div className="ml-8 text-sm leading-relaxed py-0.5">
+          <sup className="text-xs text-green-700 font-sans mr-0.5">{footnote.marker}</sup>
+          <InlineEditor
+            text={footnote.text}
+            className="bg-green-200/70 text-stone-600"
+            onSave={footnote.onEdit}
+            onDelete={footnote.onDelete}
+          />
+        </div>
+      )}
+
+      {/* Active draft (green, editable) */}
+      {drafting && (
+        <div className="ml-8 text-sm leading-relaxed py-0.5">
+          <sup className="text-xs text-green-700 font-sans mr-0.5">{footnote.marker}</sup>
+          <span
+            ref={spanRef}
+            contentEditable
+            suppressContentEditableWarning
+            className="bg-green-200/70 text-stone-600 focus:outline-none"
+            onInput={e => { textRef.current = e.currentTarget.textContent ?? '' }}
+          >
+            {footnote.text}
+          </span>
+          <div className="flex items-center gap-2 mt-0.5">
+            <button
+              onClick={save}
+              className="text-xs font-medium px-2 py-0.5 rounded bg-green-600 text-white hover:bg-green-700 transition-colors"
+            >
+              Tallenna
+            </button>
+            <button
+              onClick={cancel}
+              className="text-xs text-stone-400 hover:text-stone-600"
+            >
+              Peruuta
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+function AddPen({ className, onAdd }: { className?: string; onAdd: (text: string) => void }) {
+  const [adding, setAdding] = useState(false)
+  const spanRef = useRef<HTMLSpanElement>(null)
+  const textRef = useRef('')
+
+  function save() {
+    const text = textRef.current.trim()
+    if (text) onAdd(text)
+    setAdding(false)
+    textRef.current = ''
+  }
+
+  function cancel() {
+    setAdding(false)
+    textRef.current = ''
+  }
+
+  if (!adding) {
+    return (
+      <div className={cn('group/addpen h-3', className)}>
+        <button
+          onClick={() => {
+            setAdding(true)
+            requestAnimationFrame(() => spanRef.current?.focus())
+          }}
+          className="opacity-0 group-hover/addpen:opacity-100 transition-opacity text-stone-300 hover:text-stone-500"
+        >
+          <Pencil className="w-2.5 h-2.5" />
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className={cn('text-sm leading-relaxed', className)}>
+      <span
+        ref={spanRef}
+        contentEditable
+        suppressContentEditableWarning
+        className="bg-green-200/70 text-stone-600 focus:outline-none min-w-[100px] inline-block"
+        onInput={e => { textRef.current = e.currentTarget.textContent ?? '' }}
+      />
+      <div className="flex items-center gap-2 mt-0.5">
+        <button
+          onClick={save}
+          className="text-xs font-medium px-2 py-0.5 rounded bg-green-600 text-white hover:bg-green-700 transition-colors"
+        >
+          Tallenna
+        </button>
+        <button
+          onClick={cancel}
+          className="text-xs text-stone-400 hover:text-stone-600"
+        >
+          Peruuta
+        </button>
+      </div>
     </div>
   )
 }

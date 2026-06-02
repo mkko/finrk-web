@@ -343,6 +343,37 @@ export const useStore = create<AppState>()(
         }))
       },
 
+      addFootnote: (verseNumber: number, text: string) => {
+        set(state => ({
+          verses: state.verses.map(v => {
+            if (v.number !== verseNumber) return v
+            const existing = v.footnotes ?? []
+            const marker = `${verseNumber}`
+            return { ...v, footnotes: [...existing, { marker, text, baseText: text }] }
+          }),
+        }))
+      },
+
+      editFootnote: (verseNumber: number, marker: string, newText: string) => {
+        set(state => ({
+          verses: state.verses.map(v =>
+            v.number === verseNumber
+              ? { ...v, footnotes: v.footnotes?.map(fn => fn.marker === marker ? { ...fn, text: newText } : fn) }
+              : v
+          ),
+        }))
+      },
+
+      deleteFootnote: (verseNumber: number, marker: string) => {
+        set(state => ({
+          verses: state.verses.map(v =>
+            v.number === verseNumber
+              ? { ...v, footnotes: v.footnotes?.filter(fn => fn.marker !== marker) }
+              : v
+          ),
+        }))
+      },
+
       editProposalText: (proposalId: string, newText: string) => {
         set(state => ({
           proposals: state.proposals.map(p =>

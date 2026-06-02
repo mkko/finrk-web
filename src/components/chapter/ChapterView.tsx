@@ -7,7 +7,7 @@ import { Verse } from './Verse'
 import { VerseDetailPanel } from './VerseDetailPanel'
 import { proposalCoversVerse, proposalVerseRef } from '@/lib/types'
 import { REFERENCE_TRANSLATIONS } from '@/lib/seed-data'
-import type { ProposalAnnotation, ReviewComment } from './Verse'
+import type { ProposalAnnotation, ReviewComment, FootnoteAnnotation } from './Verse'
 import { cn } from '@/lib/utils'
 
 type DocView = 'ehdotukset' | 'tarkistus'
@@ -26,6 +26,9 @@ export function ChapterView() {
   const addProposal = useStore(s => s.addProposal)
   const editProposalText = useStore(s => s.editProposalText)
   const deleteProposal = useStore(s => s.deleteProposal)
+  const addFootnote = useStore(s => s.addFootnote)
+  const editFootnote = useStore(s => s.editFootnote)
+  const deleteFootnote = useStore(s => s.deleteFootnote)
   const currentUserId = useStore(s => s.currentUserId)
   const currentUser = users.find(u => u.id === currentUserId)!
   const viewingSnapshotId = useStore(s => s.viewingSnapshotId)
@@ -232,7 +235,12 @@ export function ChapterView() {
                       isSelected={selectedVerse === verse.number}
                       onSelect={() => setSelectedVerse(verse.number)}
                       sectionHeader={verse.sectionHeader}
-                      footnotes={verse.footnotes}
+                      footnotes={verse.footnotes?.map(fn => ({
+                        ...fn,
+                        onEdit: (newText: string) => editFootnote(verse.number, fn.marker, newText),
+                        onDelete: () => deleteFootnote(verse.number, fn.marker),
+                      }))}
+                      footnoteActions={{ onAdd: (text: string) => addFootnote(verse.number, text) }}
                       proposalAnnotation={annotations.proposalAnnotation}
                       reviewComments={annotations.reviewComments}
                       showProposals={docView === 'ehdotukset'}

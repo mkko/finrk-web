@@ -92,6 +92,7 @@ export interface Merkinta {
 export interface Footnote {
   marker: string
   text: string
+  baseText: string
 }
 
 export interface Verse {
@@ -141,6 +142,9 @@ export interface AppState {
   addMerkinta: (verses: { verseNumber: number; text: string }[], note?: string) => void
   updateMerkintaNote: (id: string, note: string) => void
   deleteMerkinta: (id: string) => void
+  addFootnote: (verseNumber: number, text: string) => void
+  editFootnote: (verseNumber: number, marker: string, newText: string) => void
+  deleteFootnote: (verseNumber: number, marker: string) => void
   editProposalText: (proposalId: string, newText: string) => void
   deleteProposal: (proposalId: string) => void
   createSnapshot: (name: string) => void

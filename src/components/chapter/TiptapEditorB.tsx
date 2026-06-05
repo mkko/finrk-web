@@ -13,9 +13,10 @@
 import { useEffect, useCallback, useRef, useMemo } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import { Node as TiptapNode, Mark as TiptapMark, Extension, mergeAttributes } from '@tiptap/core'
+import { Node as TiptapNode, Mark as TiptapMark, Extension, mergeAttributes, InputRule } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
+import { Slice, Fragment } from '@tiptap/pm/model'
 import { Verse, Proposal, User, proposalCoversVerse } from '@/lib/types'
 
 interface Props {
@@ -58,6 +59,29 @@ const VerseMarker = TiptapNode.create({
       class: 'text-xs text-stone-400 font-sans mr-0.5 select-none',
       contenteditable: 'false',
     }, `${node.attrs.number}`]
+  },
+
+  addInputRules() {
+    return [
+      new InputRule({
+        find: /^(\d+)\s$/,
+        handler: ({ state, range, match }) => {
+          const num = parseInt(match[1], 10)
+          const $from = state.doc.resolve(range.from)
+          // Only trigger at the very start of a paragraph with no existing verseMarker
+          if ($from.parentOffset !== 0) return null
+          const parent = $from.parent
+          let hasMarker = false
+          parent.forEach((child) => {
+            if (child.type.name === 'verseMarker') hasMarker = true
+          })
+          if (hasMarker) return null
+
+          const markerNode = this.type.create({ number: num })
+          state.tr.replaceWith(range.from, range.to, markerNode)
+        },
+      }),
+    ]
   },
 })
 
@@ -365,6 +389,23 @@ function verseAtPos(state: any): number | null {
   return verseNum
 }
 
+// ── Parse verse lines from plain text ──────────────────
+
+function parseVerseLines(text: string): { number: number; text: string }[] | null {
+  const lines = text.split('\n').filter(l => l.trim())
+  const parsed: { number: number; text: string }[] = []
+  for (const line of lines) {
+    const match = line.match(/^(\d+)\s+(.+)/)
+    if (match) {
+      parsed.push({ number: parseInt(match[1], 10), text: match[2].trim() })
+    } else if (parsed.length > 0) {
+      // Continuation line — append to previous verse
+      parsed[parsed.length - 1].text += ' ' + line.trim()
+    }
+  }
+  return parsed.length > 0 ? parsed : null
+}
+
 // ── Component ──────────────────────────────────────────
 
 export function TiptapEditorB({
@@ -396,6 +437,24 @@ export function TiptapEditorB({
     editorProps: {
       attributes: {
         class: 'focus:outline-none min-h-[200px] font-serif text-base leading-7 text-stone-800',
+      },
+      handlePaste(view, event) {
+        const text = event.clipboardData?.getData('text/plain')
+        if (!text) return false
+
+        const parsed = parseVerseLines(text)
+        if (!parsed) return false
+
+        const { schema } = view.state
+        const nodes = parsed.map(v =>
+          schema.nodes.paragraph.create(null, [
+            schema.nodes.verseMarker.create({ number: v.number }),
+            schema.text(v.text),
+          ])
+        )
+        const slice = new Slice(Fragment.from(nodes), 0, 0)
+        view.dispatch(view.state.tr.replaceSelection(slice))
+        return true
       },
       handleClick(view) {
         const verse = verseAtPos(view.state)

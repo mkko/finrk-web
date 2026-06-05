@@ -144,17 +144,48 @@ function createOriginalWidget(verseNum: number, text: string, modified: boolean)
   details.contentEditable = 'false'
 
   details.className = modified
-    ? 'bg-amber-50/60 border border-amber-200/60 rounded px-2 py-0.5 text-sm my-0.5 select-none'
-    : 'bg-amber-50/60 border border-amber-200/60 rounded px-2 py-0.5 text-sm my-0.5 select-none opacity-0 pointer-events-none'
+    ? 'select-none mb-0.5'
+    : 'select-none opacity-0 pointer-events-none mb-0.5'
 
   const summary = document.createElement('summary')
-  summary.className = 'text-[10px] text-stone-400 cursor-pointer leading-tight'
-  summary.textContent = `Alkuperainen jae ${verseNum}`
+  summary.className = 'list-none relative cursor-pointer'
+  summary.style.cssText = 'height: 0; line-height: 0; font-size: 0;'
+
+  // Top line — shorter on trailing side to leave room for the rounded corner
+  const line = document.createElement('span')
+  line.className = 'block border-t border-amber-300/60'
+  line.style.cssText = 'margin-right: 0.5rem;'
+
+  // Caret in the margin
+  const caret = document.createElement('span')
+  caret.className = 'absolute transition-all rounded-full'
+  caret.style.cssText = 'left: -2.25rem; top: 0; transform: translateY(-50%); width: 2.25rem; height: 2.25rem; display: flex; align-items: center; justify-content: center;'
+  // SVG triangle — precisely centered
+  caret.innerHTML = '<svg width="16" height="16" viewBox="0 0 8 8" style="display:block;"><path d="M2 1 L6 4 L2 7 Z" fill="rgb(251 191 36)"/></svg>'
+  caret.addEventListener('mouseenter', () => { caret.style.backgroundColor = 'rgb(252 211 77 / 0.4)' })
+  caret.addEventListener('mouseleave', () => { caret.style.backgroundColor = 'transparent' })
+
+  summary.appendChild(line)
+  summary.appendChild(caret)
   details.appendChild(summary)
 
+  // Rotate caret when open
+  details.addEventListener('toggle', () => {
+    caret.style.transform = details.open ? 'translateY(-50%) rotate(90deg)' : 'translateY(-50%)'
+  })
+
   const content = document.createElement('div')
-  content.className = 'text-stone-500 font-serif text-sm leading-snug mt-0.5'
-  content.textContent = text
+  content.className = 'text-stone-500 font-serif text-base leading-7 bg-amber-50/60 border border-amber-300/60 border-t-0 rounded-lg px-2 py-1'
+  content.style.cssText = 'border-top-left-radius: 0; border-top-right-radius: 0;'
+
+  // Verse number as superscript, matching the editor styling
+  const num = document.createElement('span')
+  num.className = 'text-xs text-stone-400 font-sans'
+  num.style.cssText = 'vertical-align: super; font-size: 0.65em; line-height: 0;'
+  num.textContent = `${verseNum}`
+
+  content.appendChild(num)
+  content.appendChild(document.createTextNode(` ${text}`))
   details.appendChild(content)
 
   return details

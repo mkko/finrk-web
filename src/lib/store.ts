@@ -27,7 +27,7 @@ function initialState() {
   return {
     currentUserId: 'kaantaja-a',
     users: SEED_USERS,
-    verses: SEED_VERSES.map(v => ({ ...v })),
+    verses: SEED_VERSES.map(v => ({ ...v, text: v.baseText })),
     proposals: [] as typeof SEED_PROPOSALS,
     merkinnat: [] as Merkinta[],
     activity: [] as typeof SEED_ACTIVITY,
@@ -442,7 +442,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'raamattu-kaannostyo',
-      version: 12,
+      version: 15,
       migrate: () => initialState(),
     }
   )

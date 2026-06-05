@@ -5,6 +5,10 @@ import { useSearchParams } from 'next/navigation'
 import { useStore } from '@/lib/store'
 import { Verse } from './Verse'
 import { VerseDetailPanel } from './VerseDetailPanel'
+import { DocumentEditor } from './DocumentEditor'
+import { TiptapEditorA } from './TiptapEditorA'
+import { TiptapEditorB } from './TiptapEditorB'
+import { ContinuousDoc } from './ContinuousDoc'
 import { proposalCoversVerse, proposalVerseRef } from '@/lib/types'
 import { REFERENCE_TRANSLATIONS } from '@/lib/seed-data'
 import type { ProposalAnnotation, ReviewComment, FootnoteAnnotation } from './Verse'
@@ -220,43 +224,101 @@ export function ChapterView() {
 
               {/* Verses */}
               <div className="font-serif text-base leading-7 text-stone-800">
-                {verses.map((verse, i) => {
-                  const annotations = verseAnnotations[i]
-                  const hasActiveProposal = proposals.some(
-                    p => p.status !== 'hyvaksytty_lopullisesti' && proposalCoversVerse(p, verse.number)
-                  )
-                  const canDraft = currentUser.role === 'kaantaja' && !hasActiveProposal && draftingVerse !== verse.number
+                {(appVersion === '1a' || appVersion === '1ba' || appVersion === '1bb' || appVersion === '1c') ? (
+                  <>
+                    {appVersion === '1a' && (
+                      <DocumentEditor
+                        verses={verses}
+                        proposals={proposals}
+                        users={users}
+                        currentUserId={currentUserId}
+                        showProposals={docView === 'ehdotukset'}
+                        showReviewComments={docView === 'tarkistus'}
+                        selectedVerse={selectedVerse}
+                        onSelectVerse={setSelectedVerse}
+                        onAddProposal={addProposal}
+                      />
+                    )}
+                    {appVersion === '1ba' && (
+                      <TiptapEditorA
+                        verses={verses}
+                        proposals={proposals}
+                        users={users}
+                        currentUserId={currentUserId}
+                        showProposals={docView === 'ehdotukset'}
+                        showReviewComments={docView === 'tarkistus'}
+                        selectedVerse={selectedVerse}
+                        onSelectVerse={setSelectedVerse}
+                        onAddProposal={addProposal}
+                      />
+                    )}
+                    {appVersion === '1bb' && (
+                      <TiptapEditorB
+                        verses={verses}
+                        proposals={proposals}
+                        users={users}
+                        currentUserId={currentUserId}
+                        showProposals={docView === 'ehdotukset'}
+                        showReviewComments={docView === 'tarkistus'}
+                        selectedVerse={selectedVerse}
+                        onSelectVerse={setSelectedVerse}
+                        onAddProposal={addProposal}
+                      />
+                    )}
+                    {appVersion === '1c' && (
+                      <ContinuousDoc
+                        verses={verses}
+                        proposals={proposals}
+                        users={users}
+                        currentUserId={currentUserId}
+                        currentUserRole={currentUser.role}
+                        showProposals={docView === 'ehdotukset'}
+                        showReviewComments={docView === 'tarkistus'}
+                        selectedVerse={selectedVerse}
+                        onSelectVerse={setSelectedVerse}
+                        onAddProposal={addProposal}
+                      />
+                    )}
+                  </>
+                ) : (
+                  verses.map((verse, i) => {
+                    const annotations = verseAnnotations[i]
+                    const hasActiveProposal = proposals.some(
+                      p => p.status !== 'hyvaksytty_lopullisesti' && proposalCoversVerse(p, verse.number)
+                    )
+                    const canDraft = currentUser.role === 'kaantaja' && !hasActiveProposal && draftingVerse !== verse.number
 
-                  return (
-                    <Verse
-                      key={verse.number}
-                      ref={el => setVerseRef(verse.number, el)}
-                      verse={verse}
-                      isSelected={selectedVerse === verse.number}
-                      onSelect={() => setSelectedVerse(verse.number)}
-                      sectionHeader={verse.sectionHeader}
-                      footnotes={verse.footnotes?.map(fn => ({
-                        ...fn,
-                        onEdit: (newText: string) => editFootnote(verse.number, fn.marker, newText),
-                        onDelete: () => deleteFootnote(verse.number, fn.marker),
-                      }))}
-                      footnoteActions={{ onAdd: (text: string) => addFootnote(verse.number, text) }}
-                      proposalAnnotation={annotations.proposalAnnotation}
-                      reviewComments={annotations.reviewComments}
-                      showProposals={docView === 'ehdotukset'}
-                      showReviewComments={docView === 'tarkistus'}
-                      onStartDraft={canDraft ? () => startDraft(verse.number) : undefined}
-                      draftState={draftingVerse === verse.number ? {
-                        text: draftText,
-                        rationale: draftRationale,
-                        onTextChange: setDraftText,
-                        onRationaleChange: setDraftRationale,
-                        onSubmit: submitDraft,
-                        onCancel: cancelDraft,
-                      } : undefined}
-                    />
-                  )
-                })}
+                    return (
+                      <Verse
+                        key={verse.number}
+                        ref={el => setVerseRef(verse.number, el)}
+                        verse={verse}
+                        isSelected={selectedVerse === verse.number}
+                        onSelect={() => setSelectedVerse(verse.number)}
+                        sectionHeader={verse.sectionHeader}
+                        footnotes={verse.footnotes?.map(fn => ({
+                          ...fn,
+                          onEdit: (newText: string) => editFootnote(verse.number, fn.marker, newText),
+                          onDelete: () => deleteFootnote(verse.number, fn.marker),
+                        }))}
+                        footnoteActions={{ onAdd: (text: string) => addFootnote(verse.number, text) }}
+                        proposalAnnotation={annotations.proposalAnnotation}
+                        reviewComments={annotations.reviewComments}
+                        showProposals={docView === 'ehdotukset'}
+                        showReviewComments={docView === 'tarkistus'}
+                        onStartDraft={canDraft ? () => startDraft(verse.number) : undefined}
+                        draftState={draftingVerse === verse.number ? {
+                          text: draftText,
+                          rationale: draftRationale,
+                          onTextChange: setDraftText,
+                          onRationaleChange: setDraftRationale,
+                          onSubmit: submitDraft,
+                          onCancel: cancelDraft,
+                        } : undefined}
+                      />
+                    )
+                  })
+                )}
               </div>
             </div>
           </div>

@@ -121,7 +121,7 @@ export interface ActivityEntry {
   detail: string
 }
 
-export type AppVersion = '1.0' | '2.0'
+export type AppVersion = '1.0' | '1a' | '1ba' | '1bb' | '1c' | '2.0'
 
 export interface AppState {
   currentUserId: string

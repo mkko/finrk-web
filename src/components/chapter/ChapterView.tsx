@@ -263,6 +263,7 @@ export function ChapterView() {
                         selectedVerse={selectedVerse}
                         onSelectVerse={setSelectedVerse}
                         onAddProposal={addProposal}
+                        onEditFootnote={editFootnote}
                       />
                     )}
                     {appVersion === '1c' && (

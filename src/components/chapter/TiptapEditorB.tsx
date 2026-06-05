@@ -3,7 +3,8 @@
 /**
  * 1bb — Freeform editor with original-text reference for every verse.
  *
- * Each verse is a separate paragraph containing a verseMarker atom + text.
+ * Each verse is a separate paragraph containing a verseMarker atom + text,
+ * followed by inline footnotes (footnoteMarker + styled text).
  * A non-editable collapsible <details> widget sits before every verse,
  * showing the original (baseText).  No proposal blocks — this is a clean
  * editing surface with reference text always available.
@@ -12,7 +13,7 @@
 import { useEffect, useCallback, useRef, useMemo } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import { Node as TiptapNode, Extension, mergeAttributes } from '@tiptap/core'
+import { Node as TiptapNode, Mark as TiptapMark, Extension, mergeAttributes } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import { Verse, Proposal, User, proposalCoversVerse } from '@/lib/types'
@@ -32,6 +33,7 @@ interface Props {
     authorId: string
     status: 'luonnos'
   }) => void
+  onEditFootnote: (verseNumber: number, marker: string, newText: string) => void
 }
 
 // ── Nodes ──────────────────────────────────────────────
@@ -59,6 +61,75 @@ const VerseMarker = TiptapNode.create({
   },
 })
 
+const FootnoteMarker = TiptapNode.create({
+  name: 'footnoteMarker',
+  group: 'inline',
+  inline: true,
+  atom: true,
+  selectable: false,
+  draggable: false,
+
+  addAttributes() {
+    return {
+      marker: { default: '' },
+      verse: { default: 0 },
+    }
+  },
+
+  parseHTML() {
+    return [{ tag: 'span[data-fnm]' }]
+  },
+
+  renderHTML({ node }) {
+    return ['span', {
+      'data-fnm': node.attrs.marker,
+      'data-verse': node.attrs.verse,
+      class: 'footnote-marker-wrap',
+      contenteditable: 'false',
+    },
+      ['br'],
+      ['sup', { class: 'text-[10px] text-stone-400 font-sans ml-6 select-none' }, node.attrs.marker],
+      ['span', { class: 'text-[10px] text-stone-400 select-none' }, ' '],
+    ]
+  },
+
+  addKeyboardShortcuts() {
+    return {
+      Backspace: () => {
+        const { $from } = this.editor.state.selection
+        const nodeBefore = $from.nodeBefore
+        if (nodeBefore?.type.name === 'footnoteMarker') {
+          return true // block deletion
+        }
+        return false
+      },
+      Delete: () => {
+        const { $from } = this.editor.state.selection
+        const nodeAfter = $from.nodeAfter
+        if (nodeAfter?.type.name === 'footnoteMarker') {
+          return true // block deletion
+        }
+        return false
+      },
+    }
+  },
+})
+
+const FootnoteMark = TiptapMark.create({
+  name: 'footnote',
+
+  parseHTML() {
+    return [{ tag: 'span[data-fn-text]' }]
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return ['span', mergeAttributes(HTMLAttributes, {
+      'data-fn-text': '',
+      class: 'text-sm text-stone-400 leading-relaxed',
+    }), 0]
+  },
+})
+
 const SectionHeader = TiptapNode.create({
   name: 'sectionHeader',
   group: 'block',
@@ -70,22 +141,6 @@ const SectionHeader = TiptapNode.create({
     return ['h3', {
       'data-section': '',
       class: 'font-serif text-base font-semibold text-stone-700 mt-6 mb-2',
-      contenteditable: 'false',
-    }, 0]
-  },
-})
-
-const FootnoteBlock = TiptapNode.create({
-  name: 'footnoteBlock',
-  group: 'block',
-  content: 'text*',
-  atom: true,
-  selectable: false,
-  parseHTML() { return [{ tag: 'div[data-fn]' }] },
-  renderHTML() {
-    return ['div', {
-      'data-fn': '',
-      class: 'ml-8 text-sm text-stone-400 leading-relaxed',
       contenteditable: 'false',
     }, 0]
   },
@@ -120,9 +175,6 @@ function makeOriginalTextExtension(versesRef: React.RefObject<Verse[]>) {
   return Extension.create({
     name: 'originalTextB',
     addProseMirrorPlugins() {
-      let cachedDecos = DecorationSet.empty
-      let cachedDocId: any = null
-
       return [
         new Plugin({
           key: originalTextKey,
@@ -146,29 +198,35 @@ function makeOriginalTextExtension(versesRef: React.RefObject<Verse[]>) {
   })
 }
 
+function extractVerseTextFromParagraph(node: any): { verseNum: number | null; verseText: string } {
+  let verseNum: number | null = null
+  let verseText = ''
+  let hitFootnote = false
+
+  node.forEach((child: any) => {
+    if (child.type.name === 'verseMarker' && verseNum === null) {
+      verseNum = child.attrs.number
+    } else if (child.type.name === 'footnoteMarker') {
+      hitFootnote = true
+    } else if (child.isText && !hitFootnote) {
+      verseText += child.text
+    }
+  })
+
+  return { verseNum, verseText }
+}
+
 function buildDecos(doc: any, verses: Verse[]): DecorationSet {
   const widgets: Decoration[] = []
 
   doc.descendants((node: any, pos: number) => {
-    // Only look at top-level block nodes
     if (node.type.name === 'paragraph') {
-      // Find the verseMarker inside this paragraph
-      let verseNum: number | null = null
-      node.forEach((child: any) => {
-        if (child.type.name === 'verseMarker' && verseNum === null) {
-          verseNum = child.attrs.number
-        }
-      })
+      const { verseNum, verseText } = extractVerseTextFromParagraph(node)
 
       if (verseNum !== null) {
         const verse = verses.find(v => v.number === verseNum)
         if (verse) {
-          // Extract current text from paragraph (excluding verseMarker)
-          let currentText = ''
-          node.forEach((child: any) => {
-            if (child.isText) currentText += child.text
-          })
-          const modified = currentText.trim() !== verse.baseText
+          const modified = verseText.trim() !== verse.baseText
 
           widgets.push(
             Decoration.widget(pos, () => createOriginalWidget(verseNum!, verse.baseText, modified), {
@@ -178,7 +236,7 @@ function buildDecos(doc: any, verses: Verse[]): DecorationSet {
           )
         }
       }
-      return false // don't descend into paragraph children
+      return false
     }
   })
 
@@ -198,24 +256,29 @@ function buildContent(verses: Verse[]) {
       })
     }
 
-    // One paragraph per verse: marker + text
-    content.push({
-      type: 'paragraph',
-      content: [
-        { type: 'verseMarker', attrs: { number: verse.number } },
-        { type: 'text', text: verse.text || ' ' },
-      ],
-    })
+    const paragraphContent: any[] = [
+      { type: 'verseMarker', attrs: { number: verse.number } },
+      { type: 'text', text: verse.text || ' ' },
+    ]
 
-    // Footnotes after the verse
     if (verse.footnotes) {
       for (const fn of verse.footnotes) {
-        content.push({
-          type: 'footnoteBlock',
-          content: [{ type: 'text', text: `${fn.marker} ${fn.text}` }],
+        paragraphContent.push({
+          type: 'footnoteMarker',
+          attrs: { marker: fn.marker, verse: verse.number },
+        })
+        paragraphContent.push({
+          type: 'text',
+          text: fn.text,
+          marks: [{ type: 'footnote' }],
         })
       }
     }
+
+    content.push({
+      type: 'paragraph',
+      content: paragraphContent,
+    })
   }
 
   if (content.length === 0) {
@@ -225,27 +288,65 @@ function buildContent(verses: Verse[]) {
   return { type: 'doc', content }
 }
 
-// ── Extract verse texts ────────────────────────────────
+// ── Extract verse texts and footnotes ──────────────────
 
-function extractVerseTexts(doc: any): Map<number, string> {
-  const result = new Map<number, string>()
+interface FootnoteData {
+  verse: number
+  marker: string
+  text: string
+}
+
+interface ExtractedData {
+  verses: Map<number, string>
+  footnotes: FootnoteData[]
+}
+
+function extractData(doc: any): ExtractedData {
+  const verses = new Map<number, string>()
+  const footnotes: FootnoteData[] = []
+
   doc.descendants((node: any) => {
     if (node.type.name !== 'paragraph') return
 
     let verseNum: number | null = null
-    let text = ''
+    let verseText = ''
+    let currentFootnoteMarker: string | null = null
+    let currentFootnoteVerse: number | null = null
+    let currentFootnoteText = ''
+
+    const flushFootnote = () => {
+      if (currentFootnoteMarker !== null && currentFootnoteVerse !== null) {
+        footnotes.push({
+          verse: currentFootnoteVerse,
+          marker: currentFootnoteMarker,
+          text: currentFootnoteText.trim(),
+        })
+      }
+    }
 
     node.forEach((child: any) => {
       if (child.type.name === 'verseMarker') {
-        verseNum = child.attrs.number
+        if (verseNum === null) verseNum = child.attrs.number
+      } else if (child.type.name === 'footnoteMarker') {
+        flushFootnote()
+        currentFootnoteMarker = child.attrs.marker
+        currentFootnoteVerse = child.attrs.verse
+        currentFootnoteText = ''
       } else if (child.isText) {
-        text += child.text
+        if (currentFootnoteMarker !== null) {
+          currentFootnoteText += child.text
+        } else {
+          verseText += child.text
+        }
       }
     })
 
-    if (verseNum !== null) result.set(verseNum, text.trim())
+    flushFootnote()
+
+    if (verseNum !== null) verses.set(verseNum, verseText.trim())
   })
-  return result
+
+  return { verses, footnotes }
 }
 
 // ── Helpers ────────────────────────────────────────────
@@ -270,6 +371,7 @@ export function TiptapEditorB({
   verses, proposals, users, currentUserId,
   showProposals, showReviewComments,
   selectedVerse, onSelectVerse, onAddProposal,
+  onEditFootnote,
 }: Props) {
   const versesRef = useRef(verses)
   versesRef.current = verses
@@ -285,8 +387,9 @@ export function TiptapEditorB({
         horizontalRule: false,
       }),
       VerseMarker,
+      FootnoteMarker,
+      FootnoteMark,
       SectionHeader,
-      FootnoteBlock,
       OriginalText,
     ],
     content: buildContent(verses),
@@ -309,7 +412,9 @@ export function TiptapEditorB({
 
   const handleBlur = useCallback(() => {
     if (!editor) return
-    const newTexts = extractVerseTexts(editor.state.doc)
+    const { verses: newTexts, footnotes: newFootnotes } = extractData(editor.state.doc)
+
+    // Check verse text changes → create proposals
     for (const verse of verses) {
       const newText = newTexts.get(verse.number)
       if (newText !== undefined && newText !== verse.text) {
@@ -321,7 +426,17 @@ export function TiptapEditorB({
         })
       }
     }
-  }, [editor, verses, currentUserId, onAddProposal])
+
+    // Check footnote text changes → direct save
+    for (const fn of newFootnotes) {
+      const verse = verses.find(v => v.number === fn.verse)
+      if (!verse?.footnotes) continue
+      const origFn = verse.footnotes.find(f => f.marker === fn.marker)
+      if (origFn && fn.text !== origFn.text) {
+        onEditFootnote(fn.verse, fn.marker, fn.text)
+      }
+    }
+  }, [editor, verses, currentUserId, onAddProposal, onEditFootnote])
 
   return (
     <div onBlur={handleBlur}>

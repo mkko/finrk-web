@@ -93,10 +93,13 @@ const FootnoteBlock = TiptapNode.create({
 
 // ── Original-text decorations (all verses, always) ─────
 
-function createOriginalWidget(verseNum: number, text: string): HTMLElement {
+function createOriginalWidget(verseNum: number, text: string, modified: boolean): HTMLElement {
   const details = document.createElement('details')
   details.contentEditable = 'false'
-  details.className = 'bg-amber-50/60 border border-amber-200/60 rounded px-2 py-0.5 text-sm my-0.5 select-none'
+
+  details.className = modified
+    ? 'bg-amber-50/60 border border-amber-200/60 rounded px-2 py-0.5 text-sm my-0.5 select-none'
+    : 'bg-amber-50/60 border border-amber-200/60 rounded px-2 py-0.5 text-sm my-0.5 select-none opacity-0 pointer-events-none'
 
   const summary = document.createElement('summary')
   summary.className = 'text-[10px] text-stone-400 cursor-pointer leading-tight'
@@ -160,10 +163,17 @@ function buildDecos(doc: any, verses: Verse[]): DecorationSet {
       if (verseNum !== null) {
         const verse = verses.find(v => v.number === verseNum)
         if (verse) {
+          // Extract current text from paragraph (excluding verseMarker)
+          let currentText = ''
+          node.forEach((child: any) => {
+            if (child.isText) currentText += child.text
+          })
+          const modified = currentText.trim() !== verse.baseText
+
           widgets.push(
-            Decoration.widget(pos, () => createOriginalWidget(verseNum!, verse.baseText), {
+            Decoration.widget(pos, () => createOriginalWidget(verseNum!, verse.baseText, modified), {
               side: -1,
-              key: `orig-${verseNum}`,
+              key: `orig-${verseNum}-${modified ? 'm' : 'u'}`,
             }),
           )
         }

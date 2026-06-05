@@ -3,8 +3,8 @@
 /**
  * 1bb — Freeform editor with original-text reference for every verse.
  *
- * Each verse is a separate paragraph containing a verseMarker atom + text,
- * followed by inline footnotes (footnoteMarker + styled text).
+ * Verse numbers are plain editable text detected by regex (^(\d+)\s+).
+ * Inline footnotes use footnoteMarker atoms + styled text.
  * A non-editable collapsible <details> widget sits before every verse,
  * showing the original (baseText).  No proposal blocks — this is a clean
  * editing surface with reference text always available.
@@ -13,7 +13,7 @@
 import { useEffect, useCallback, useRef, useMemo } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import { Node as TiptapNode, Mark as TiptapMark, Extension, mergeAttributes, InputRule } from '@tiptap/core'
+import { Node as TiptapNode, Mark as TiptapMark, Extension, mergeAttributes } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import { Slice, Fragment } from '@tiptap/pm/model'
@@ -37,53 +37,20 @@ interface Props {
   onEditFootnote: (verseNumber: number, marker: string, newText: string) => void
 }
 
+// ── Verse detection ───────────────────────────────────
+
+const VERSE_RE = /^(\d+)\s+([\s\S]*)/
+
+function extractVerseFromText(text: string): { verseNum: number | null; verseText: string } {
+  const match = text.match(VERSE_RE)
+  if (match) {
+    const num = parseInt(match[1], 10)
+    if (num > 0 && num <= 200) return { verseNum: num, verseText: match[2] }
+  }
+  return { verseNum: null, verseText: text }
+}
+
 // ── Nodes ──────────────────────────────────────────────
-
-const VerseMarker = TiptapNode.create({
-  name: 'verseMarker',
-  group: 'inline',
-  inline: true,
-  atom: true,
-
-  addAttributes() {
-    return { number: { default: 0 } }
-  },
-
-  parseHTML() {
-    return [{ tag: 'sup[data-vm]' }]
-  },
-
-  renderHTML({ node }) {
-    return ['sup', {
-      'data-vm': node.attrs.number,
-      class: 'text-xs text-stone-400 font-sans mr-0.5 select-none',
-      contenteditable: 'false',
-    }, `${node.attrs.number}`]
-  },
-
-  addInputRules() {
-    return [
-      new InputRule({
-        find: /^(\d+)\s$/,
-        handler: ({ state, range, match }) => {
-          const num = parseInt(match[1], 10)
-          const $from = state.doc.resolve(range.from)
-          // Only trigger at the very start of a paragraph with no existing verseMarker
-          if ($from.parentOffset !== 0) return null
-          const parent = $from.parent
-          let hasMarker = false
-          parent.forEach((child) => {
-            if (child.type.name === 'verseMarker') hasMarker = true
-          })
-          if (hasMarker) return null
-
-          const markerNode = this.type.create({ number: num })
-          state.tr.replaceWith(range.from, range.to, markerNode)
-        },
-      }),
-    ]
-  },
-})
 
 const FootnoteMarker = TiptapNode.create({
   name: 'footnoteMarker',
@@ -170,7 +137,7 @@ const SectionHeader = TiptapNode.create({
   },
 })
 
-// ── Original-text decorations (all verses, always) ─────
+// ── Decorations (original text + verse number styling) ─
 
 function createOriginalWidget(verseNum: number, text: string, modified: boolean): HTMLElement {
   const details = document.createElement('details')
@@ -193,15 +160,15 @@ function createOriginalWidget(verseNum: number, text: string, modified: boolean)
   return details
 }
 
-const originalTextKey = new PluginKey('originalTextB')
+const decoKey = new PluginKey('decoB')
 
-function makeOriginalTextExtension(versesRef: React.RefObject<Verse[]>) {
+function makeDecoExtension(versesRef: React.RefObject<Verse[]>) {
   return Extension.create({
-    name: 'originalTextB',
+    name: 'decoB',
     addProseMirrorPlugins() {
       return [
         new Plugin({
-          key: originalTextKey,
+          key: decoKey,
           state: {
             init(_config, state) {
               return buildDecos(state.doc, versesRef.current ?? [])
@@ -223,36 +190,77 @@ function makeOriginalTextExtension(versesRef: React.RefObject<Verse[]>) {
 }
 
 function extractVerseTextFromParagraph(node: any): { verseNum: number | null; verseText: string } {
-  let verseNum: number | null = null
-  let verseText = ''
+  let plainText = ''
   let hitFootnote = false
 
   node.forEach((child: any) => {
-    if (child.type.name === 'verseMarker' && verseNum === null) {
-      verseNum = child.attrs.number
-    } else if (child.type.name === 'footnoteMarker') {
+    if (child.type.name === 'footnoteMarker') {
       hitFootnote = true
     } else if (child.isText && !hitFootnote) {
-      verseText += child.text
+      plainText += child.text
     }
   })
 
-  return { verseNum, verseText }
+  return extractVerseFromText(plainText)
 }
 
 function buildDecos(doc: any, verses: Verse[]): DecorationSet {
-  const widgets: Decoration[] = []
+  const decorations: Decoration[] = []
+  const verseNumbers = new Set(verses.map(v => v.number))
+  const seenVerses = new Set<number>()
 
   doc.descendants((node: any, pos: number) => {
     if (node.type.name === 'paragraph') {
       const { verseNum, verseText } = extractVerseTextFromParagraph(node)
 
       if (verseNum !== null) {
+        // Find the text range for the verse number prefix
+        const verseNumStr = `${verseNum}`
+        let textOffset = 0
+        let foundRange = false
+
+        node.forEach((child: any, offset: number) => {
+          if (foundRange) return
+          if (child.isText) {
+            const childText = child.text as string
+            const match = childText.match(/^(\d+)\s/)
+            if (match && textOffset === 0) {
+              const from = pos + 1 + offset
+              const to = from + match[0].length
+
+              // Determine style
+              const isDuplicate = seenVerses.has(verseNum)
+              const isUnknown = !verseNumbers.has(verseNum)
+
+              let className = 'text-xs font-sans'
+              if (isDuplicate) {
+                className += ' text-orange-500'
+              } else if (isUnknown) {
+                className += ' text-red-400'
+              } else {
+                className += ' text-stone-400'
+              }
+              // Superscript via inline style (vertical-align doesn't have a Tailwind class)
+              decorations.push(
+                Decoration.inline(from, to, {
+                  class: className,
+                  style: 'vertical-align: super; font-size: 0.65em; line-height: 0;',
+                })
+              )
+              foundRange = true
+            }
+            textOffset += childText.length
+          }
+        })
+
+        seenVerses.add(verseNum)
+
+        // Original text widget
         const verse = verses.find(v => v.number === verseNum)
         if (verse) {
           const modified = verseText.trim() !== verse.baseText
 
-          widgets.push(
+          decorations.push(
             Decoration.widget(pos, () => createOriginalWidget(verseNum!, verse.baseText, modified), {
               side: -1,
               key: `orig-${verseNum}-${modified ? 'm' : 'u'}`,
@@ -264,7 +272,7 @@ function buildDecos(doc: any, verses: Verse[]): DecorationSet {
     }
   })
 
-  return DecorationSet.create(doc, widgets)
+  return DecorationSet.create(doc, decorations)
 }
 
 // ── Content builder ────────────────────────────────────
@@ -280,9 +288,9 @@ function buildContent(verses: Verse[]) {
       })
     }
 
+    const verseText = verse.text || ' '
     const paragraphContent: any[] = [
-      { type: 'verseMarker', attrs: { number: verse.number } },
-      { type: 'text', text: verse.text || ' ' },
+      { type: 'text', text: `${verse.number} ${verseText}` },
     ]
 
     if (verse.footnotes) {
@@ -332,42 +340,55 @@ function extractData(doc: any): ExtractedData {
   doc.descendants((node: any) => {
     if (node.type.name !== 'paragraph') return
 
-    let verseNum: number | null = null
-    let verseText = ''
+    let plainText = ''
     let currentFootnoteMarker: string | null = null
-    let currentFootnoteVerse: number | null = null
     let currentFootnoteText = ''
+    let hitFootnote = false
 
     const flushFootnote = () => {
-      if (currentFootnoteMarker !== null && currentFootnoteVerse !== null) {
+      if (currentFootnoteMarker !== null && detectedVerse !== null) {
         footnotes.push({
-          verse: currentFootnoteVerse,
+          verse: detectedVerse,
           marker: currentFootnoteMarker,
           text: currentFootnoteText.trim(),
         })
       }
     }
 
+    let detectedVerse: number | null = null
+
     node.forEach((child: any) => {
-      if (child.type.name === 'verseMarker') {
-        if (verseNum === null) verseNum = child.attrs.number
-      } else if (child.type.name === 'footnoteMarker') {
+      if (child.type.name === 'footnoteMarker') {
+        // First time hitting footnote: extract verse from accumulated text
+        if (!hitFootnote) {
+          const { verseNum } = extractVerseFromText(plainText)
+          detectedVerse = verseNum
+          hitFootnote = true
+        }
         flushFootnote()
         currentFootnoteMarker = child.attrs.marker
-        currentFootnoteVerse = child.attrs.verse
         currentFootnoteText = ''
       } else if (child.isText) {
         if (currentFootnoteMarker !== null) {
           currentFootnoteText += child.text
         } else {
-          verseText += child.text
+          plainText += child.text
         }
       }
     })
 
+    // If no footnotes were encountered, detect verse now
+    if (!hitFootnote) {
+      const { verseNum } = extractVerseFromText(plainText)
+      detectedVerse = verseNum
+    }
+
     flushFootnote()
 
-    if (verseNum !== null) verses.set(verseNum, verseText.trim())
+    if (detectedVerse !== null) {
+      const { verseText } = extractVerseFromText(plainText)
+      verses.set(detectedVerse, verseText.trim())
+    }
   })
 
   return { verses, footnotes }
@@ -380,13 +401,14 @@ function verseAtPos(state: any): number | null {
   const parent = $from.parent
   if (parent.type.name !== 'paragraph') return null
 
-  let verseNum: number | null = null
+  let plainText = ''
+  let hitFootnote = false
   parent.forEach((child: any) => {
-    if (child.type.name === 'verseMarker' && verseNum === null) {
-      verseNum = child.attrs.number
-    }
+    if (child.type.name === 'footnoteMarker') hitFootnote = true
+    else if (child.isText && !hitFootnote) plainText += child.text
   })
-  return verseNum
+
+  return extractVerseFromText(plainText).verseNum
 }
 
 // ── Parse verse lines from plain text ──────────────────
@@ -418,7 +440,7 @@ export function TiptapEditorB({
   versesRef.current = verses
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const OriginalText = useMemo(() => makeOriginalTextExtension(versesRef), [])
+  const DecoExt = useMemo(() => makeDecoExtension(versesRef), [])
 
   const editor = useEditor({
     extensions: [
@@ -427,11 +449,10 @@ export function TiptapEditorB({
         bulletList: false, orderedList: false, listItem: false,
         horizontalRule: false,
       }),
-      VerseMarker,
       FootnoteMarker,
       FootnoteMark,
       SectionHeader,
-      OriginalText,
+      DecoExt,
     ],
     content: buildContent(verses),
     editorProps: {
@@ -448,8 +469,7 @@ export function TiptapEditorB({
         const { schema } = view.state
         const nodes = parsed.map(v =>
           schema.nodes.paragraph.create(null, [
-            schema.nodes.verseMarker.create({ number: v.number }),
-            schema.text(v.text),
+            schema.text(`${v.number} ${v.text}`),
           ])
         )
         const slice = new Slice(Fragment.from(nodes), 0, 0)

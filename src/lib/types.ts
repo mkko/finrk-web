@@ -121,8 +121,6 @@ export interface ActivityEntry {
   detail: string
 }
 
-export type AppVersion = '1.0' | '1a' | '1ba' | '1bb' | '1c' | '2.0'
-
 export interface AppState {
   currentUserId: string
   users: User[]
@@ -132,7 +130,6 @@ export interface AppState {
   activity: ActivityEntry[]
   snapshots: Snapshot[]
   viewingSnapshotId: string | null
-  appVersion: AppVersion
   setCurrentUser: (userId: string) => void
   addProposal: (proposal: Omit<Proposal, 'id' | 'createdAt' | 'statusChangedAt' | 'comments' | 'votes'>) => void
   updateProposalStatus: (proposalId: string, newStatus: ProposalStatus, comment?: string) => void
@@ -149,7 +146,6 @@ export interface AppState {
   deleteProposal: (proposalId: string) => void
   createSnapshot: (name: string) => void
   viewSnapshot: (snapshotId: string | null) => void
-  setAppVersion: (version: AppVersion) => void
   resetState: () => void
   loadDemoData: () => void
 }

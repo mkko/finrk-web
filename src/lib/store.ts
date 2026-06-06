@@ -2,7 +2,7 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { AppState, AppVersion, Proposal, ProposalStatus, Vote, Merkinta, Snapshot, proposalVerseRef } from './types'
+import { AppState, Proposal, ProposalStatus, Vote, Merkinta, Snapshot, proposalVerseRef } from './types'
 import { SEED_USERS, SEED_VERSES, SEED_PROPOSALS, SEED_ACTIVITY, SEED_MERKINNAT, SEED_SNAPSHOTS } from './seed-data'
 
 function getInitialVerses() {
@@ -33,7 +33,6 @@ function initialState() {
     activity: [] as typeof SEED_ACTIVITY,
     snapshots: [] as Snapshot[],
     viewingSnapshotId: null as string | null,
-    appVersion: '1.0' as AppVersion,
   }
 }
 
@@ -47,7 +46,6 @@ function demoState() {
     activity: [...SEED_ACTIVITY],
     snapshots: [...SEED_SNAPSHOTS],
     viewingSnapshotId: null as string | null,
-    appVersion: '1.0' as AppVersion,
   }
 }
 
@@ -426,10 +424,6 @@ export const useStore = create<AppState>()(
 
       viewSnapshot: (snapshotId: string | null) => {
         set({ viewingSnapshotId: snapshotId })
-      },
-
-      setAppVersion: (version: AppVersion) => {
-        set({ appVersion: version })
       },
 
       resetState: () => {

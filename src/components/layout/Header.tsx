@@ -12,39 +12,6 @@ const NAV_ITEMS = [
   { href: '/edistyminen', label: 'Edistyminen' },
 ]
 
-const VERSION_TABS: { id: import('@/lib/types').AppVersion; label: string }[] = [
-  { id: '1.0', label: '1.0' },
-  { id: '1a', label: '1a' },
-  { id: '1ba', label: '1ba' },
-  { id: '1bb', label: '1bb' },
-  { id: '1c', label: '1c' },
-  { id: '2.0', label: '2.0' },
-]
-
-function VersionTabs() {
-  const { appVersion, setAppVersion } = useStore()
-  return (
-    <div className="border-b border-stone-100 bg-stone-50">
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 flex items-center gap-0.5 h-9">
-        {VERSION_TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setAppVersion(tab.id)}
-            className={cn(
-              'text-xs px-3 py-1 -mb-px relative z-10 rounded-t transition-colors',
-              appVersion === tab.id
-                ? 'font-semibold text-stone-800 bg-white border border-stone-200 border-b-white'
-                : 'text-stone-400 hover:text-stone-600'
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 export function Header() {
   const pathname = usePathname()
   const { currentUserId, users } = useStore()
@@ -61,8 +28,6 @@ export function Header() {
 
   return (
     <header className="border-b border-stone-200 bg-white">
-      {/* Version tabs */}
-      <VersionTabs />
       <div className="mx-auto max-w-5xl px-4 sm:px-6">
         <div className="flex h-14 items-center justify-between">
           <div className="flex items-center gap-6">

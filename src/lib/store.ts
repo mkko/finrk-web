@@ -352,6 +352,16 @@ export const useStore = create<AppState>()(
         }))
       },
 
+      editSectionHeader: (verseNumber: number, newText: string) => {
+        set(state => ({
+          verses: state.verses.map(v =>
+            v.number === verseNumber
+              ? { ...v, sectionHeader: newText || undefined }
+              : v
+          ),
+        }))
+      },
+
       editFootnote: (verseNumber: number, marker: string, newText: string) => {
         set(state => ({
           verses: state.verses.map(v =>

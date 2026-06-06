@@ -19,6 +19,7 @@ export function ChapterView() {
   const users = useStore(s => s.users)
   const addProposal = useStore(s => s.addProposal)
   const editFootnote = useStore(s => s.editFootnote)
+  const editSectionHeader = useStore(s => s.editSectionHeader)
   const currentUserId = useStore(s => s.currentUserId)
   const viewingSnapshotId = useStore(s => s.viewingSnapshotId)
   const snapshots = useStore(s => s.snapshots)
@@ -110,6 +111,7 @@ export function ChapterView() {
                   onSelectVerse={setSelectedVerse}
                   onAddProposal={addProposal}
                   onEditFootnote={editFootnote}
+                  onEditSectionHeader={editSectionHeader}
                 />
               </div>
             </div>

@@ -140,6 +140,7 @@ export interface AppState {
   updateMerkintaNote: (id: string, note: string) => void
   deleteMerkinta: (id: string) => void
   addFootnote: (verseNumber: number, text: string) => void
+  editSectionHeader: (verseNumber: number, newText: string) => void
   editFootnote: (verseNumber: number, marker: string, newText: string) => void
   deleteFootnote: (verseNumber: number, marker: string) => void
   editProposalText: (proposalId: string, newText: string) => void

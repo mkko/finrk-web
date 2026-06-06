@@ -35,6 +35,7 @@ interface Props {
     status: 'luonnos'
   }) => void
   onEditFootnote: (verseNumber: number, marker: string, newText: string) => void
+  onEditSectionHeader: (verseNumber: number, newText: string) => void
 }
 
 // ── Verse detection ───────────────────────────────────
@@ -127,12 +128,16 @@ const SectionHeader = TiptapNode.create({
   content: 'text*',
   defining: true,
   selectable: false,
+
+  addAttributes() {
+    return { verse: { default: 0 } }
+  },
+
   parseHTML() { return [{ tag: 'h3[data-section]' }] },
   renderHTML() {
     return ['h3', {
       'data-section': '',
       class: 'font-serif text-base font-semibold text-stone-700 mt-6 mb-2',
-      contenteditable: 'false',
     }, 0]
   },
 })
@@ -315,6 +320,7 @@ function buildContent(verses: Verse[]) {
     if (verse.sectionHeader) {
       content.push({
         type: 'sectionHeader',
+        attrs: { verse: verse.number },
         content: [{ type: 'text', text: verse.sectionHeader }],
       })
     }
@@ -362,13 +368,22 @@ interface FootnoteData {
 interface ExtractedData {
   verses: Map<number, string>
   footnotes: FootnoteData[]
+  sectionHeaders: Map<number, string>
 }
 
 function extractData(doc: any): ExtractedData {
   const verses = new Map<number, string>()
   const footnotes: FootnoteData[] = []
+  const sectionHeaders = new Map<number, string>()
 
   doc.descendants((node: any) => {
+    if (node.type.name === 'sectionHeader') {
+      const verseNum = node.attrs.verse
+      if (verseNum > 0) {
+        sectionHeaders.set(verseNum, node.textContent.trim())
+      }
+      return false
+    }
     if (node.type.name !== 'paragraph') return
 
     let plainText = ''
@@ -422,7 +437,7 @@ function extractData(doc: any): ExtractedData {
     }
   })
 
-  return { verses, footnotes }
+  return { verses, footnotes, sectionHeaders }
 }
 
 // ── Helpers ────────────────────────────────────────────
@@ -465,7 +480,7 @@ export function TiptapEditorB({
   verses, proposals, users, currentUserId,
   showProposals, showReviewComments,
   selectedVerse, onSelectVerse, onAddProposal,
-  onEditFootnote,
+  onEditFootnote, onEditSectionHeader,
 }: Props) {
   const versesRef = useRef(verses)
   versesRef.current = verses
@@ -522,7 +537,7 @@ export function TiptapEditorB({
 
   const handleBlur = useCallback(() => {
     if (!editor) return
-    const { verses: newTexts, footnotes: newFootnotes } = extractData(editor.state.doc)
+    const { verses: newTexts, footnotes: newFootnotes, sectionHeaders: newHeaders } = extractData(editor.state.doc)
 
     // Check verse text changes → create proposals
     for (const verse of verses) {
@@ -546,7 +561,16 @@ export function TiptapEditorB({
         onEditFootnote(fn.verse, fn.marker, fn.text)
       }
     }
-  }, [editor, verses, currentUserId, onAddProposal, onEditFootnote])
+
+    // Check section header changes → direct save
+    for (const verse of verses) {
+      const newHeader = newHeaders.get(verse.number)
+      const oldHeader = verse.sectionHeader ?? ''
+      if (newHeader !== undefined && newHeader !== oldHeader) {
+        onEditSectionHeader(verse.number, newHeader)
+      }
+    }
+  }, [editor, verses, currentUserId, onAddProposal, onEditFootnote, onEditSectionHeader])
 
   return (
     <div onBlur={handleBlur}>

@@ -153,8 +153,9 @@ function createOriginalWidget(verseNum: number, text: string, modified: boolean)
     : 'select-none opacity-0 pointer-events-none mb-0.5'
 
   const summary = document.createElement('summary')
-  summary.className = 'list-none relative cursor-pointer'
+  summary.className = 'list-none relative cursor-pointer outline-none'
   summary.style.cssText = 'height: 0; line-height: 0; font-size: 0;'
+  summary.tabIndex = -1
 
   // Top line — shorter on trailing side to leave room for the rounded corner
   const line = document.createElement('span')

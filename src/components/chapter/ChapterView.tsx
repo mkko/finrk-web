@@ -26,6 +26,7 @@ export function ChapterView() {
   const storeVerses = useStore(s => s.verses)
   const users = useStore(s => s.users)
   const editVerse = useStore(s => s.editVerse)
+  const addFootnote = useStore(s => s.addFootnote)
   const editFootnote = useStore(s => s.editFootnote)
   const editSectionHeader = useStore(s => s.editSectionHeader)
   const currentUserId = useStore(s => s.currentUserId)
@@ -240,6 +241,7 @@ export function ChapterView() {
                   selectedVerse={selectedVerse}
                   onSelectVerse={setSelectedVerse}
                   onEditVerse={editVerse}
+                  onAddFootnote={addFootnote}
                   onEditFootnote={editFootnote}
                   onEditSectionHeader={editSectionHeader}
                 />

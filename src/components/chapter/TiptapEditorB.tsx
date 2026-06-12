@@ -91,6 +91,25 @@ const FootnoteBlock = TiptapNode.create({
   },
 })
 
+const AnnotationBlock = TiptapNode.create({
+  name: 'annotationBlock',
+  group: 'block',
+  content: 'inline*',
+  defining: true,
+
+  addAttributes() {
+    return { verse: { default: 0 } }
+  },
+
+  parseHTML() { return [{ tag: 'p[data-annotation]' }] },
+  renderHTML() {
+    return ['p', {
+      'data-annotation': '',
+      style: 'font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.8125rem; color: #92400e; background: #fffbeb; border-left: 3px solid #f59e0b; padding: 0.375rem 0.5rem; margin: 0.25rem 0; border-radius: 0.25rem; font-style: italic;',
+    }, 0]
+  },
+})
+
 // ── Decorations ───────────────────────────────────────
 // Verse number superscript styling + collapsible original-text widget.
 
@@ -281,7 +300,6 @@ function extractData(doc: any): ExtractedData {
       const v = node.attrs.verse || lastVerseNum
       if (v) {
         const raw = node.textContent.trim()
-        // Try to parse "marker text" format
         const m = raw.match(/^(\S+)\s+(.*)/)
         if (m) {
           footnotes.push({ verse: v, marker: m[1], text: m[2] })
@@ -291,6 +309,9 @@ function extractData(doc: any): ExtractedData {
       }
       return false
     }
+
+    // Annotations are internal-only, not part of published content
+    if (node.type.name === 'annotationBlock') return false
 
     if (node.type.name !== 'paragraph') return
 
@@ -322,8 +343,8 @@ function verseAtCursor(editor: any): number | null {
   const { $from } = editor.state.selection
   const parent = $from.parent
 
-  // SectionHeader or FootnoteBlock carry a verse attr
-  if (parent.type.name === 'sectionHeader' || parent.type.name === 'footnoteBlock') {
+  // SectionHeader, FootnoteBlock, AnnotationBlock carry a verse attr
+  if (parent.type.name === 'sectionHeader' || parent.type.name === 'footnoteBlock' || parent.type.name === 'annotationBlock') {
     return parent.attrs.verse || null
   }
 
@@ -394,6 +415,7 @@ export function TiptapEditorB({
       }),
       SectionHeader,
       FootnoteBlock,
+      AnnotationBlock,
       DecoExt,
     ],
     content: buildContent(verses),
@@ -486,14 +508,17 @@ export function TiptapEditorB({
     return () => { editor.off('selectionUpdate', update); editor.off('transaction', update) }
   }, [editor])
 
-  const activeType: 'paragraph' | 'sectionHeader' | 'footnoteBlock' =
+  type BlockType = 'paragraph' | 'sectionHeader' | 'footnoteBlock' | 'annotationBlock'
+
+  const activeType: BlockType =
     editor?.isActive('sectionHeader') ? 'sectionHeader'
     : editor?.isActive('footnoteBlock') ? 'footnoteBlock'
+    : editor?.isActive('annotationBlock') ? 'annotationBlock'
     : 'paragraph'
 
   const cursorVerse = verseAtCursor(editor)
 
-  const setType = useCallback((type: 'paragraph' | 'sectionHeader' | 'footnoteBlock') => {
+  const setType = useCallback((type: BlockType) => {
     if (!editor || type === activeType) return
     const attrs = type !== 'paragraph' ? { verse: cursorVerse ?? 0 } : undefined
     editor.chain().focus().setNode(type, attrs).run()
@@ -509,6 +534,7 @@ export function TiptapEditorB({
             <SegmentBtn active={activeType === 'paragraph'} onClick={() => setType('paragraph')} label="Jae" />
             <SegmentBtn active={activeType === 'sectionHeader'} onClick={() => setType('sectionHeader')} label="Väliotsikko" />
             <SegmentBtn active={activeType === 'footnoteBlock'} onClick={() => setType('footnoteBlock')} label="Alaviite" />
+            <SegmentBtn active={activeType === 'annotationBlock'} onClick={() => setType('annotationBlock')} label="Merkintä" />
           </div>
         </div>
       )}

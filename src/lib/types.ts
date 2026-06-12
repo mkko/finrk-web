@@ -105,7 +105,7 @@ export interface Verse {
 export interface Snapshot {
   id: string
   textWorkId: string
-  type: 'submission' | 'internal'
+  type: 'submission' | 'internal' | 'publication'
   name?: string
   createdAt: string
   createdBy: string
@@ -156,7 +156,7 @@ export interface AppState {
   editSectionHeader: (verseNumber: number, newText: string) => void
   editFootnote: (verseNumber: number, marker: string, newText: string) => void
   deleteFootnote: (verseNumber: number, marker: string) => void
-  createSnapshot: (textWorkId: string, name?: string, type?: 'submission' | 'internal') => void
+  createSnapshot: (textWorkId: string, name?: string, type?: 'submission' | 'internal' | 'publication') => void
   restoreSnapshot: (snapshotId: string) => void
   viewSnapshot: (snapshotId: string | null) => void
   resetState: () => void

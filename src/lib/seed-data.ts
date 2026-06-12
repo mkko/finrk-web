@@ -139,7 +139,8 @@ export const SEED_TEXT_WORKS: TextWork[] = [
     id: 'tw-1',
     scope: { book: '1Thess', chapter: 2 },
     status: 'luonnos',
-    statusChangedAt: '2026-04-05T08:00:00Z',
+    statusChangedAt: '2026-04-16T09:00:00Z',
+    publishedForFeedbackAt: '2026-04-12T10:00:00Z',
   },
   {
     id: 'tw-2',
@@ -389,6 +390,21 @@ export const REFERENCE_TRANSLATIONS: ReferenceTranslation[] = [
 ]
 
 export const SEED_SNAPSHOTS: Snapshot[] = [
+  // Publication snapshot for tw-1 (captured when it was briefly published, before pulling back)
+  {
+    id: 'snapshot-tw1-publication',
+    textWorkId: 'tw-1',
+    type: 'publication',
+    createdAt: '2026-04-12T10:00:00Z',
+    createdBy: 'tekstiryhma-a',
+    verseTexts: SEED_VERSES.map(v => ({ number: v.number, text: v.baseText })),
+    footnoteTexts: SEED_VERSES.flatMap(v =>
+      (v.footnotes ?? []).map(fn => ({ verse: v.number, marker: fn.marker, text: fn.baseText }))
+    ),
+    sectionHeaderTexts: SEED_VERSES
+      .filter(v => v.sectionHeader)
+      .map(v => ({ verse: v.number, text: v.sectionHeader! })),
+  },
   // Internal snapshot for tw-1
   {
     id: 'snapshot-tw1-internal',

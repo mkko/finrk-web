@@ -62,6 +62,25 @@ export const useStore = create<AppState>()(
         if (!tw || !currentUser) return
         if (!canTransition(tw.status, newStatus, currentUser.role)) return
 
+        // Create a publication snapshot when publishing for feedback
+        const newSnapshots: Snapshot[] = []
+        if (newStatus === 'julkaistu_palautteelle') {
+          newSnapshots.push({
+            id: `snapshot-pub-${Date.now()}`,
+            textWorkId,
+            type: 'publication',
+            createdAt: now,
+            createdBy: state.currentUserId,
+            verseTexts: state.verses.map(v => ({ number: v.number, text: v.text })),
+            footnoteTexts: state.verses.flatMap(v =>
+              (v.footnotes ?? []).map(fn => ({ verse: v.number, marker: fn.marker, text: fn.text }))
+            ),
+            sectionHeaderTexts: state.verses
+              .filter(v => v.sectionHeader)
+              .map(v => ({ verse: v.number, text: v.sectionHeader! })),
+          })
+        }
+
         set(state => ({
           textWorks: state.textWorks.map(t => {
             if (t.id !== textWorkId) return t
@@ -71,6 +90,7 @@ export const useStore = create<AppState>()(
             }
             return updated
           }),
+          snapshots: [...state.snapshots, ...newSnapshots],
           activity: [
             {
               id: `act-${Date.now()}`,
@@ -326,7 +346,7 @@ export const useStore = create<AppState>()(
         }))
       },
 
-      createSnapshot: (textWorkId: string, name?: string, type: 'submission' | 'internal' = 'internal') => {
+      createSnapshot: (textWorkId: string, name?: string, type: 'submission' | 'internal' | 'publication' = 'internal') => {
         const now = new Date().toISOString()
         const state = get()
         const snapshot: Snapshot = {

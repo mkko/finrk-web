@@ -41,7 +41,8 @@ export function getTransitionLabel(from: TextWorkStatus, to: TextWorkStatus): st
 }
 
 export function canEditVerses(status: TextWorkStatus, role: PersonaRole): boolean {
-  return role === 'tekstiryhma' && (status === 'luonnos' || status === 'julkaistu_palautteelle')
+  // Tekstiryhma can always edit — work continues even during review
+  return role === 'tekstiryhma'
 }
 
 export function getVisibleStatuses(role: PersonaRole): TextWorkStatus[] {

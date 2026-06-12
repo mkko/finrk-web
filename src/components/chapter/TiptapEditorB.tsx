@@ -13,7 +13,8 @@
  * verse number are continuations of the previous verse.
  */
 
-import { useEffect, useCallback, useRef, useMemo, useState } from 'react'
+import { useEffect, useCallback, useRef, useMemo, useState, type RefObject } from 'react'
+import { createPortal } from 'react-dom'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Node as TiptapNode, Extension } from '@tiptap/core'
@@ -29,6 +30,7 @@ interface Props {
   users: User[]
   currentUserId: string
   readOnly: boolean
+  toolbarRef?: RefObject<HTMLDivElement | null>
   selectedVerse: number | null
   onSelectVerse: (num: number) => void
   onEditVerse: (verseNumber: number, newText: string) => void
@@ -391,7 +393,7 @@ function parseVerseLines(text: string): { number: number; text: string }[] | nul
 
 export function TiptapEditorB({
   verses, users, currentUserId,
-  readOnly,
+  readOnly, toolbarRef,
   selectedVerse, onSelectVerse, onEditVerse,
   onAddFootnote, onEditFootnote, onEditSectionHeader,
 }: Props) {
@@ -526,18 +528,21 @@ export function TiptapEditorB({
 
   // ── Render ───────────────────────────────────────
 
+  const toolbar = !readOnly ? (
+    <div className="inline-flex rounded-md border border-stone-200 bg-stone-50 p-0.5">
+      <SegmentBtn active={activeType === 'paragraph'} onClick={() => setType('paragraph')} label="Jae" />
+      <SegmentBtn active={activeType === 'sectionHeader'} onClick={() => setType('sectionHeader')} label="Väliotsikko" />
+      <SegmentBtn active={activeType === 'footnoteBlock'} onClick={() => setType('footnoteBlock')} label="Alaviite" />
+      <SegmentBtn active={activeType === 'annotationBlock'} onClick={() => setType('annotationBlock')} label="Merkintä" />
+    </div>
+  ) : null
+
   return (
     <div onBlur={handleBlur}>
-      {!readOnly && (
-        <div className="flex items-center mb-3 pb-2 border-b border-stone-200">
-          <div className="inline-flex rounded-md border border-stone-200 bg-stone-50 p-0.5">
-            <SegmentBtn active={activeType === 'paragraph'} onClick={() => setType('paragraph')} label="Jae" />
-            <SegmentBtn active={activeType === 'sectionHeader'} onClick={() => setType('sectionHeader')} label="Väliotsikko" />
-            <SegmentBtn active={activeType === 'footnoteBlock'} onClick={() => setType('footnoteBlock')} label="Alaviite" />
-            <SegmentBtn active={activeType === 'annotationBlock'} onClick={() => setType('annotationBlock')} label="Merkintä" />
-          </div>
-        </div>
-      )}
+      {toolbar && toolbarRef?.current
+        ? createPortal(toolbar, toolbarRef.current)
+        : toolbar && <div className="flex items-center mb-3 pb-2 border-b border-stone-200">{toolbar}</div>
+      }
       <EditorContent editor={editor} />
     </div>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useStore } from '@/lib/store'
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
@@ -22,6 +22,7 @@ export function ChapterView() {
   const [showVoterModal, setShowVoterModal] = useState(false)
   const [showSnapshotList, setShowSnapshotList] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode | null>(null)
+  const toolbarRef = useRef<HTMLDivElement>(null)
 
   const storeVerses = useStore(s => s.verses)
   const users = useStore(s => s.users)
@@ -44,29 +45,22 @@ export function ChapterView() {
   const currentTw = getCurrentTextWork(textWorks)
   const isTekstiryhma = currentUser.role === 'tekstiryhma'
 
-  // Base version = baseText on each verse (the original/canonical text). Always exists.
   const baseVerses = storeVerses.map(v => ({ ...v, text: v.baseText }))
   const changedVerseCount = storeVerses.filter(v => v.text !== v.baseText).length
 
-  // Default: tekstiryhma → draft, others → base
   const effectiveViewMode = viewMode ?? (isTekstiryhma ? 'draft' : 'base')
 
-  // Reset view mode when user switches persona
-  useEffect(() => {
-    setViewMode(null)
-  }, [currentUserId])
+  useEffect(() => { setViewMode(null) }, [currentUserId])
 
-  // Determine which verses to show
   const verses = viewedSnapshot
     ? storeVerses.map(v => {
-        const snapshotVerse = viewedSnapshot.verseTexts.find(sv => sv.number === v.number)
-        return snapshotVerse ? { ...v, text: snapshotVerse.text } : v
+        const sv = viewedSnapshot.verseTexts.find(sv => sv.number === v.number)
+        return sv ? { ...v, text: sv.text } : v
       })
     : effectiveViewMode === 'base'
       ? baseVerses
       : storeVerses
 
-  // Base is always read-only. Draft is editable only for tekstiryhma.
   const canEdit = canEditVerses(currentTw?.status ?? 'luonnos', currentUser.role)
   const readOnly = effectiveViewMode === 'base' || !canEdit || !!viewedSnapshot
 
@@ -75,7 +69,6 @@ export function ChapterView() {
     ? getAvailableTransitions(currentTw.status, currentUser.role)
     : []
 
-  // Check if current user is a selected voter for an active proposal
   const activeProposal = currentTw?.submissionProposalId
     ? proposals.find(p => p.id === currentTw.submissionProposalId)
     : undefined
@@ -90,12 +83,70 @@ export function ChapterView() {
     }
   }, [searchParams])
 
-  const showVersionToggle = !viewedSnapshot
-
   return (
     <div className="h-full flex">
       {/* Main document column */}
       <div className="flex-1 min-h-0 flex flex-col">
+
+        {/* Document toolbar — fixed below header */}
+        {!viewedSnapshot && (
+          <div className="flex-none border-b border-stone-200 bg-white px-4 py-2 flex items-center gap-3">
+            {/* Version toggle */}
+            <div className="inline-flex rounded-md border border-stone-200 bg-stone-50 p-0.5">
+              <button
+                onClick={() => setViewMode('base')}
+                className={cn(
+                  'px-3 py-1 text-xs rounded transition-colors',
+                  effectiveViewMode === 'base'
+                    ? 'bg-white text-stone-800 font-medium shadow-sm'
+                    : 'text-stone-400 hover:text-stone-600'
+                )}
+              >
+                Julkaistu
+              </button>
+              <button
+                onClick={() => setViewMode('draft')}
+                className={cn(
+                  'px-3 py-1 text-xs rounded transition-colors',
+                  effectiveViewMode === 'draft'
+                    ? 'bg-white text-stone-800 font-medium shadow-sm'
+                    : 'text-stone-400 hover:text-stone-600'
+                )}
+              >
+                Luonnos
+                {changedVerseCount > 0 && (
+                  <span className={cn(
+                    'ml-1.5 text-xs tabular-nums',
+                    effectiveViewMode === 'draft' ? 'text-stone-400' : 'text-amber-600'
+                  )}>
+                    ({changedVerseCount})
+                  </span>
+                )}
+              </button>
+            </div>
+
+            <div className="w-px h-5 bg-stone-200" />
+
+            {/* Editor paragraph type controls — portal target */}
+            <div ref={toolbarRef} />
+
+            <div className="flex-1" />
+
+            {/* Status badge */}
+            {currentTw && (
+              <Badge variant="outline" className={cn('text-xs', STATUS_COLORS[currentTw.status])}>
+                {STATUS_LABELS[currentTw.status]}
+              </Badge>
+            )}
+
+            {openComments > 0 && (
+              <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                {openComments} avointa
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Snapshot viewing banner */}
         {viewedSnapshot && (
           <div className="flex-none border-b border-blue-200 bg-blue-50 px-6 py-2.5 flex items-center justify-between">
@@ -117,66 +168,15 @@ export function ChapterView() {
         {/* Scrollable document area */}
         <div className="flex-1 min-h-0 overflow-y-auto bg-stone-100">
           <div className="max-w-3xl mx-auto py-8 px-4">
-
-            {/* Version segmented control — above the document */}
-            {showVersionToggle && (
-              <div className="flex justify-center mb-4">
-                <div className="inline-flex rounded-md border border-stone-300 bg-white p-0.5 shadow-sm">
-                  <button
-                    onClick={() => setViewMode('base')}
-                    className={cn(
-                      'px-4 py-1.5 text-sm rounded transition-colors',
-                      effectiveViewMode === 'base'
-                        ? 'bg-stone-800 text-white font-medium'
-                        : 'text-stone-500 hover:text-stone-700'
-                    )}
-                  >
-                    Julkaistu
-                  </button>
-                  <button
-                    onClick={() => setViewMode('draft')}
-                    className={cn(
-                      'px-4 py-1.5 text-sm rounded transition-colors',
-                      effectiveViewMode === 'draft'
-                        ? 'bg-stone-800 text-white font-medium'
-                        : 'text-stone-500 hover:text-stone-700'
-                    )}
-                  >
-                    Luonnos
-                    {changedVerseCount > 0 && (
-                      <span className={cn(
-                        'ml-1.5 text-xs tabular-nums',
-                        effectiveViewMode === 'draft' ? 'text-stone-300' : 'text-amber-600'
-                      )}>
-                        ({changedVerseCount})
-                      </span>
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* A4-like page */}
             <div className="bg-white border border-stone-300 shadow-md" style={{ padding: '40px 50px', minHeight: '800px' }}>
               {/* Document header */}
               <p className="font-serif text-sm text-stone-400 mb-1">1. Tessalonikalaiskirje</p>
               <h1 className="font-serif text-2xl font-semibold text-stone-800 leading-tight mb-4">Luku 2</h1>
 
-              {/* Status header bar */}
-              {currentTw && (
+              {/* Action bar — transition buttons, snapshots, voting */}
+              {currentTw && (availableTransitions.length > 0 || (isTekstiryhma) || (currentTw.status === 'lahetetty_hallitukselle' && isSelectedVoter)) && (
                 <div className="flex flex-wrap items-center gap-2 mb-6 pb-4 border-b border-stone-200">
-                  <Badge variant="outline" className={cn('text-xs', STATUS_COLORS[currentTw.status])}>
-                    {STATUS_LABELS[currentTw.status]}
-                  </Badge>
-
-                  {openComments > 0 && (
-                    <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
-                      {openComments} avointa kommenttia
-                    </span>
-                  )}
-
-                  <div className="flex-1" />
-
                   {/* Transition buttons for tekstiryhma */}
                   {availableTransitions.map(target => {
                     if (target === 'lahetetty_hallitukselle') {
@@ -202,7 +202,6 @@ export function ChapterView() {
                     )
                   })}
 
-                  {/* Snapshot button for tekstiryhma */}
                   {isTekstiryhma && (
                     <Button
                       size="sm"
@@ -238,6 +237,7 @@ export function ChapterView() {
                   users={users}
                   currentUserId={currentUserId}
                   readOnly={readOnly}
+                  toolbarRef={toolbarRef}
                   selectedVerse={selectedVerse}
                   onSelectVerse={setSelectedVerse}
                   onEditVerse={editVerse}

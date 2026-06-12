@@ -144,6 +144,7 @@ export interface AppState {
   viewingSnapshotId: string | null
   setCurrentUser: (userId: string) => void
   editVerse: (verseNumber: number, newText: string) => void
+  publishDraft: () => void
   updateTextWorkStatus: (textWorkId: string, newStatus: TextWorkStatus) => void
   submitToHallitus: (textWorkId: string, selectedVoters: string[], rationale: string) => void
   castVote: (proposalId: string, decision: 'approve' | 'reject', comment?: string) => void

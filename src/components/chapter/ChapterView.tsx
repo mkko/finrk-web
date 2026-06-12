@@ -23,10 +23,12 @@ export function ChapterView() {
   const [showSnapshotList, setShowSnapshotList] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode | null>(null)
   const toolbarRef = useRef<HTMLDivElement>(null)
+  const [editorDirty, setEditorDirty] = useState(false)
 
   const storeVerses = useStore(s => s.verses)
   const users = useStore(s => s.users)
   const editVerse = useStore(s => s.editVerse)
+  const publishDraft = useStore(s => s.publishDraft)
   const addFootnote = useStore(s => s.addFootnote)
   const editFootnote = useStore(s => s.editFootnote)
   const editSectionHeader = useStore(s => s.editSectionHeader)
@@ -131,6 +133,16 @@ export function ChapterView() {
             <div ref={toolbarRef} />
 
             <div className="flex-1" />
+
+            {/* Publish button — visible on draft tab when there are changes */}
+            {isTekstiryhma && effectiveViewMode === 'draft' && (changedVerseCount > 0 || editorDirty) && (
+              <Button
+                size="sm"
+                onClick={() => { publishDraft(); setViewMode('base') }}
+              >
+                Julkaise
+              </Button>
+            )}
 
             {/* Status badge */}
             {currentTw && (
@@ -244,6 +256,7 @@ export function ChapterView() {
                   onAddFootnote={addFootnote}
                   onEditFootnote={editFootnote}
                   onEditSectionHeader={editSectionHeader}
+                  onDirtyChange={setEditorDirty}
                 />
               </div>
             </div>

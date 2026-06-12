@@ -54,6 +54,24 @@ export const useStore = create<AppState>()(
         }))
       },
 
+      publishDraft: () => {
+        const now = new Date().toISOString()
+        set(state => ({
+          verses: state.verses.map(v => ({ ...v, baseText: v.text })),
+          activity: [
+            {
+              id: `act-${Date.now()}`,
+              timestamp: now,
+              userId: state.currentUserId,
+              textWorkId: '',
+              action: 'Julkaistu',
+              detail: 'Luonnos julkaistu uudeksi pohjaversioksi',
+            },
+            ...state.activity,
+          ],
+        }))
+      },
+
       updateTextWorkStatus: (textWorkId: string, newStatus: TextWorkStatus) => {
         const now = new Date().toISOString()
         const state = get()

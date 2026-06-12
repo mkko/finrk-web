@@ -37,6 +37,7 @@ interface Props {
   onAddFootnote: (verseNumber: number, text: string) => void
   onEditFootnote: (verseNumber: number, marker: string, newText: string) => void
   onEditSectionHeader: (verseNumber: number, newText: string) => void
+  onDirtyChange?: (dirty: boolean) => void
 }
 
 // ── Verse number detection ────────────────────────────
@@ -396,6 +397,7 @@ export function TiptapEditorB({
   readOnly, toolbarRef,
   selectedVerse, onSelectVerse, onEditVerse,
   onAddFootnote, onEditFootnote, onEditSectionHeader,
+  onDirtyChange,
 }: Props) {
   const versesRef = useRef(verses)
   versesRef.current = verses
@@ -466,7 +468,24 @@ export function TiptapEditorB({
   })
 
   useEffect(() => { editor?.setEditable(!readOnly) }, [editor, readOnly])
-  useEffect(() => { if (editor && !editor.isFocused) editor.commands.setContent(buildContent(verses)) }, [editor, verses])
+  const suppressDirty = useRef(false)
+  useEffect(() => {
+    if (editor && !editor.isFocused) {
+      suppressDirty.current = true
+      editor.commands.setContent(buildContent(verses))
+      onDirtyChange?.(false)
+      // Allow the update event to fire first, then unsuppress
+      requestAnimationFrame(() => { suppressDirty.current = false })
+    }
+  }, [editor, verses, onDirtyChange])
+
+  // Signal dirty state only on user-initiated content changes
+  useEffect(() => {
+    if (!editor || !onDirtyChange) return
+    const handler = () => { if (!suppressDirty.current) onDirtyChange(true) }
+    editor.on('update', handler)
+    return () => { editor.off('update', handler) }
+  }, [editor, onDirtyChange])
 
   // ── Blur → save changes ──────────────────────────
 
@@ -497,7 +516,9 @@ export function TiptapEditorB({
         onEditSectionHeader(verse.number, newH)
       }
     }
-  }, [editor, verses, readOnly, onEditVerse, onEditFootnote, onEditSectionHeader])
+
+    onDirtyChange?.(false)
+  }, [editor, verses, readOnly, onEditVerse, onEditFootnote, onEditSectionHeader, onDirtyChange])
 
   // ── Toolbar state ────────────────────────────────
 

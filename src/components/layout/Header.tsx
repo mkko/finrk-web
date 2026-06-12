@@ -6,16 +6,22 @@ import { PersonaSwitcher } from '@/components/PersonaSwitcher'
 import { useStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
 
-const NAV_ITEMS = [
-  { href: '/', label: 'Luku' },
-  { href: '/ehdotukset', label: 'Ehdotukset' },
-  { href: '/edistyminen', label: 'Edistyminen' },
-]
-
 export function Header() {
   const pathname = usePathname()
   const { currentUserId, users } = useStore()
   const currentUser = users.find(u => u.id === currentUserId)!
+
+  const ehdotuksetLabel = currentUser.role === 'tekstiryhma'
+    ? 'Tekstit'
+    : currentUser.role === 'seurantaryhma'
+      ? 'Julkaistut tekstit'
+      : 'Hyväksyttävät tekstit'
+
+  const navItems = [
+    { href: '/', label: 'Luku' },
+    { href: '/ehdotukset', label: ehdotuksetLabel },
+    { href: '/edistyminen', label: 'Edistyminen' },
+  ]
 
   // Role-specific nav items
   const roleItems = currentUser.role === 'seurantaryhma'
@@ -24,7 +30,7 @@ export function Header() {
       ? [{ href: '/hallitus', label: 'Ratifiointi' }]
       : []
 
-  const allItems = [...NAV_ITEMS, ...roleItems]
+  const allItems = [...navItems, ...roleItems]
 
   return (
     <header className="border-b border-stone-200 bg-white">

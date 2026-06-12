@@ -1,4 +1,4 @@
-import { User, Verse, Proposal, ActivityEntry, Merkinta, Snapshot } from './types'
+import { User, Verse, TextWork, Proposal, Comment, ActivityEntry, Merkinta, Snapshot } from './types'
 
 // 1. Tessalonikalaiskirje, Luku 2 — from the actual RK12 working document (Versio 28.3.2026)
 export const SEED_VERSES: Verse[] = [
@@ -125,8 +125,8 @@ export const SEED_VERSES: Verse[] = [
 ]
 
 export const SEED_USERS: User[] = [
-  { id: 'kaantaja-a', name: 'Kääntäjä A', role: 'kaantaja', roleLabel: 'Kääntäjä' },
-  { id: 'kaantaja-b', name: 'Kääntäjä B', role: 'kaantaja', roleLabel: 'Kääntäjä' },
+  { id: 'tekstiryhma-a', name: 'Tekstiryhmän jäsen A', role: 'tekstiryhma', roleLabel: 'Tekstiryhmän jäsen' },
+  { id: 'tekstiryhma-b', name: 'Tekstiryhmän jäsen B', role: 'tekstiryhma', roleLabel: 'Tekstiryhmän jäsen' },
   { id: 'seurantaryhma-a', name: 'Seurantaryhmän jäsen A', role: 'seurantaryhma', roleLabel: 'Seurantaryhmän jäsen' },
   { id: 'seurantaryhma-b', name: 'Seurantaryhmän jäsen B', role: 'seurantaryhma', roleLabel: 'Seurantaryhmän jäsen' },
   { id: 'hallitus-a', name: 'Hallituksen jäsen A', role: 'hallitus', roleLabel: 'Hallituksen jäsen' },
@@ -134,121 +134,163 @@ export const SEED_USERS: User[] = [
   { id: 'hallitus-c', name: 'Hallituksen jäsen C', role: 'hallitus', roleLabel: 'Hallituksen jäsen' },
 ]
 
+export const SEED_TEXT_WORKS: TextWork[] = [
+  {
+    id: 'tw-1',
+    scope: { book: '1Thess', chapter: 2 },
+    status: 'luonnos',
+    statusChangedAt: '2026-04-05T08:00:00Z',
+  },
+  {
+    id: 'tw-2',
+    scope: { book: '1Thess', chapter: 3 },
+    status: 'julkaistu_palautteelle',
+    statusChangedAt: '2026-04-18T10:00:00Z',
+    publishedForFeedbackAt: '2026-04-18T10:00:00Z',
+  },
+  {
+    id: 'tw-3',
+    scope: { book: '1Thess', chapter: 1 },
+    status: 'lahetetty_hallitukselle',
+    statusChangedAt: '2026-04-22T14:00:00Z',
+    publishedForFeedbackAt: '2026-04-15T09:00:00Z',
+    submittedToHallitusAt: '2026-04-22T14:00:00Z',
+    submissionProposalId: 'proposal-tw3',
+  },
+  {
+    id: 'tw-4',
+    scope: { book: '1Thess', chapter: 4 },
+    status: 'hyvaksytty',
+    statusChangedAt: '2026-04-25T16:00:00Z',
+    publishedForFeedbackAt: '2026-04-10T09:00:00Z',
+    submittedToHallitusAt: '2026-04-20T12:00:00Z',
+    submissionProposalId: 'proposal-tw4',
+  },
+  {
+    id: 'tw-5',
+    scope: { book: '1Thess', chapter: 5 },
+    status: 'hylatty',
+    statusChangedAt: '2026-04-26T11:00:00Z',
+    publishedForFeedbackAt: '2026-04-12T09:00:00Z',
+    submittedToHallitusAt: '2026-04-23T10:00:00Z',
+    submissionProposalId: 'proposal-tw5',
+  },
+]
+
 export const SEED_PROPOSALS: Proposal[] = [
-  // Proposal A: verse 4 — matching the green text in the Word document
+  // tw-3: partial votes (hallitus-a approved, hallitus-b pending)
   {
-    id: 'proposal-a',
-    ranges: [{ verseStart: 4, verseEnd: 4, proposedText: 'Jumala katsoi meidät kelvollisiksi ja uskoi meille evankeliumin. Siksi me puhumme, emme miellyttääksemme ihmisiä vaan Jumalaa, joka koettelee sydämemme.' }],
-    rationale: 'Jakaminen kahteen virkkeeseen selkeyttää. "Katsoi kelvollisiksi" on tarkempi käännös kreikan δοκιμάζω-verbistä kuin "katsonut kelpaavan".',
-    authorId: 'kaantaja-a',
-    status: 'hyvaksytty_lopullisesti',
-    votes: [],
-    comments: [
-      {
-        id: 'comment-1',
-        authorId: 'kaantaja-b',
-        text: '"Katsoi kelvollisiksi" on tarkka ja silti luonteva. Kahteen virkkeeseen jakaminen selkeyttää.',
-        createdAt: '2026-04-08T10:00:00Z',
-        thread: 'main',
-      },
-      {
-        id: 'comment-2',
-        authorId: 'hallitus-a',
-        text: 'Hallitus on hyväksynyt muutoksen.',
-        createdAt: '2026-04-14T16:00:00Z',
-        thread: 'main',
-      },
-    ],
-    createdAt: '2026-04-05T08:00:00Z',
-    statusChangedAt: '2026-04-14T16:00:00Z',
-  },
-  // Proposal B: verse 9 — reordered sentence, matching Word green text
-  {
-    id: 'proposal-b',
-    ranges: [{ verseStart: 9, verseEnd: 9, proposedText: 'Muistattehan, veljet, kovan työmme ja vaivannäkömme. Kun julistimme teille Jumalan evankeliumia, teimme samalla työtä yötä päivää, ettemme olisi kenellekään teistä rasitukseksi.' }],
-    rationale: 'Lausejärjestyksen muutos: julistaminen ensin, työ sen rinnalla. Luontevampi suomenkielinen sanajärjestys.',
-    authorId: 'kaantaja-b',
-    status: 'ehdotettu',
-    votes: [],
-    comments: [
-      {
-        id: 'comment-3',
-        authorId: 'kaantaja-a',
-        text: 'Sanajärjestys on nyt luontevampi. "Teimme samalla työtä" korostaa työn samanaikaisuutta julistamisen kanssa.',
-        createdAt: '2026-04-22T11:00:00Z',
-        thread: 'main',
-      },
-      {
-        id: 'comment-3s',
-        authorId: 'seurantaryhma-a',
-        text: 'Uusi sanajärjestys on selkeämpi. Alkutekstin painotus säilyy.',
-        createdAt: '2026-04-23T09:00:00Z',
-        thread: 'seurantaryhma',
-      },
-    ],
-    createdAt: '2026-04-17T14:00:00Z',
-    statusChangedAt: '2026-04-21T08:00:00Z',
-  },
-  // Proposal C: verse 12 — matching Word green text
-  {
-    id: 'proposal-c',
-    ranges: [{ verseStart: 12, verseEnd: 12, proposedText: 'ja korostimme, että teidän tulee vaeltaa niin kuin Jumalan arvo vaatii, hänen, joka kutsuu teidät valtakuntaansa ja kirkkauteensa.' }],
-    rationale: '"Tähdensimme" → "korostimme" on nykysuomessa luontevampi. "Jumalan arvon mukaisesti" → "niin kuin Jumalan arvo vaatii" on konkreettisempi.',
-    authorId: 'kaantaja-a',
-    status: 'hallituksen_kasittelyssa',
+    id: 'proposal-tw3',
+    textWorkId: 'tw-3',
+    snapshotId: 'snapshot-tw3-submission',
+    selectedVoters: ['hallitus-a', 'hallitus-b'],
+    rationale: 'Ensimmäinen luku on valmis seurantaryhmän palautteen jälkeen. Pyydämme hallituksen hyväksyntää.',
     votes: [
-      { userId: 'hallitus-a', decision: 'approve', createdAt: '2026-04-25T10:00:00Z' },
+      { userId: 'hallitus-a', decision: 'approve', createdAt: '2026-04-24T10:00:00Z' },
     ],
-    comments: [
-      {
-        id: 'comment-4',
-        authorId: 'kaantaja-b',
-        text: '"Korostimme" on hyvä valinta. Selkeämpi kuin "tähdensimme".',
-        createdAt: '2026-04-24T09:00:00Z',
-        thread: 'main',
-      },
-      {
-        id: 'comment-5s',
-        authorId: 'seurantaryhma-a',
-        text: 'Seurantaryhmä on tarkistanut — ei huomautettavaa.',
-        createdAt: '2026-04-24T15:00:00Z',
-        thread: 'seurantaryhma',
-      },
-    ],
-    createdAt: '2026-04-20T10:00:00Z',
-    statusChangedAt: '2026-04-24T12:00:00Z',
+    createdAt: '2026-04-22T14:00:00Z',
   },
-  // Proposal D: verse 19 — matching Word green text
+  // tw-4: all approved
   {
-    id: 'proposal-d',
-    ranges: [{ verseStart: 19, verseEnd: 19, proposedText: 'Kuka on meidän toivomme tai ilomme tai kerskauksemme kruunu Herramme Jeesuksen edessä, kun hän saapuu, ellette te?' }],
-    rationale: '"Hänen tulemuksessaan" → "kun hän saapuu" on suorempi ja luontevampi ilmaus.',
-    authorId: 'kaantaja-a',
-    status: 'ehdotettu',
-    votes: [],
-    comments: [],
-    createdAt: '2026-04-22T08:00:00Z',
-    statusChangedAt: '2026-04-22T08:00:00Z',
-  },
-  // Proposal E: verse 20 — matching Word green text
-  {
-    id: 'proposal-e',
-    ranges: [{ verseStart: 20, verseEnd: 20, proposedText: 'Juuri te olette meidän kunniamme ja ilomme.' }],
-    rationale: '"Tehän" → "Juuri te" painottaa korostusta selvemmin.',
-    authorId: 'kaantaja-b',
-    status: 'ehdotettu',
-    votes: [],
-    comments: [
-      {
-        id: 'comment-6s',
-        authorId: 'seurantaryhma-b',
-        text: '"Juuri te" on painokkaampi ja sopii paremmin retorisen kysymyksen jatkoksi.',
-        createdAt: '2026-04-23T14:00:00Z',
-        thread: 'seurantaryhma',
-      },
+    id: 'proposal-tw4',
+    textWorkId: 'tw-4',
+    snapshotId: 'snapshot-tw4-submission',
+    selectedVoters: ['hallitus-a', 'hallitus-b'],
+    rationale: 'Neljäs luku on valmis käsittelyyn.',
+    votes: [
+      { userId: 'hallitus-a', decision: 'approve', createdAt: '2026-04-24T14:00:00Z' },
+      { userId: 'hallitus-b', decision: 'approve', createdAt: '2026-04-25T16:00:00Z' },
     ],
-    createdAt: '2026-04-22T09:00:00Z',
-    statusChangedAt: '2026-04-22T09:00:00Z',
+    createdAt: '2026-04-20T12:00:00Z',
+    resolvedAt: '2026-04-25T16:00:00Z',
+  },
+  // tw-5: rejected
+  {
+    id: 'proposal-tw5',
+    textWorkId: 'tw-5',
+    snapshotId: 'snapshot-tw5-submission',
+    selectedVoters: ['hallitus-b', 'hallitus-c'],
+    rationale: 'Viides luku ehdotettu hallitukselle.',
+    votes: [
+      { userId: 'hallitus-b', decision: 'approve', createdAt: '2026-04-25T09:00:00Z' },
+      { userId: 'hallitus-c', decision: 'reject', comment: 'Jakeiden 4–6 käännösratkaisut vaativat vielä tarkistamista. Erityisesti jae 5 on epäselvä.', createdAt: '2026-04-26T11:00:00Z' },
+    ],
+    createdAt: '2026-04-23T10:00:00Z',
+    resolvedAt: '2026-04-26T11:00:00Z',
+  },
+]
+
+export const SEED_COMMENTS: Comment[] = [
+  // tw-2: seurantaryhmä comments (2 avoin, 1 kasitelty)
+  {
+    id: 'comment-s1',
+    textWorkId: 'tw-2',
+    verseAnchor: { verseStart: 1 },
+    verseSnapshot: 'Luvun 3 jae 1 teksti.',
+    authorId: 'seurantaryhma-a',
+    text: 'Aloituksen sanajärjestys voisi olla luontevampi.',
+    thread: 'seurantaryhma',
+    status: 'avoin',
+    createdAt: '2026-04-19T09:00:00Z',
+  },
+  {
+    id: 'comment-s2',
+    textWorkId: 'tw-2',
+    verseAnchor: { verseStart: 3 },
+    verseSnapshot: 'Luvun 3 jae 3 teksti.',
+    authorId: 'seurantaryhma-b',
+    text: 'Kreikan sanan vivahde ei välity tässä muotoilussa.',
+    thread: 'seurantaryhma',
+    status: 'avoin',
+    createdAt: '2026-04-19T14:00:00Z',
+  },
+  {
+    id: 'comment-s3',
+    textWorkId: 'tw-2',
+    verseAnchor: { verseStart: 5 },
+    verseSnapshot: 'Luvun 3 jae 5 teksti.',
+    authorId: 'seurantaryhma-a',
+    text: 'Hyvä muotoilu, ei huomautettavaa.',
+    thread: 'seurantaryhma',
+    status: 'kasitelty',
+    resolvedBy: 'tekstiryhma-a',
+    resolvedAt: '2026-04-20T08:00:00Z',
+    createdAt: '2026-04-19T15:00:00Z',
+  },
+  // tw-1: tekstiryhma comment
+  {
+    id: 'comment-t1',
+    textWorkId: 'tw-1',
+    verseAnchor: { verseStart: 7 },
+    verseSnapshot: 'vaikka Kristuksen apostoleina olisimmekin voineet vaatia arvonantoa. Olimme sen sijaan teidän keskuudessanne lempeitä kuin imettävä äiti, joka hoivaa lapsiaan.',
+    authorId: 'tekstiryhma-b',
+    text: 'Tekstikriittinen huomio: ēpioi vs. nēpioi vaikuttaa käännökseen merkittävästi.',
+    thread: 'tekstiryhma',
+    status: 'avoin',
+    createdAt: '2026-04-17T11:00:00Z',
+  },
+  {
+    id: 'comment-t2',
+    textWorkId: 'tw-1',
+    verseAnchor: { verseStart: 12 },
+    verseSnapshot: 'ja tähdensimme, että teidän tulee vaeltaa Jumalan arvon mukaisesti, hänen, joka kutsuu teidät valtakuntaansa ja kirkkauteensa.',
+    authorId: 'tekstiryhma-a',
+    text: '"Tähdensimme" on vanhahtava — harkitaan "korostimme" tai "painotimme".',
+    thread: 'tekstiryhma',
+    status: 'avoin',
+    createdAt: '2026-04-19T09:15:00Z',
+  },
+  // tw-5: rejection comment
+  {
+    id: 'comment-r1',
+    textWorkId: 'tw-5',
+    verseAnchor: { verseStart: 5 },
+    verseSnapshot: 'Luvun 5 jae 5 teksti.',
+    authorId: 'hallitus-c',
+    text: 'Jakeen 5 käännös on epäselvä. Alkutekstin merkitys ei välity riittävästi.',
+    thread: 'tekstiryhma',
+    status: 'avoin',
+    createdAt: '2026-04-26T11:00:00Z',
   },
 ]
 
@@ -256,47 +298,47 @@ export const SEED_MERKINNAT: Merkinta[] = [
   {
     id: 'merkinta-1',
     verses: [{ verseNumber: 3, text: 'Kehotuksemme' }],
-    authorId: 'kaantaja-a',
+    authorId: 'tekstiryhma-a',
     note: 'kr. paraklesis, voi tarkoittaa myös lohdutusta',
     createdAt: '2026-04-16T08:00:00Z',
   },
   {
     id: 'merkinta-2',
     verses: [{ verseNumber: 3, text: 'epäpuhtaista vaikuttimista' }],
-    authorId: 'kaantaja-a',
+    authorId: 'tekstiryhma-a',
     createdAt: '2026-04-16T08:30:00Z',
   },
   {
     id: 'merkinta-3',
     verses: [{ verseNumber: 7, text: 'imettävä' }],
-    authorId: 'kaantaja-a',
+    authorId: 'tekstiryhma-a',
     note: 'Tekstikriittinen: ēpioi vs. nēpioi — NA28 lukee ēpioi',
     createdAt: '2026-04-17T10:30:00Z',
   },
   {
     id: 'merkinta-4',
     verses: [{ verseNumber: 7, text: 'lempeät' }],
-    authorId: 'kaantaja-a',
+    authorId: 'tekstiryhma-a',
     createdAt: '2026-04-17T10:35:00Z',
   },
   {
     id: 'merkinta-5',
     verses: [{ verseNumber: 12, text: 'vaatineet' }],
-    authorId: 'kaantaja-a',
+    authorId: 'tekstiryhma-a',
     note: 'kr. martyromenoi — vertaa: todistaneet, vakuuttaneet',
     createdAt: '2026-04-19T09:15:00Z',
   },
   {
     id: 'merkinta-6',
     verses: [{ verseNumber: 16, text: 'viha' }],
-    authorId: 'kaantaja-a',
+    authorId: 'tekstiryhma-a',
     note: 'eis telos — eschatologinen vai historiallinen viittaus?',
     createdAt: '2026-04-20T11:00:00Z',
   },
   {
     id: 'merkinta-7',
     verses: [{ verseNumber: 9, text: 'Yötä päivää' }],
-    authorId: 'kaantaja-b',
+    authorId: 'tekstiryhma-b',
     note: 'Heprealainen sanajärjestys (ilta ensin)',
     createdAt: '2026-04-18T16:00:00Z',
   },
@@ -347,60 +389,104 @@ export const REFERENCE_TRANSLATIONS: ReferenceTranslation[] = [
 ]
 
 export const SEED_SNAPSHOTS: Snapshot[] = [
+  // Internal snapshot for tw-1
   {
-    id: 'snapshot-1',
+    id: 'snapshot-tw1-internal',
+    textWorkId: 'tw-1',
+    type: 'internal',
     name: 'Ensimmäinen luonnoskierros',
     createdAt: '2026-04-14T17:00:00Z',
-    createdBy: 'kaantaja-a',
-    verseTexts: SEED_VERSES.map(v => {
-      if (v.number === 4) {
-        return { number: 4, text: 'Jumala on katsonut meidät kelvollisiksi ja uskonut meille evankeliumin, ja sen mukaisesti me puhumme — emme miellyttääksemme ihmisiä vaan Jumalaa, joka tutkii sydämemme.' }
-      }
-      return { number: v.number, text: v.baseText }
-    }),
-    includedProposalIds: ['proposal-d'],
+    createdBy: 'tekstiryhma-a',
+    verseTexts: SEED_VERSES.map(v => ({ number: v.number, text: v.baseText })),
+    footnoteTexts: SEED_VERSES.flatMap(v =>
+      (v.footnotes ?? []).map(fn => ({ verse: v.number, marker: fn.marker, text: fn.baseText }))
+    ),
+    sectionHeaderTexts: SEED_VERSES
+      .filter(v => v.sectionHeader)
+      .map(v => ({ verse: v.number, text: v.sectionHeader! })),
+  },
+  // Submission snapshot for tw-3
+  {
+    id: 'snapshot-tw3-submission',
+    textWorkId: 'tw-3',
+    type: 'submission',
+    createdAt: '2026-04-22T14:00:00Z',
+    createdBy: 'tekstiryhma-a',
+    verseTexts: [{ number: 1, text: 'Luvun 1 teksti (tiivistelmä).' }],
+    footnoteTexts: [],
+    sectionHeaderTexts: [],
+  },
+  // Submission snapshot for tw-4
+  {
+    id: 'snapshot-tw4-submission',
+    textWorkId: 'tw-4',
+    type: 'submission',
+    createdAt: '2026-04-20T12:00:00Z',
+    createdBy: 'tekstiryhma-b',
+    verseTexts: [{ number: 1, text: 'Luvun 4 teksti (tiivistelmä).' }],
+    footnoteTexts: [],
+    sectionHeaderTexts: [],
+  },
+  // Submission snapshot for tw-5
+  {
+    id: 'snapshot-tw5-submission',
+    textWorkId: 'tw-5',
+    type: 'submission',
+    createdAt: '2026-04-23T10:00:00Z',
+    createdBy: 'tekstiryhma-a',
+    verseTexts: [{ number: 1, text: 'Luvun 5 teksti (tiivistelmä).' }],
+    footnoteTexts: [],
+    sectionHeaderTexts: [],
   },
 ]
 
 export const SEED_ACTIVITY: ActivityEntry[] = [
   {
     id: 'act-1',
-    timestamp: '2026-04-14T16:00:00Z',
-    userId: 'hallitus-a',
-    proposalId: 'proposal-d',
-    action: 'Hyväksytty lopullisesti',
-    detail: 'Jae 4 — hallitus hyväksyi muutoksen',
+    timestamp: '2026-04-26T11:00:00Z',
+    userId: 'hallitus-c',
+    textWorkId: 'tw-5',
+    action: 'Hylätty',
+    detail: '1. Tess. luku 5 — hallitus hylkäsi',
   },
   {
     id: 'act-2',
-    timestamp: '2026-04-20T12:00:00Z',
-    userId: 'kaantaja-a',
-    proposalId: 'proposal-c',
-    action: 'Lähetetty ehdotukseksi',
-    detail: 'Jae 13 — lähetetty ehdotukseksi',
+    timestamp: '2026-04-25T16:00:00Z',
+    userId: 'hallitus-b',
+    textWorkId: 'tw-4',
+    action: 'Hyväksytty',
+    detail: '1. Tess. luku 4 — hallitus hyväksyi yksimielisesti',
   },
   {
     id: 'act-3',
-    timestamp: '2026-04-21T08:00:00Z',
-    userId: 'kaantaja-b',
-    proposalId: 'proposal-b',
-    action: 'Lähetetty ehdotukseksi',
-    detail: 'Jakeet 9–10 — lähetetty ehdotukseksi',
+    timestamp: '2026-04-24T10:00:00Z',
+    userId: 'hallitus-a',
+    textWorkId: 'tw-3',
+    action: 'Äänestetty',
+    detail: '1. Tess. luku 1 — ääni annettu',
   },
   {
     id: 'act-4',
-    timestamp: '2026-04-22T11:00:00Z',
-    userId: 'kaantaja-b',
-    proposalId: 'proposal-b',
-    action: 'Uusi kommentti',
-    detail: 'Jakeet 9–10 — uusi kommentti',
+    timestamp: '2026-04-22T14:00:00Z',
+    userId: 'tekstiryhma-a',
+    textWorkId: 'tw-3',
+    action: 'Lähetetty hallitukselle',
+    detail: '1. Tess. luku 1 — lähetetty hallitukselle',
   },
   {
     id: 'act-5',
     timestamp: '2026-04-19T09:00:00Z',
-    userId: 'kaantaja-a',
-    proposalId: 'proposal-a',
-    action: 'Uusi ehdotus',
-    detail: 'Jae 7 — uusi ehdotus luotu',
+    userId: 'seurantaryhma-a',
+    textWorkId: 'tw-2',
+    action: 'Uusi kommentti',
+    detail: '1. Tess. luku 3 — uusi kommentti',
+  },
+  {
+    id: 'act-6',
+    timestamp: '2026-04-18T10:00:00Z',
+    userId: 'tekstiryhma-a',
+    textWorkId: 'tw-2',
+    action: 'Julkaistu palautteelle',
+    detail: '1. Tess. luku 3 — julkaistu seurantaryhmälle',
   },
 ]

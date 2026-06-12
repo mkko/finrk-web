@@ -1,49 +1,53 @@
-import { ProposalStatus, PersonaRole } from './types'
+import { TextWorkStatus, PersonaRole } from './types'
 
-// Forward transitions: who can advance to the next state
-const FORWARD_TRANSITIONS: Record<ProposalStatus, { next: ProposalStatus; allowedRoles: PersonaRole[] } | null> = {
-  luonnos: { next: 'ehdotettu', allowedRoles: ['kaantaja'] },
-  ehdotettu: { next: 'hallituksen_kasittelyssa', allowedRoles: ['hallitus'] },
-  hallituksen_kasittelyssa: null, // resolved by voting, not manual advance
-  hyvaksytty_lopullisesti: null, // terminal
+interface Transition {
+  target: TextWorkStatus
+  actors: PersonaRole[]
 }
 
-// Send-back transitions: who can send back and where it goes
-const SEND_BACK_TRANSITIONS: Record<ProposalStatus, { prev: ProposalStatus; allowedRoles: PersonaRole[] } | null> = {
-  luonnos: null,
-  ehdotettu: null, // rejection now goes through voting
-  hallituksen_kasittelyssa: null, // resolved by voting
-  hyvaksytty_lopullisesti: null,
+const TRANSITIONS: Record<TextWorkStatus, Transition[]> = {
+  luonnos: [
+    { target: 'julkaistu_palautteelle', actors: ['tekstiryhma'] },
+  ],
+  julkaistu_palautteelle: [
+    { target: 'luonnos', actors: ['tekstiryhma'] },
+    { target: 'lahetetty_hallitukselle', actors: ['tekstiryhma'] },
+  ],
+  lahetetty_hallitukselle: [
+    // Resolved by voting, not manual transitions
+  ],
+  hyvaksytty: [],
+  hylatty: [
+    { target: 'luonnos', actors: ['tekstiryhma'] },
+  ],
 }
 
-export function canAdvance(status: ProposalStatus, role: PersonaRole): boolean {
-  const transition = FORWARD_TRANSITIONS[status]
-  return transition !== null && transition.allowedRoles.includes(role)
+export function canTransition(status: TextWorkStatus, target: TextWorkStatus, role: PersonaRole): boolean {
+  return TRANSITIONS[status].some(t => t.target === target && t.actors.includes(role))
 }
 
-export function getNextStatus(status: ProposalStatus): ProposalStatus | null {
-  return FORWARD_TRANSITIONS[status]?.next ?? null
+export function getAvailableTransitions(status: TextWorkStatus, role: PersonaRole): TextWorkStatus[] {
+  return TRANSITIONS[status]
+    .filter(t => t.actors.includes(role))
+    .map(t => t.target)
 }
 
-export function canSendBack(status: ProposalStatus, role: PersonaRole): boolean {
-  const transition = SEND_BACK_TRANSITIONS[status]
-  return transition !== null && transition.allowedRoles.includes(role)
+export function getTransitionLabel(from: TextWorkStatus, to: TextWorkStatus): string {
+  if (from === 'luonnos' && to === 'julkaistu_palautteelle') return 'Julkaise palautteelle'
+  if (from === 'julkaistu_palautteelle' && to === 'luonnos') return 'Vedä takaisin luonnokseksi'
+  if (from === 'julkaistu_palautteelle' && to === 'lahetetty_hallitukselle') return 'Lähetä hallitukselle'
+  if (from === 'hylatty' && to === 'luonnos') return 'Palauta luonnokseksi'
+  return ''
 }
 
-export function getSendBackStatus(status: ProposalStatus): ProposalStatus | null {
-  return SEND_BACK_TRANSITIONS[status]?.prev ?? null
+export function canEditVerses(status: TextWorkStatus, role: PersonaRole): boolean {
+  return role === 'tekstiryhma' && (status === 'luonnos' || status === 'julkaistu_palautteelle')
 }
 
-export function getAdvanceLabel(status: ProposalStatus): string {
-  switch (status) {
-    case 'luonnos': return 'Lähetä ehdotukseksi'
-    case 'ehdotettu': return 'Aloita käsittely'
-    default: return ''
+export function getVisibleStatuses(role: PersonaRole): TextWorkStatus[] {
+  if (role === 'seurantaryhma') {
+    return ['julkaistu_palautteelle', 'lahetetty_hallitukselle', 'hyvaksytty']
   }
-}
-
-export function getSendBackLabel(status: ProposalStatus): string {
-  switch (status) {
-    default: return ''
-  }
+  // tekstiryhma and hallitus see all
+  return ['luonnos', 'julkaistu_palautteelle', 'lahetetty_hallitukselle', 'hyvaksytty', 'hylatty']
 }

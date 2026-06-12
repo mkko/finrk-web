@@ -10,30 +10,23 @@
  * editing surface with reference text always available.
  */
 
-import { useEffect, useCallback, useRef, useMemo } from 'react'
+import { useEffect, useCallback, useRef, useMemo, useState } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Node as TiptapNode, Mark as TiptapMark, Extension, mergeAttributes } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import { Slice, Fragment } from '@tiptap/pm/model'
-import { Verse, Proposal, User, proposalCoversVerse } from '@/lib/types'
+import { Verse, User } from '@/lib/types'
 
 interface Props {
   verses: Verse[]
-  proposals: Proposal[]
   users: User[]
   currentUserId: string
-  showProposals: boolean
-  showReviewComments: boolean
+  readOnly: boolean
   selectedVerse: number | null
   onSelectVerse: (num: number) => void
-  onAddProposal: (proposal: {
-    ranges: { verseStart: number; verseEnd: number; proposedText: string }[]
-    rationale: string
-    authorId: string
-    status: 'luonnos'
-  }) => void
+  onEditVerse: (verseNumber: number, newText: string) => void
   onEditFootnote: (verseNumber: number, marker: string, newText: string) => void
   onEditSectionHeader: (verseNumber: number, newText: string) => void
 }
@@ -252,7 +245,6 @@ function buildDecos(doc: any, verses: Verse[]): DecorationSet {
 
       if (verseNum !== null) {
         // Find the text range for the verse number prefix
-        const verseNumStr = `${verseNum}`
         let textOffset = 0
         let foundRange = false
 
@@ -478,9 +470,9 @@ function parseVerseLines(text: string): { number: number; text: string }[] | nul
 // ── Component ──────────────────────────────────────────
 
 export function TiptapEditorB({
-  verses, proposals, users, currentUserId,
-  showProposals, showReviewComments,
-  selectedVerse, onSelectVerse, onAddProposal,
+  verses, users, currentUserId,
+  readOnly,
+  selectedVerse, onSelectVerse, onEditVerse,
   onEditFootnote, onEditSectionHeader,
 }: Props) {
   const versesRef = useRef(verses)
@@ -502,6 +494,7 @@ export function TiptapEditorB({
       DecoExt,
     ],
     content: buildContent(verses),
+    editable: !readOnly,
     editorProps: {
       attributes: {
         class: 'focus:outline-none min-h-[200px] font-serif text-base leading-7 text-stone-800',
@@ -531,25 +524,27 @@ export function TiptapEditorB({
     },
   })
 
+  // Update editable state when readOnly changes
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(!readOnly)
+    }
+  }, [editor, readOnly])
+
   useEffect(() => {
     if (!editor || editor.isFocused) return
     editor.commands.setContent(buildContent(verses))
   }, [editor, verses])
 
   const handleBlur = useCallback(() => {
-    if (!editor) return
+    if (!editor || readOnly) return
     const { verses: newTexts, footnotes: newFootnotes, sectionHeaders: newHeaders } = extractData(editor.state.doc)
 
-    // Check verse text changes → create proposals
+    // Check verse text changes → direct edit
     for (const verse of verses) {
       const newText = newTexts.get(verse.number)
       if (newText !== undefined && newText !== verse.text) {
-        onAddProposal({
-          ranges: [{ verseStart: verse.number, verseEnd: verse.number, proposedText: newText }],
-          rationale: '',
-          authorId: currentUserId,
-          status: 'luonnos',
-        })
+        onEditVerse(verse.number, newText)
       }
     }
 
@@ -571,11 +566,89 @@ export function TiptapEditorB({
         onEditSectionHeader(verse.number, newHeader)
       }
     }
-  }, [editor, verses, currentUserId, onAddProposal, onEditFootnote, onEditSectionHeader])
+  }, [editor, verses, readOnly, onEditVerse, onEditFootnote, onEditSectionHeader])
+
+  const isBold = editor?.isActive('bold') ?? false
+  const isItalic = editor?.isActive('italic') ?? false
+  const isSectionHeader = editor?.isActive('sectionHeader') ?? false
+
+  // Force re-render on selection/transaction changes for toolbar state
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    if (!editor) return
+    const update = () => setTick(t => t + 1)
+    editor.on('selectionUpdate', update)
+    editor.on('transaction', update)
+    return () => {
+      editor.off('selectionUpdate', update)
+      editor.off('transaction', update)
+    }
+  }, [editor])
+
+  const toggleSectionHeader = useCallback(() => {
+    if (!editor) return
+    if (isSectionHeader) {
+      editor.chain().focus().setNode('paragraph').run()
+    } else {
+      editor.chain().focus().setNode('sectionHeader').run()
+    }
+  }, [editor, isSectionHeader])
 
   return (
     <div onBlur={handleBlur}>
+      {/* Toolbar — hidden when readOnly */}
+      {!readOnly && (
+        <div className="flex items-center gap-0.5 mb-3 pb-2 border-b border-stone-200">
+          <ToolbarButton
+            active={isBold}
+            onClick={() => editor?.chain().focus().toggleBold().run()}
+            title="Lihavointi (Cmd+B)"
+          >
+            <strong>B</strong>
+          </ToolbarButton>
+          <ToolbarButton
+            active={isItalic}
+            onClick={() => editor?.chain().focus().toggleItalic().run()}
+            title="Kursiivi (Cmd+I)"
+          >
+            <em>I</em>
+          </ToolbarButton>
+          <div className="w-px h-5 bg-stone-200 mx-1" />
+          <ToolbarButton
+            active={isSectionHeader}
+            onClick={toggleSectionHeader}
+            title="Väliotsikko"
+          >
+            H
+          </ToolbarButton>
+        </div>
+      )}
       <EditorContent editor={editor} />
     </div>
+  )
+}
+
+function ToolbarButton({
+  active, onClick, title, children,
+}: {
+  active: boolean
+  onClick: () => void
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onMouseDown={e => e.preventDefault()}
+      onClick={onClick}
+      title={title}
+      className={`px-2 py-1 text-sm rounded transition-colors ${
+        active
+          ? 'bg-stone-200 text-stone-900 font-semibold'
+          : 'text-stone-500 hover:bg-stone-100 hover:text-stone-700'
+      }`}
+    >
+      {children}
+    </button>
   )
 }

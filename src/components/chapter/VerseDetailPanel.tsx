@@ -2,24 +2,23 @@
 
 import { useEffect, useState } from 'react'
 import { useStore } from '@/lib/store'
-import { STATUS_LABELS, STATUS_COLORS, Proposal, User, ProposalStatus, Verse, proposalCoversVerse, proposalVerseRef } from '@/lib/types'
-import { canAdvance, canSendBack, getNextStatus, getSendBackStatus, getAdvanceLabel, getSendBackLabel } from '@/lib/state-machine'
+import { Comment } from '@/lib/types'
+import { getVerseComments } from '@/lib/selectors'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
-import { X, ArrowRight, ArrowLeft, MessageSquare, Pencil } from 'lucide-react'
+import { X, MessageSquare, Check, ChevronDown } from 'lucide-react'
 import { renderWithHighlights } from '@/lib/highlight'
 import { cn } from '@/lib/utils'
 
 interface VerseDetailPanelProps {
   verseNumber: number
+  textWorkId?: string
   onClose: () => void
-  onStartEdit?: () => void
-  onRevert?: () => void
 }
 
-export function VerseDetailPanel({ verseNumber, onClose, onStartEdit, onRevert }: VerseDetailPanelProps) {
+export function VerseDetailPanel({ verseNumber, textWorkId, onClose }: VerseDetailPanelProps) {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
@@ -28,31 +27,38 @@ export function VerseDetailPanel({ verseNumber, onClose, onStartEdit, onRevert }
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [onClose])
 
-  return <PanelContent verseNumber={verseNumber} onClose={onClose} onStartEdit={onStartEdit} onRevert={onRevert} />
+  return <PanelContent verseNumber={verseNumber} textWorkId={textWorkId} onClose={onClose} />
 }
 
-function PanelContent({ verseNumber, onClose, onStartEdit, onRevert }: { verseNumber: number; onClose: () => void; onStartEdit?: () => void; onRevert?: () => void }) {
+function PanelContent({ verseNumber, textWorkId, onClose }: { verseNumber: number; textWorkId?: string; onClose: () => void }) {
   const verses = useStore(s => s.verses)
-  const proposals = useStore(s => s.proposals)
   const users = useStore(s => s.users)
   const currentUser = useStore(s => s.users.find(u => u.id === s.currentUserId)!)
+  const allComments = useStore(s => s.comments)
   const addComment = useStore(s => s.addComment)
-  const updateProposalStatus = useStore(s => s.updateProposalStatus)
-  const castVote = useStore(s => s.castVote)
-  const allUsers = useStore(s => s.users)
+  const resolveComment = useStore(s => s.resolveComment)
   const merkinnat = useStore(s => s.merkinnat)
   const deleteMerkinta = useStore(s => s.deleteMerkinta)
   const updateMerkintaNote = useStore(s => s.updateMerkintaNote)
 
   const verse = verses.find(v => v.number === verseNumber)!
-  const verseProposals = proposals
-    .filter(p => proposalCoversVerse(p, verseNumber))
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-
   const hasBeenRevised = verse.text !== verse.baseText
 
-  const isKaantaja = currentUser.role === 'kaantaja'
-  const verseHighlights = isKaantaja
+  const isTekstiRyhma = currentUser.role === 'tekstiryhma'
+  const isSeurantaryhma = currentUser.role === 'seurantaryhma'
+
+  // Comments for this verse
+  const verseComments = textWorkId ? getVerseComments(allComments, textWorkId, verseNumber) : []
+  const commentThread = isSeurantaryhma ? 'seurantaryhma' : 'tekstiryhma'
+  const visibleComments = verseComments.filter(c => {
+    if (isTekstiRyhma) return true // sees all threads
+    return c.thread === commentThread
+  })
+  const openComments = visibleComments.filter(c => c.status === 'avoin')
+  const resolvedComments = visibleComments.filter(c => c.status === 'kasitelty')
+
+  // Merkintä (highlights) - only for tekstiryhma
+  const verseHighlights = isTekstiRyhma
     ? merkinnat.filter(m => m.verses.some(v => v.verseNumber === verseNumber) && m.authorId === currentUser.id)
     : []
   const highlightTexts = verseHighlights.flatMap(m =>
@@ -61,22 +67,36 @@ function PanelContent({ verseNumber, onClose, onStartEdit, onRevert }: { verseNu
 
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [editingNoteText, setEditingNoteText] = useState('')
+  const [commentText, setCommentText] = useState('')
+  const [showResolved, setShowResolved] = useState(false)
 
   useEffect(() => {
     setEditingNoteId(null)
+    setCommentText('')
   }, [verseNumber])
+
+  function handleAddComment() {
+    if (!commentText.trim() || !textWorkId) return
+    addComment({
+      textWorkId,
+      verseAnchor: { verseStart: verseNumber },
+      verseSnapshot: verse.text,
+      authorId: currentUser.id,
+      text: commentText.trim(),
+      thread: commentThread,
+    })
+    setCommentText('')
+  }
+
+  // Can comment: tekstiryhma always, seurantaryhma on published texts, hallitus never
+  const canComment = isTekstiRyhma || isSeurantaryhma
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-stone-200 sticky top-0 bg-white z-10">
-        <h2 className="font-semibold text-stone-800 flex items-center gap-2">
+        <h2 className="font-semibold text-stone-800">
           Jae {verseNumber}
-          {onRevert && (
-            <span className="text-xs font-medium bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
-              Muokkaus
-            </span>
-          )}
         </h2>
         <button
           onClick={onClose}
@@ -94,7 +114,7 @@ function PanelContent({ verseNumber, onClose, onStartEdit, onRevert }: { verseNu
             Nykyinen teksti
           </h3>
           <p className="font-serif text-base leading-7 text-stone-800">
-            {isKaantaja ? renderWithHighlights(verse.text, highlightTexts) : verse.text}
+            {isTekstiRyhma ? renderWithHighlights(verse.text, highlightTexts) : verse.text}
           </p>
         </div>
 
@@ -110,18 +130,7 @@ function PanelContent({ verseNumber, onClose, onStartEdit, onRevert }: { verseNu
           </div>
         )}
 
-        {onStartEdit && (
-          <Button variant="outline" className="w-full" onClick={onStartEdit}>
-            <Pencil className="h-4 w-4 mr-2" />
-            Ehdota muutosta
-          </Button>
-        )}
-        {onRevert && (
-          <Button variant="outline" className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200" onClick={onRevert}>
-            Palauta alkuperäinen
-          </Button>
-        )}
-
+        {/* Merkintä highlights (tekstiryhma only) */}
         {verseHighlights.length > 0 && (
           <div>
             <h3 className="text-xs font-medium text-amber-700 uppercase tracking-wide mb-2">
@@ -178,323 +187,134 @@ function PanelContent({ verseNumber, onClose, onStartEdit, onRevert }: { verseNu
           </div>
         )}
 
-        {verseProposals.length > 0 && <Separator />}
+        {(openComments.length > 0 || canComment) && <Separator />}
 
-        {/* Proposals */}
-        {verseProposals.length > 0 ? (
-          <div className="space-y-4">
+        {/* Open comments */}
+        {openComments.length > 0 && (
+          <div className="space-y-3">
             <h3 className="text-xs font-medium text-stone-500 uppercase tracking-wide">
-              Ehdotukset
+              Avoimet kommentit ({openComments.length})
             </h3>
-            {verseProposals.map(proposal => (
-              <ProposalCard
-                key={proposal.id}
-                proposal={proposal}
+            {openComments.map(comment => (
+              <CommentCard
+                key={comment.id}
+                comment={comment}
                 users={users}
-                currentUser={currentUser}
-                verses={verses}
-                onAddComment={addComment}
-                onUpdateStatus={updateProposalStatus}
-                onCastVote={castVote}
-                allUsers={allUsers}
+                onResolve={() => resolveComment(comment.id)}
               />
             ))}
           </div>
-        ) : (
-          <p className="text-sm text-stone-400 py-2">
-            Ei ehdotuksia tälle jakeelle.
-          </p>
         )}
-      </div>
-    </div>
-  )
-}
 
-function ProposalCard({
-  proposal,
-  users,
-  currentUser,
-  verses,
-  onAddComment,
-  onUpdateStatus,
-  onCastVote,
-  allUsers,
-}: {
-  proposal: Proposal
-  users: User[]
-  currentUser: User
-  verses: Verse[]
-  onAddComment: (proposalId: string, comment: { authorId: string; text: string; thread: 'main' | 'seurantaryhma' }) => void
-  onUpdateStatus: (proposalId: string, status: ProposalStatus, comment?: string) => void
-  onCastVote: (proposalId: string, decision: 'approve' | 'reject', comment?: string) => void
-  allUsers: User[]
-}) {
-  const [commentText, setCommentText] = useState('')
-  const [sendBackText, setSendBackText] = useState('')
-  const [showSendBack, setShowSendBack] = useState(false)
-  const [rejectText, setRejectText] = useState('')
-  const [showRejectForm, setShowRejectForm] = useState(false)
-  const author = users.find(u => u.id === proposal.authorId)!
-
-  const isSeurantaryhma = currentUser.role === 'seurantaryhma'
-  const commentThread = isSeurantaryhma ? 'seurantaryhma' : 'main'
-  const visibleComments = proposal.comments.filter(c => c.thread === commentThread)
-
-  const showAdvance = canAdvance(proposal.status, currentUser.role)
-  const showSendBackBtn = canSendBack(proposal.status, currentUser.role)
-
-  function handleAdvance() {
-    const next = getNextStatus(proposal.status)
-    if (next) onUpdateStatus(proposal.id, next)
-  }
-
-  function handleSendBack() {
-    const prev = getSendBackStatus(proposal.status)
-    if (prev && sendBackText.trim()) {
-      onUpdateStatus(proposal.id, prev, sendBackText.trim())
-      setSendBackText('')
-      setShowSendBack(false)
-    }
-  }
-
-  function handleAddComment() {
-    if (commentText.trim()) {
-      onAddComment(proposal.id, { authorId: currentUser.id, text: commentText.trim(), thread: commentThread })
-      setCommentText('')
-    }
-  }
-
-  return (
-    <div className="rounded-lg border border-stone-200 bg-stone-50/50 overflow-hidden">
-      {/* Proposal header */}
-      <div className="px-4 py-3 space-y-2">
-        <div className="flex items-start justify-between gap-2">
-          <div className="text-sm">
-            <span className="font-medium text-stone-700">{author.name}</span>
-            <span className="text-stone-400 ml-2">
-              {formatDate(proposal.createdAt)}
-            </span>
-          </div>
-          <Badge variant="outline" className={cn('text-xs shrink-0', STATUS_COLORS[proposal.status])}>
-            {STATUS_LABELS[proposal.status]}
-          </Badge>
-        </div>
-
-        {/* Proposed text — one block per range */}
-        {proposal.ranges.map((range, i) => {
-          const originalText = verses
-            .filter(v => v.number >= range.verseStart && v.number <= range.verseEnd)
-            .map(v => v.text)
-            .join(' ')
-          return (
-            <div key={i} className="bg-white rounded-md border border-stone-200 p-3">
-              {proposal.ranges.length > 1 && (
-                <p className="text-xs text-stone-400 mb-1">
-                  {range.verseStart === range.verseEnd ? `Jae ${range.verseStart}` : `Jakeet ${range.verseStart}–${range.verseEnd}`}
-                </p>
-              )}
-              <p className="font-serif text-sm leading-6 text-stone-800">
-                {proposal.status === 'hyvaksytty_lopullisesti'
-                  ? range.proposedText
-                  : <DiffText oldText={originalText} newText={range.proposedText} />
-                }
-              </p>
-            </div>
-          )
-        })}
-
-        {/* Rationale */}
-        <p className="text-sm text-stone-600 leading-relaxed">
-          {proposal.rationale}
-        </p>
-
-        {/* Verse range indicator for multi-range or multi-verse proposals */}
-        {(proposal.ranges.length > 1 || proposal.ranges[0].verseStart !== proposal.ranges[0].verseEnd) && (
-          <p className="text-xs text-stone-400">
-            {proposalVerseRef(proposal)}
-          </p>
-        )}
-      </div>
-
-      {/* Comments (thread-filtered) */}
-      {visibleComments.length > 0 && (
-        <div className="border-t border-stone-200 px-4 py-3 space-y-3">
-          {visibleComments.map(comment => {
-            const commentAuthor = users.find(u => u.id === comment.authorId)!
-            return (
-              <div key={comment.id} className="text-sm">
-                <div className="flex items-baseline gap-2">
-                  <span className="font-medium text-stone-700">{commentAuthor.name}</span>
-                  <span className="text-xs text-stone-400">{formatDate(comment.createdAt)}</span>
-                </div>
-                <p className="text-stone-600 mt-0.5 leading-relaxed">{comment.text}</p>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Add comment */}
-      {proposal.status !== 'hyvaksytty_lopullisesti' && (
-        <div className="border-t border-stone-200 px-4 py-3">
-          <div className="flex gap-2">
-            <Textarea
-              placeholder="Kirjoita kommentti..."
-              value={commentText}
-              onChange={e => setCommentText(e.target.value)}
-              className="min-h-[60px] text-sm resize-none"
-              rows={2}
-            />
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleAddComment}
-              disabled={!commentText.trim()}
-              className="self-end shrink-0"
+        {/* Resolved comments */}
+        {resolvedComments.length > 0 && (
+          <div>
+            <button
+              onClick={() => setShowResolved(!showResolved)}
+              className="flex items-center gap-1 text-xs font-medium text-stone-400 hover:text-stone-600 transition-colors"
             >
-              <MessageSquare className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Voting UI for hallituksen_kasittelyssa */}
-      {proposal.status === 'hallituksen_kasittelyssa' && currentUser.role === 'hallitus' && (() => {
-        const hallitusMembers = allUsers.filter(u => u.role === 'hallitus')
-        const currentUserVote = proposal.votes.find(v => v.userId === currentUser.id)
-        return (
-          <div className="border-t border-stone-200 px-4 py-3 space-y-2">
-            <p className="text-xs text-violet-700 font-medium">
-              Äänestys: {proposal.votes.length}/{hallitusMembers.length} äänestänyt
-            </p>
-            {!currentUserVote ? (
-              showRejectForm ? (
-                <div className="space-y-2">
-                  <Textarea
-                    placeholder="Perustele hylkäys..."
-                    value={rejectText}
-                    onChange={e => setRejectText(e.target.value)}
-                    className="min-h-[60px] text-sm resize-none"
-                    rows={2}
+              <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', showResolved && 'rotate-180')} />
+              Käsitellyt ({resolvedComments.length})
+            </button>
+            {showResolved && (
+              <div className="mt-2 space-y-3">
+                {resolvedComments.map(comment => (
+                  <CommentCard
+                    key={comment.id}
+                    comment={comment}
+                    users={users}
+                    resolved
                   />
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => setShowRejectForm(false)}>
-                      Peruuta
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-red-700"
-                      onClick={() => {
-                        if (rejectText.trim()) {
-                          onCastVote(proposal.id, 'reject', rejectText.trim())
-                          setRejectText('')
-                          setShowRejectForm(false)
-                        }
-                      }}
-                      disabled={!rejectText.trim()}
-                    >
-                      Hylkää
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-red-700"
-                    onClick={() => setShowRejectForm(true)}
-                  >
-                    <ArrowLeft className="h-4 w-4 mr-1" />
-                    Hylkää
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => onCastVote(proposal.id, 'approve')}
-                    className="ml-auto"
-                  >
-                    Hyväksy
-                    <ArrowRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </div>
-              )
-            ) : (
-              <p className="text-xs text-violet-600">
-                Olet äänestänyt: {currentUserVote.decision === 'approve' ? 'Hyväksy' : 'Hylkää'}
-              </p>
+                ))}
+              </div>
             )}
           </div>
-        )
-      })()}
+        )}
 
-      {/* Actions (kääntäjä advance: luonnos → ehdotettu, hallitus: ehdotettu → hallituksen_kasittelyssa) */}
-      {(showAdvance || showSendBackBtn) && (
-        <div className="border-t border-stone-200 px-4 py-3 space-y-2">
-          {showSendBack && (
-            <div className="space-y-2">
+        {/* Add comment form */}
+        {canComment && textWorkId && (
+          <div className="space-y-2">
+            <div className="flex gap-2">
               <Textarea
-                placeholder="Perustele palautus..."
-                value={sendBackText}
-                onChange={e => setSendBackText(e.target.value)}
+                placeholder="Kirjoita kommentti..."
+                value={commentText}
+                onChange={e => setCommentText(e.target.value)}
                 className="min-h-[60px] text-sm resize-none"
                 rows={2}
               />
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => setShowSendBack(false)}>
-                  Peruuta
-                </Button>
-                <Button size="sm" variant="outline" onClick={handleSendBack} disabled={!sendBackText.trim()}>
-                  Palauta
-                </Button>
-              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleAddComment}
+                disabled={!commentText.trim()}
+                className="self-end shrink-0"
+              >
+                <MessageSquare className="h-4 w-4" />
+              </Button>
             </div>
-          )}
+          </div>
+        )}
 
-          {!showSendBack && (
-            <div className="flex gap-2">
-              {showSendBackBtn && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowSendBack(true)}
-                  className="text-amber-700"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-1" />
-                  {getSendBackLabel(proposal.status)}
-                </Button>
-              )}
-              {showAdvance && (
-                <Button
-                  size="sm"
-                  onClick={handleAdvance}
-                  className="ml-auto"
-                >
-                  {getAdvanceLabel(proposal.status)}
-                  <ArrowRight className="h-4 w-4 ml-1" />
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+        {/* No comments message */}
+        {openComments.length === 0 && resolvedComments.length === 0 && !canComment && (
+          <p className="text-sm text-stone-400 py-2">
+            Ei kommentteja tälle jakeelle.
+          </p>
+        )}
+      </div>
     </div>
   )
 }
 
-function DiffText({ oldText, newText }: { oldText: string; newText: string }) {
-  const { diffWords } = require('diff') as typeof import('diff')
-  const parts: import('diff').Change[] = diffWords(oldText, newText)
+function CommentCard({
+  comment,
+  users,
+  onResolve,
+  resolved,
+}: {
+  comment: Comment
+  users: { id: string; name: string }[]
+  onResolve?: () => void
+  resolved?: boolean
+}) {
+  const author = users.find(u => u.id === comment.authorId)
+  const resolver = comment.resolvedBy ? users.find(u => u.id === comment.resolvedBy) : null
+
   return (
-    <>
-      {parts.map((part, i) => (
-        part.added
-          ? <span key={i} className="bg-emerald-100 text-emerald-900 rounded px-0.5">{part.value}</span>
-          : part.removed
-            ? <span key={i} className="bg-red-100 text-red-800 line-through rounded px-0.5">{part.value}</span>
-            : <span key={i}>{part.value}</span>
-      ))}
-    </>
+    <div className={cn(
+      'rounded-lg border p-3 space-y-1.5',
+      resolved ? 'border-stone-100 bg-stone-50/50' : 'border-stone-200 bg-white'
+    )}>
+      <div className="flex items-baseline justify-between gap-2">
+        <div className="text-sm">
+          <span className="font-medium text-stone-700">{author?.name ?? 'Tuntematon'}</span>
+          <span className="text-xs text-stone-400 ml-2">{formatDate(comment.createdAt)}</span>
+          {comment.thread === 'seurantaryhma' && (
+            <Badge variant="outline" className="text-[10px] ml-2 px-1 py-0 border-amber-200 text-amber-600">
+              seurantaryhmä
+            </Badge>
+          )}
+        </div>
+        {!resolved && onResolve && (
+          <button
+            onClick={onResolve}
+            className="text-xs text-stone-400 hover:text-emerald-600 flex items-center gap-0.5 shrink-0 transition-colors"
+            title="Merkitse käsitellyksi"
+          >
+            <Check className="h-3.5 w-3.5" />
+            Käsitelty
+          </button>
+        )}
+      </div>
+      <p className={cn('text-sm leading-relaxed', resolved ? 'text-stone-400' : 'text-stone-600')}>
+        {comment.text}
+      </p>
+      {resolved && resolver && comment.resolvedAt && (
+        <p className="text-[11px] text-stone-400">
+          Käsitellyt: {resolver.name}, {formatDate(comment.resolvedAt)}
+        </p>
+      )}
+    </div>
   )
 }
 

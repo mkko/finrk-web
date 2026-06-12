@@ -1,7 +1,7 @@
 'use client'
 
 import { forwardRef, useState, useRef } from 'react'
-import { Verse as VerseType, ProposalStatus } from '@/lib/types'
+import { Verse as VerseType, TextWorkStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { Pencil } from 'lucide-react'
 
@@ -9,7 +9,7 @@ export interface ProposalAnnotation {
   id: string
   proposedText: string
   authorName: string
-  status: ProposalStatus
+  status: TextWorkStatus
   verseLabel: string
   onEdit: (newText: string) => void
   onDelete: () => void

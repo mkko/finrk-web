@@ -3,24 +3,35 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useStore } from '@/lib/store'
+import { STATUS_LABELS, STATUS_COLORS, textWorkLabel } from '@/lib/types'
+import { canEditVerses, getAvailableTransitions, getTransitionLabel } from '@/lib/state-machine'
+import { getCurrentTextWork, getOpenCommentCount } from '@/lib/selectors'
 import { VerseDetailPanel } from './VerseDetailPanel'
 import { TiptapEditorB } from './TiptapEditorB'
+import { VoterSelectionModal } from './VoterSelectionModal'
+import { SnapshotList } from './SnapshotList'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-
-type DocView = 'ehdotukset' | 'tarkistus'
 
 export function ChapterView() {
   const searchParams = useSearchParams()
   const [selectedVerse, setSelectedVerse] = useState<number | null>(null)
-  const [docView, setDocView] = useState<DocView>('ehdotukset')
+  const [showVoterModal, setShowVoterModal] = useState(false)
+  const [showSnapshotList, setShowSnapshotList] = useState(false)
 
   const storeVerses = useStore(s => s.verses)
-  const proposals = useStore(s => s.proposals)
   const users = useStore(s => s.users)
-  const addProposal = useStore(s => s.addProposal)
+  const editVerse = useStore(s => s.editVerse)
   const editFootnote = useStore(s => s.editFootnote)
   const editSectionHeader = useStore(s => s.editSectionHeader)
   const currentUserId = useStore(s => s.currentUserId)
+  const currentUser = useStore(s => s.users.find(u => u.id === s.currentUserId)!)
+  const textWorks = useStore(s => s.textWorks)
+  const comments = useStore(s => s.comments)
+  const proposals = useStore(s => s.proposals)
+  const updateTextWorkStatus = useStore(s => s.updateTextWorkStatus)
+  const castVote = useStore(s => s.castVote)
   const viewingSnapshotId = useStore(s => s.viewingSnapshotId)
   const snapshots = useStore(s => s.snapshots)
   const viewedSnapshot = viewingSnapshotId ? snapshots.find(s => s.id === viewingSnapshotId) : null
@@ -32,6 +43,20 @@ export function ChapterView() {
     : storeVerses
 
   const viewSnapshotAction = useStore(s => s.viewSnapshot)
+
+  const currentTw = getCurrentTextWork(textWorks)
+  const readOnly = !currentTw || !canEditVerses(currentTw.status, currentUser.role)
+  const openComments = currentTw ? getOpenCommentCount(comments, currentTw.id) : 0
+  const availableTransitions = currentTw
+    ? getAvailableTransitions(currentTw.status, currentUser.role)
+    : []
+
+  // Check if current user is a selected voter for an active proposal
+  const activeProposal = currentTw?.submissionProposalId
+    ? proposals.find(p => p.id === currentTw.submissionProposalId)
+    : undefined
+  const isSelectedVoter = activeProposal?.selectedVoters.includes(currentUserId) ?? false
+  const hasVoted = activeProposal?.votes.some(v => v.userId === currentUserId) ?? false
 
   useEffect(() => {
     const v = searchParams.get('verse')
@@ -72,44 +97,85 @@ export function ChapterView() {
               <p className="font-serif text-sm text-stone-400 mb-1">1. Tessalonikalaiskirje</p>
               <h1 className="font-serif text-2xl font-semibold text-stone-800 leading-tight mb-4">Luku 2</h1>
 
-              {/* View toggle */}
-              <div className="flex gap-1 mb-6 border-b border-stone-200">
-                <button
-                  onClick={() => setDocView('ehdotukset')}
-                  className={cn(
-                    'text-sm px-3 py-1.5 -mb-px border-b-2 transition-colors',
-                    docView === 'ehdotukset'
-                      ? 'border-green-600 text-green-700 font-medium'
-                      : 'border-transparent text-stone-400 hover:text-stone-600'
+              {/* Status header bar */}
+              {currentTw && (
+                <div className="flex flex-wrap items-center gap-2 mb-6 pb-4 border-b border-stone-200">
+                  <Badge variant="outline" className={cn('text-xs', STATUS_COLORS[currentTw.status])}>
+                    {STATUS_LABELS[currentTw.status]}
+                  </Badge>
+
+                  {openComments > 0 && (
+                    <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                      {openComments} avointa kommenttia
+                    </span>
                   )}
-                >
-                  Ehdotukset
-                </button>
-                <button
-                  onClick={() => setDocView('tarkistus')}
-                  className={cn(
-                    'text-sm px-3 py-1.5 -mb-px border-b-2 transition-colors',
-                    docView === 'tarkistus'
-                      ? 'border-yellow-600 text-yellow-700 font-medium'
-                      : 'border-transparent text-stone-400 hover:text-stone-600'
+
+                  <div className="flex-1" />
+
+                  {/* Transition buttons for tekstiryhma */}
+                  {availableTransitions.map(target => {
+                    if (target === 'lahetetty_hallitukselle') {
+                      return (
+                        <Button
+                          key={target}
+                          size="sm"
+                          onClick={() => setShowVoterModal(true)}
+                        >
+                          {getTransitionLabel(currentTw.status, target)}
+                        </Button>
+                      )
+                    }
+                    return (
+                      <Button
+                        key={target}
+                        size="sm"
+                        variant={target === 'luonnos' ? 'outline' : 'default'}
+                        onClick={() => updateTextWorkStatus(currentTw.id, target)}
+                      >
+                        {getTransitionLabel(currentTw.status, target)}
+                      </Button>
+                    )
+                  })}
+
+                  {/* Snapshot button for tekstiryhma */}
+                  {currentUser.role === 'tekstiryhma' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowSnapshotList(true)}
+                    >
+                      Tilannekuvat
+                    </Button>
                   )}
-                >
-                  Tarkistus
-                </button>
-              </div>
+
+                  {/* Voting panel for selected hallitus voter */}
+                  {currentTw.status === 'lahetetty_hallitukselle' && isSelectedVoter && !hasVoted && activeProposal && (
+                    <div className="w-full mt-2 rounded-md border border-violet-200 bg-violet-50/50 p-3 space-y-2">
+                      <p className="text-sm font-medium text-violet-800">
+                        Äänestyksesi vaaditaan
+                      </p>
+                      <p className="text-xs text-violet-600">
+                        {activeProposal.votes.length}/{activeProposal.selectedVoters.length} äänestänyt
+                      </p>
+                      <VotingButtons proposalId={activeProposal.id} onVote={castVote} />
+                    </div>
+                  )}
+                  {currentTw.status === 'lahetetty_hallitukselle' && isSelectedVoter && hasVoted && (
+                    <span className="text-xs text-violet-600">Olet äänestänyt</span>
+                  )}
+                </div>
+              )}
 
               {/* Verses */}
               <div className="font-serif text-base leading-7 text-stone-800">
                 <TiptapEditorB
                   verses={verses}
-                  proposals={proposals}
                   users={users}
                   currentUserId={currentUserId}
-                  showProposals={docView === 'ehdotukset'}
-                  showReviewComments={docView === 'tarkistus'}
+                  readOnly={readOnly}
                   selectedVerse={selectedVerse}
                   onSelectVerse={setSelectedVerse}
-                  onAddProposal={addProposal}
+                  onEditVerse={editVerse}
                   onEditFootnote={editFootnote}
                   onEditSectionHeader={editSectionHeader}
                 />
@@ -124,9 +190,8 @@ export function ChapterView() {
         {selectedVerse !== null
           ? <VerseDetailPanel
               verseNumber={selectedVerse}
+              textWorkId={currentTw?.id}
               onClose={() => setSelectedVerse(null)}
-              onStartEdit={undefined}
-              onRevert={undefined}
             />
           : (
             <div className="flex-1 flex items-center justify-center p-8 text-center">
@@ -135,6 +200,79 @@ export function ChapterView() {
           )
         }
       </div>
+
+      {/* Modals */}
+      {currentTw && (
+        <>
+          <VoterSelectionModal
+            open={showVoterModal}
+            onClose={() => setShowVoterModal(false)}
+            textWorkId={currentTw.id}
+          />
+          <SnapshotList
+            open={showSnapshotList}
+            onClose={() => setShowSnapshotList(false)}
+            textWorkId={currentTw.id}
+          />
+        </>
+      )}
+    </div>
+  )
+}
+
+function VotingButtons({ proposalId, onVote }: { proposalId: string; onVote: (id: string, d: 'approve' | 'reject', c?: string) => void }) {
+  const [showReject, setShowReject] = useState(false)
+  const [rejectText, setRejectText] = useState('')
+
+  if (showReject) {
+    return (
+      <div className="space-y-2">
+        <textarea
+          placeholder="Perustele hylkäys..."
+          value={rejectText}
+          onChange={e => setRejectText(e.target.value)}
+          className="w-full text-sm border border-violet-200 rounded px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-violet-400"
+          rows={2}
+        />
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setShowReject(false)}>
+            Peruuta
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-red-700"
+            onClick={() => {
+              if (rejectText.trim()) {
+                onVote(proposalId, 'reject', rejectText.trim())
+              }
+            }}
+            disabled={!rejectText.trim()}
+          >
+            Hylkää
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex gap-2">
+      <Button
+        size="sm"
+        variant="outline"
+        className="text-red-700"
+        onClick={() => setShowReject(true)}
+      >
+        Hylkää
+      </Button>
+      <Button
+        size="sm"
+        onClick={() => onVote(proposalId, 'approve')}
+        className="ml-auto"
+      >
+        Hyväksy
+      </Button>
     </div>
   )
 }

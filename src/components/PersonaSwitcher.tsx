@@ -12,9 +12,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ChevronDown, RotateCcw, DatabaseZap } from 'lucide-react'
 
-const ROLE_ORDER = ['kaantaja', 'hallitus', 'seurantaryhma'] as const
+const ROLE_ORDER = ['tekstiryhma', 'hallitus', 'seurantaryhma'] as const
 const ROLE_LABELS: Record<string, string> = {
-  kaantaja: 'Kääntäjät',
+  tekstiryhma: 'Tekstiryhmä',
   seurantaryhma: 'Seurantaryhmä',
   hallitus: 'Hallitus',
 }

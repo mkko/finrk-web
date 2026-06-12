@@ -2,33 +2,21 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { AppState, Proposal, ProposalStatus, Vote, Merkinta, Snapshot, proposalVerseRef } from './types'
-import { SEED_USERS, SEED_VERSES, SEED_PROPOSALS, SEED_ACTIVITY, SEED_MERKINNAT, SEED_SNAPSHOTS } from './seed-data'
-
-function getInitialVerses() {
-  // Apply ratified proposals to verse text
-  const verses = SEED_VERSES.map(v => ({ ...v }))
-  for (const p of SEED_PROPOSALS) {
-    if (p.status === 'hyvaksytty_lopullisesti') {
-      for (const range of p.ranges) {
-        for (let i = range.verseStart; i <= range.verseEnd; i++) {
-          const verse = verses.find(v => v.number === i)
-          if (verse) {
-            verse.text = i === range.verseStart ? range.proposedText : ''
-          }
-        }
-      }
-    }
-  }
-  return verses
-}
+import { AppState, TextWorkStatus, Merkinta, Snapshot, Comment, textWorkLabel } from './types'
+import { canTransition } from './state-machine'
+import {
+  SEED_USERS, SEED_VERSES, SEED_TEXT_WORKS, SEED_PROPOSALS,
+  SEED_COMMENTS, SEED_ACTIVITY, SEED_MERKINNAT, SEED_SNAPSHOTS,
+} from './seed-data'
 
 function initialState() {
   return {
-    currentUserId: 'kaantaja-a',
+    currentUserId: 'tekstiryhma-a',
     users: SEED_USERS,
     verses: SEED_VERSES.map(v => ({ ...v, text: v.baseText })),
+    textWorks: [] as typeof SEED_TEXT_WORKS,
     proposals: [] as typeof SEED_PROPOSALS,
+    comments: [] as Comment[],
     merkinnat: [] as Merkinta[],
     activity: [] as typeof SEED_ACTIVITY,
     snapshots: [] as Snapshot[],
@@ -38,10 +26,12 @@ function initialState() {
 
 function demoState() {
   return {
-    currentUserId: 'kaantaja-a',
+    currentUserId: 'tekstiryhma-a',
     users: SEED_USERS,
-    verses: getInitialVerses(),
+    verses: [...SEED_VERSES],
+    textWorks: [...SEED_TEXT_WORKS],
     proposals: [...SEED_PROPOSALS],
+    comments: [...SEED_COMMENTS],
     merkinnat: [...SEED_MERKINNAT],
     activity: [...SEED_ACTIVITY],
     snapshots: [...SEED_SNAPSHOTS],
@@ -56,109 +46,127 @@ export const useStore = create<AppState>()(
 
       setCurrentUser: (userId: string) => set({ currentUserId: userId }),
 
-      addProposal: (proposal) => {
-        const id = `proposal-${Date.now()}`
-        const now = new Date().toISOString()
-        const newProposal: Proposal = {
-          ...proposal,
-          id,
-          comments: [],
-          votes: [],
-          createdAt: now,
-          statusChangedAt: now,
-        }
-        const r0 = proposal.ranges[0]
-        const verseRef = proposal.ranges.length === 1
-          ? (r0.verseStart === r0.verseEnd ? `Jae ${r0.verseStart}` : `Jakeet ${r0.verseStart}–${r0.verseEnd}`)
-          : `Jakeet ${proposal.ranges.map(r => r.verseStart).join(', ')}`
+      editVerse: (verseNumber: number, newText: string) => {
         set(state => ({
-          proposals: [...state.proposals, newProposal],
+          verses: state.verses.map(v =>
+            v.number === verseNumber ? { ...v, text: newText } : v
+          ),
+        }))
+      },
+
+      updateTextWorkStatus: (textWorkId: string, newStatus: TextWorkStatus) => {
+        const now = new Date().toISOString()
+        const state = get()
+        const currentUser = state.users.find(u => u.id === state.currentUserId)
+        const tw = state.textWorks.find(t => t.id === textWorkId)
+        if (!tw || !currentUser) return
+        if (!canTransition(tw.status, newStatus, currentUser.role)) return
+
+        set(state => ({
+          textWorks: state.textWorks.map(t => {
+            if (t.id !== textWorkId) return t
+            const updated = { ...t, status: newStatus, statusChangedAt: now }
+            if (newStatus === 'julkaistu_palautteelle') {
+              updated.publishedForFeedbackAt = now
+            }
+            return updated
+          }),
           activity: [
             {
               id: `act-${Date.now()}`,
               timestamp: now,
               userId: state.currentUserId,
-              proposalId: id,
-              action: 'Uusi ehdotus',
-              detail: `${verseRef} — uusi ehdotus luotu`,
+              textWorkId,
+              action: newStatus === 'julkaistu_palautteelle' ? 'Julkaistu palautteelle'
+                : newStatus === 'luonnos' ? 'Palautettu luonnokseksi'
+                : newStatus,
+              detail: `${textWorkLabel(tw)} — tila muutettu`,
             },
             ...state.activity,
           ],
         }))
       },
 
-      updateProposalStatus: (proposalId: string, newStatus: ProposalStatus, comment?: string) => {
+      submitToHallitus: (textWorkId: string, selectedVoters: string[], rationale: string) => {
         const now = new Date().toISOString()
-        set(state => {
-          const proposals = state.proposals.map(p => {
-            if (p.id !== proposalId) return p
-            const updated = { ...p, status: newStatus, statusChangedAt: now, votes: [] as Vote[] }
-            if (comment) {
-              updated.comments = [
-                ...p.comments,
-                {
-                  id: `comment-${Date.now()}`,
-                  authorId: state.currentUserId,
-                  text: comment,
-                  createdAt: now,
-                  thread: 'main' as const,
-                },
-              ]
-            }
+        const state = get()
+        const tw = state.textWorks.find(t => t.id === textWorkId)
+        if (!tw || tw.status !== 'julkaistu_palautteelle') return
 
-            return updated
-          })
+        // Create submission snapshot
+        const snapshotId = `snapshot-${Date.now()}`
+        const snapshot: Snapshot = {
+          id: snapshotId,
+          textWorkId,
+          type: 'submission',
+          createdAt: now,
+          createdBy: state.currentUserId,
+          verseTexts: state.verses.map(v => ({ number: v.number, text: v.text })),
+          footnoteTexts: state.verses.flatMap(v =>
+            (v.footnotes ?? []).map(fn => ({ verse: v.number, marker: fn.marker, text: fn.text }))
+          ),
+          sectionHeaderTexts: state.verses
+            .filter(v => v.sectionHeader)
+            .map(v => ({ verse: v.number, text: v.sectionHeader! })),
+        }
 
-          const proposal = state.proposals.find(p => p.id === proposalId)!
-          const verseRef = proposalVerseRef(proposal)
+        const proposalId = `proposal-${Date.now()}`
 
-          const statusLabels: Record<ProposalStatus, string> = {
-            luonnos: 'Palautettu luonnokseksi',
-            ehdotettu: 'Lähetetty ehdotukseksi',
-            hallituksen_kasittelyssa: 'Otettu käsittelyyn',
-            hyvaksytty_lopullisesti: 'Hyväksytty lopullisesti',
-          }
-
-          let verses = state.verses
-          if (newStatus === 'hyvaksytty_lopullisesti') {
-            verses = state.verses.map(v => {
-              for (const range of proposal.ranges) {
-                if (v.number >= range.verseStart && v.number <= range.verseEnd) {
-                  return { ...v, text: v.number === range.verseStart ? range.proposedText : '' }
+        set(state => ({
+          textWorks: state.textWorks.map(t =>
+            t.id === textWorkId
+              ? {
+                  ...t,
+                  status: 'lahetetty_hallitukselle' as const,
+                  statusChangedAt: now,
+                  submittedToHallitusAt: now,
+                  submissionProposalId: proposalId,
                 }
-              }
-              return v
-            })
-          }
-
-          return {
-            proposals,
-            verses,
-            activity: [
-              {
-                id: `act-${Date.now()}`,
-                timestamp: now,
-                userId: state.currentUserId,
-                proposalId,
-                action: statusLabels[newStatus],
-                detail: `${verseRef} — ${statusLabels[newStatus].toLowerCase()}`,
-              },
-              ...state.activity,
-            ],
-          }
-        })
+              : t
+          ),
+          snapshots: [...state.snapshots, snapshot],
+          proposals: [
+            ...state.proposals,
+            {
+              id: proposalId,
+              textWorkId,
+              snapshotId,
+              selectedVoters,
+              rationale,
+              votes: [],
+              createdAt: now,
+            },
+          ],
+          activity: [
+            {
+              id: `act-${Date.now()}`,
+              timestamp: now,
+              userId: state.currentUserId,
+              textWorkId,
+              action: 'Lähetetty hallitukselle',
+              detail: `${textWorkLabel(tw)} — lähetetty hallitukselle`,
+            },
+            ...state.activity,
+          ],
+        }))
       },
 
       castVote: (proposalId: string, decision: 'approve' | 'reject', comment?: string) => {
         const now = new Date().toISOString()
         set(state => {
           const proposal = state.proposals.find(p => p.id === proposalId)
-          if (!proposal || proposal.status !== 'hallituksen_kasittelyssa') return state
+          if (!proposal) return state
 
-          // Don't allow duplicate votes
+          const tw = state.textWorks.find(t => t.id === proposal.textWorkId)
+          if (!tw || tw.status !== 'lahetetty_hallitukselle') return state
+
+          // Must be a selected voter
+          if (!proposal.selectedVoters.includes(state.currentUserId)) return state
+
+          // No duplicate votes
           if (proposal.votes.some(v => v.userId === state.currentUserId)) return state
 
-          const newVote: Vote = {
+          const newVote = {
             userId: state.currentUserId,
             decision,
             comment,
@@ -166,128 +174,49 @@ export const useStore = create<AppState>()(
           }
           const updatedVotes = [...proposal.votes, newVote]
 
-          const hallitusMembers = state.users.filter(u => u.role === 'hallitus')
-          const allVoted = hallitusMembers.every(m => updatedVotes.some(v => v.userId === m.id))
+          const allVoted = proposal.selectedVoters.every(
+            voterId => updatedVotes.some(v => v.userId === voterId)
+          )
 
-          if (!allVoted) {
-            // Just record the vote, no status change yet
-            return {
-              proposals: state.proposals.map(p =>
-                p.id === proposalId ? { ...p, votes: updatedVotes } : p
-              ),
-              activity: [
-                {
-                  id: `act-${Date.now()}`,
-                  timestamp: now,
-                  userId: state.currentUserId,
-                  proposalId,
-                  action: 'Äänestetty',
-                  detail: `${proposalVerseRef(proposal)} — ääni annettu`,
-                },
-                ...state.activity,
-              ],
-            }
+          let newTwStatus: TextWorkStatus | null = null
+          if (allVoted) {
+            const allApproved = updatedVotes.every(v => v.decision === 'approve')
+            newTwStatus = allApproved ? 'hyvaksytty' : 'hylatty'
           }
 
-          // All voted — tally
-          const allApproved = updatedVotes.every(v => v.decision === 'approve')
-
-          if (allApproved) {
-            // Unanimous approval
-            const verses = state.verses.map(v => {
-              for (const range of proposal.ranges) {
-                if (v.number >= range.verseStart && v.number <= range.verseEnd) {
-                  return { ...v, text: v.number === range.verseStart ? range.proposedText : '' }
-                }
-              }
-              return v
-            })
-            return {
-              proposals: state.proposals.map(p =>
-                p.id === proposalId
-                  ? { ...p, status: 'hyvaksytty_lopullisesti' as const, statusChangedAt: now, votes: updatedVotes }
-                  : p
-              ),
-              verses,
-              activity: [
-                {
-                  id: `act-${Date.now()}`,
-                  timestamp: now,
-                  userId: state.currentUserId,
-                  proposalId,
-                  action: 'Hyväksytty lopullisesti',
-                  detail: `${proposalVerseRef(proposal)} — hallitus hyväksyi yksimielisesti`,
-                },
-                ...state.activity,
-              ],
-            }
-          } else {
-            // At least one rejection — add rejection comments to main thread and reset to luonnos
-            const rejectionComments = updatedVotes
-              .filter(v => v.decision === 'reject' && v.comment)
-              .map((v, i) => {
-                const voter = state.users.find(u => u.id === v.userId)
-                return {
-                  id: `comment-${Date.now()}-${i}`,
-                  authorId: v.userId,
-                  text: `[Hallituksen palautus] ${voter?.name ?? 'Tuntematon'}: ${v.comment}`,
-                  createdAt: now,
-                  thread: 'main' as const,
-                }
-              })
-            return {
-              proposals: state.proposals.map(p =>
-                p.id === proposalId
-                  ? {
-                      ...p,
-                      status: 'luonnos' as const,
-                      statusChangedAt: now,
-                      votes: [],
-                      comments: [...p.comments, ...rejectionComments],
-                    }
-                  : p
-              ),
-              activity: [
-                {
-                  id: `act-${Date.now()}`,
-                  timestamp: now,
-                  userId: state.currentUserId,
-                  proposalId,
-                  action: 'Palautettu luonnokseksi',
-                  detail: `${proposalVerseRef(proposal)} — hallitus palautti ehdotuksen`,
-                },
-                ...state.activity,
-              ],
-            }
-          }
-        })
-      },
-
-      addComment: (proposalId: string, comment) => {
-        const now = new Date().toISOString()
-        set(state => {
-          const proposal = state.proposals.find(p => p.id === proposalId)!
-          const verseRef = proposalVerseRef(proposal)
           return {
             proposals: state.proposals.map(p =>
               p.id === proposalId
                 ? {
                     ...p,
-                    comments: [
-                      ...p.comments,
-                      { ...comment, id: `comment-${Date.now()}`, createdAt: now },
-                    ],
+                    votes: updatedVotes,
+                    ...(newTwStatus ? { resolvedAt: now } : {}),
                   }
                 : p
             ),
+            textWorks: newTwStatus
+              ? state.textWorks.map(t =>
+                  t.id === proposal.textWorkId
+                    ? { ...t, status: newTwStatus!, statusChangedAt: now }
+                    : t
+                )
+              : state.textWorks,
             activity: [
               {
                 id: `act-${Date.now()}`,
                 timestamp: now,
                 userId: state.currentUserId,
-                proposalId,
-                action: 'Uusi kommentti',
-                detail: `${verseRef} — uusi kommentti`,
+                textWorkId: proposal.textWorkId,
+                action: newTwStatus === 'hyvaksytty'
+                  ? 'Hyväksytty'
+                  : newTwStatus === 'hylatty'
+                    ? 'Hylätty'
+                    : 'Äänestetty',
+                detail: `${textWorkLabel(tw)} — ${
+                  newTwStatus === 'hyvaksytty' ? 'hallitus hyväksyi yksimielisesti'
+                  : newTwStatus === 'hylatty' ? 'hallitus hylkäsi'
+                  : 'ääni annettu'
+                }`,
               },
               ...state.activity,
             ],
@@ -295,20 +224,35 @@ export const useStore = create<AppState>()(
         })
       },
 
-      addBatchFeedback: (text: string) => {
+      addComment: (comment) => {
         const now = new Date().toISOString()
         set(state => ({
+          comments: [
+            ...state.comments,
+            { ...comment, id: `comment-${Date.now()}`, createdAt: now, status: 'avoin' as const },
+          ],
           activity: [
             {
               id: `act-${Date.now()}`,
               timestamp: now,
               userId: state.currentUserId,
-              proposalId: '',
-              action: 'Seurantaryhmän kokonaispalaute',
-              detail: text,
+              textWorkId: comment.textWorkId,
+              action: 'Uusi kommentti',
+              detail: `Jae ${comment.verseAnchor.verseStart} — uusi kommentti`,
             },
             ...state.activity,
           ],
+        }))
+      },
+
+      resolveComment: (commentId: string) => {
+        const now = new Date().toISOString()
+        set(state => ({
+          comments: state.comments.map(c =>
+            c.id === commentId
+              ? { ...c, status: 'kasitelty' as const, resolvedBy: state.currentUserId, resolvedAt: now }
+              : c
+          ),
         }))
       },
 
@@ -382,39 +326,23 @@ export const useStore = create<AppState>()(
         }))
       },
 
-      editProposalText: (proposalId: string, newText: string) => {
-        set(state => ({
-          proposals: state.proposals.map(p =>
-            p.id === proposalId
-              ? { ...p, ranges: p.ranges.map(r => ({ ...r, proposedText: newText })) }
-              : p
-          ),
-        }))
-      },
-
-      deleteProposal: (proposalId: string) => {
-        set(state => ({
-          proposals: state.proposals.filter(p => p.id !== proposalId),
-        }))
-      },
-
-      createSnapshot: (name: string) => {
+      createSnapshot: (textWorkId: string, name?: string, type: 'submission' | 'internal' = 'internal') => {
         const now = new Date().toISOString()
         const state = get()
-        const approvedIds = state.proposals
-          .filter(p => p.status === 'hyvaksytty_lopullisesti')
-          .map(p => p.id)
-        // Include proposals already captured in previous snapshots
-        const previouslyIncluded = state.snapshots.flatMap(s => s.includedProposalIds)
-        const allIncluded = [...new Set([...previouslyIncluded, ...approvedIds])]
-
         const snapshot: Snapshot = {
           id: `snapshot-${Date.now()}`,
+          textWorkId,
+          type,
           name,
           createdAt: now,
           createdBy: state.currentUserId,
           verseTexts: state.verses.map(v => ({ number: v.number, text: v.text })),
-          includedProposalIds: allIncluded,
+          footnoteTexts: state.verses.flatMap(v =>
+            (v.footnotes ?? []).map(fn => ({ verse: v.number, marker: fn.marker, text: fn.text }))
+          ),
+          sectionHeaderTexts: state.verses
+            .filter(v => v.sectionHeader)
+            .map(v => ({ verse: v.number, text: v.sectionHeader! })),
         }
         set(state => ({
           snapshots: [...state.snapshots, snapshot],
@@ -423,9 +351,42 @@ export const useStore = create<AppState>()(
               id: `act-${Date.now()}`,
               timestamp: now,
               userId: state.currentUserId,
-              proposalId: '',
+              textWorkId,
               action: 'Tilannekuva luotu',
-              detail: `Tilannekuva "${name}" — ${approvedIds.length} hyväksyttyä ehdotusta`,
+              detail: `Tilannekuva${name ? ` "${name}"` : ''} luotu`,
+            },
+            ...state.activity,
+          ],
+        }))
+      },
+
+      restoreSnapshot: (snapshotId: string) => {
+        const state = get()
+        const snapshot = state.snapshots.find(s => s.id === snapshotId)
+        if (!snapshot) return
+
+        set(state => ({
+          verses: state.verses.map(v => {
+            const sv = snapshot.verseTexts.find(sv => sv.number === v.number)
+            const sfn = snapshot.footnoteTexts.filter(f => f.verse === v.number)
+            const sh = snapshot.sectionHeaderTexts.find(s => s.verse === v.number)
+            return {
+              ...v,
+              text: sv ? sv.text : v.text,
+              footnotes: sfn.length > 0
+                ? sfn.map(f => ({ marker: f.marker, text: f.text, baseText: v.footnotes?.find(fn => fn.marker === f.marker)?.baseText ?? f.text }))
+                : v.footnotes,
+              sectionHeader: sh ? sh.text : v.sectionHeader,
+            }
+          }),
+          activity: [
+            {
+              id: `act-${Date.now()}`,
+              timestamp: new Date().toISOString(),
+              userId: state.currentUserId,
+              textWorkId: snapshot.textWorkId,
+              action: 'Tilannekuva palautettu',
+              detail: `Tilannekuva${snapshot.name ? ` "${snapshot.name}"` : ''} palautettu`,
             },
             ...state.activity,
           ],
@@ -446,7 +407,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'raamattu-kaannostyo',
-      version: 15,
+      version: 16,
       migrate: () => initialState(),
     }
   )

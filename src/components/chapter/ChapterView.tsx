@@ -51,6 +51,7 @@ export function ChapterView() {
   const changedVerseCount = storeVerses.filter(v => v.text !== v.baseText).length
 
   const effectiveViewMode = viewMode ?? (isTekstiryhma ? 'draft' : 'base')
+  const isDraft = effectiveViewMode === 'draft'
 
   useEffect(() => { setViewMode(null) }, [currentUserId])
 
@@ -59,12 +60,10 @@ export function ChapterView() {
         const sv = viewedSnapshot.verseTexts.find(sv => sv.number === v.number)
         return sv ? { ...v, text: sv.text } : v
       })
-    : effectiveViewMode === 'base'
-      ? baseVerses
-      : storeVerses
+    : isDraft ? storeVerses : baseVerses
 
   const canEdit = canEditVerses(currentTw?.status ?? 'luonnos', currentUser.role)
-  const readOnly = effectiveViewMode === 'base' || !canEdit || !!viewedSnapshot
+  const readOnly = !isDraft || !canEdit || !!viewedSnapshot
 
   const openComments = currentTw ? getOpenCommentCount(comments, currentTw.id) : 0
   const availableTransitions = currentTw
@@ -92,14 +91,20 @@ export function ChapterView() {
 
         {/* Document toolbar — fixed below header */}
         {!viewedSnapshot && (
-          <div className="flex-none border-b border-stone-200 bg-white px-4 py-2 flex items-center gap-3">
+          <div className={cn(
+            'flex-none border-b px-4 py-2 flex items-center gap-3 transition-colors duration-200',
+            isDraft ? 'bg-amber-50/70 border-amber-200/50' : 'bg-white border-stone-200'
+          )}>
             {/* Version toggle */}
-            <div className="inline-flex rounded-md border border-stone-200 bg-stone-50 p-0.5">
+            <div className={cn(
+              'inline-flex rounded-md border p-0.5 transition-colors duration-200',
+              isDraft ? 'border-amber-300/50 bg-amber-100/40' : 'border-stone-200 bg-stone-50'
+            )}>
               <button
                 onClick={() => setViewMode('base')}
                 className={cn(
                   'px-3 py-1 text-xs rounded transition-colors',
-                  effectiveViewMode === 'base'
+                  !isDraft
                     ? 'bg-white text-stone-800 font-medium shadow-sm'
                     : 'text-stone-400 hover:text-stone-600'
                 )}
@@ -110,8 +115,8 @@ export function ChapterView() {
                 onClick={() => setViewMode('draft')}
                 className={cn(
                   'px-3 py-1 text-xs rounded transition-colors',
-                  effectiveViewMode === 'draft'
-                    ? 'bg-white text-stone-800 font-medium shadow-sm'
+                  isDraft
+                    ? 'bg-amber-600 text-white font-medium shadow-sm'
                     : 'text-stone-400 hover:text-stone-600'
                 )}
               >
@@ -119,7 +124,7 @@ export function ChapterView() {
                 {changedVerseCount > 0 && (
                   <span className={cn(
                     'ml-1.5 text-xs tabular-nums',
-                    effectiveViewMode === 'draft' ? 'text-stone-400' : 'text-amber-600'
+                    isDraft ? 'text-amber-200' : 'text-amber-600'
                   )}>
                     ({changedVerseCount})
                   </span>
@@ -127,15 +132,15 @@ export function ChapterView() {
               </button>
             </div>
 
-            <div className="w-px h-5 bg-stone-200" />
+            <div className={cn('w-px h-5', isDraft ? 'bg-amber-300/40' : 'bg-stone-200')} />
 
             {/* Editor paragraph type controls — portal target */}
             <div ref={toolbarRef} />
 
             <div className="flex-1" />
 
-            {/* Publish button — visible on draft tab when there are changes */}
-            {isTekstiryhma && effectiveViewMode === 'draft' && (changedVerseCount > 0 || editorDirty) && (
+            {/* Publish button */}
+            {isTekstiryhma && isDraft && (changedVerseCount > 0 || editorDirty) && (
               <Button
                 size="sm"
                 onClick={() => { publishDraft(); setViewMode('base') }}
@@ -178,26 +183,35 @@ export function ChapterView() {
         )}
 
         {/* Scrollable document area */}
-        <div className="flex-1 min-h-0 overflow-y-auto bg-stone-100">
+        <div className={cn(
+          'flex-1 min-h-0 overflow-y-auto transition-colors duration-200',
+          isDraft ? 'bg-amber-50/20' : 'bg-stone-100'
+        )}>
           <div className="max-w-3xl mx-auto py-8 px-4">
             {/* A4-like page */}
-            <div className="bg-white border border-stone-300 shadow-md" style={{ padding: '40px 50px', minHeight: '800px' }}>
+            <div
+              className={cn(
+                'border shadow-md transition-colors duration-200',
+                isDraft ? 'border-amber-200/50' : 'border-stone-300'
+              )}
+              style={{
+                padding: '40px 50px',
+                minHeight: '800px',
+                backgroundColor: isDraft ? '#fffdf7' : '#ffffff',
+                boxShadow: isDraft ? 'inset 3px 0 0 #fcd34d' : undefined,
+              }}
+            >
               {/* Document header */}
               <p className="font-serif text-sm text-stone-400 mb-1">1. Tessalonikalaiskirje</p>
               <h1 className="font-serif text-2xl font-semibold text-stone-800 leading-tight mb-4">Luku 2</h1>
 
               {/* Action bar — transition buttons, snapshots, voting */}
-              {currentTw && (availableTransitions.length > 0 || (isTekstiryhma) || (currentTw.status === 'lahetetty_hallitukselle' && isSelectedVoter)) && (
+              {currentTw && (availableTransitions.length > 0 || isTekstiryhma || (currentTw.status === 'lahetetty_hallitukselle' && isSelectedVoter)) && (
                 <div className="flex flex-wrap items-center gap-2 mb-6 pb-4 border-b border-stone-200">
-                  {/* Transition buttons for tekstiryhma */}
                   {availableTransitions.map(target => {
                     if (target === 'lahetetty_hallitukselle') {
                       return (
-                        <Button
-                          key={target}
-                          size="sm"
-                          onClick={() => setShowVoterModal(true)}
-                        >
+                        <Button key={target} size="sm" onClick={() => setShowVoterModal(true)}>
                           {getTransitionLabel(currentTw.status, target)}
                         </Button>
                       )
@@ -215,21 +229,14 @@ export function ChapterView() {
                   })}
 
                   {isTekstiryhma && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setShowSnapshotList(true)}
-                    >
+                    <Button size="sm" variant="outline" onClick={() => setShowSnapshotList(true)}>
                       Tilannekuvat
                     </Button>
                   )}
 
-                  {/* Voting panel for selected hallitus voter */}
                   {currentTw.status === 'lahetetty_hallitukselle' && isSelectedVoter && !hasVoted && activeProposal && (
                     <div className="w-full mt-2 rounded-md border border-violet-200 bg-violet-50/50 p-3 space-y-2">
-                      <p className="text-sm font-medium text-violet-800">
-                        Äänestyksesi vaaditaan
-                      </p>
+                      <p className="text-sm font-medium text-violet-800">Äänestyksesi vaaditaan</p>
                       <p className="text-xs text-violet-600">
                         {activeProposal.votes.length}/{activeProposal.selectedVoters.length} äänestänyt
                       </p>
@@ -264,7 +271,7 @@ export function ChapterView() {
         </div>
       </div>
 
-      {/* Sidebar — always visible, right */}
+      {/* Sidebar */}
       <div className="w-96 shrink-0 border-l border-stone-200 bg-white flex flex-col overflow-hidden">
         {selectedVerse !== null
           ? <VerseDetailPanel

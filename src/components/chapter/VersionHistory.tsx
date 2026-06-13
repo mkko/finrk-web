@@ -91,9 +91,9 @@ export function VersionHistory({ textWorkId }: Props) {
                     {changed ? (
                       <WordDiff oldText={prevText!} newText={sv.text} />
                     ) : isNew ? (
-                      <span className="bg-emerald-100/60 rounded-sm px-0.5">{sv.text}</span>
+                      <span>{renderTextWithBreaks(sv.text, 'bg-emerald-100/60 rounded-sm px-0.5')}</span>
                     ) : (
-                      sv.text
+                      <span>{renderTextWithBreaks(sv.text)}</span>
                     )}
                   </p>
                 )
@@ -113,14 +113,24 @@ interface DiffPart {
   text: string
 }
 
+function renderTextWithBreaks(text: string, className?: string) {
+  const segments = text.split('\n')
+  return segments.map((seg, i) => (
+    <span key={i}>
+      {i > 0 && <br />}
+      <span className={className}>{seg}</span>
+    </span>
+  ))
+}
+
 function WordDiff({ oldText, newText }: { oldText: string; newText: string }) {
   const parts = diffWords(oldText, newText)
   return (
     <span>
       {parts.map((p, i) => {
-        if (p.type === 'same') return <span key={i}>{p.text}</span>
-        if (p.type === 'del') return <span key={i} className="bg-red-100 text-red-700 line-through rounded-sm px-0.5">{p.text}</span>
-        return <span key={i} className="bg-emerald-100 text-emerald-700 rounded-sm px-0.5">{p.text}</span>
+        if (p.type === 'same') return <span key={i}>{renderTextWithBreaks(p.text)}</span>
+        if (p.type === 'del') return <span key={i}>{renderTextWithBreaks(p.text, 'bg-red-100 text-red-700 line-through rounded-sm px-0.5')}</span>
+        return <span key={i}>{renderTextWithBreaks(p.text, 'bg-emerald-100 text-emerald-700 rounded-sm px-0.5')}</span>
       })}
     </span>
   )

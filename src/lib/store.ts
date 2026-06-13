@@ -241,8 +241,9 @@ export const useStore = create<AppState>()(
           const tw = state.textWorks.find(t => t.id === proposal.textWorkId)
           if (!tw || tw.status !== 'lahetetty_hallitukselle') return state
 
-          // Must be a selected voter
-          if (!proposal.selectedVoters.includes(state.currentUserId)) return state
+          // Must be a hallitus member
+          const voter = state.users.find(u => u.id === state.currentUserId)
+          if (!voter || voter.role !== 'hallitus') return state
 
           // No duplicate votes
           if (proposal.votes.some(v => v.userId === state.currentUserId)) return state
@@ -255,8 +256,9 @@ export const useStore = create<AppState>()(
           }
           const updatedVotes = [...proposal.votes, newVote]
 
-          const allVoted = proposal.selectedVoters.every(
-            voterId => updatedVotes.some(v => v.userId === voterId)
+          const hallitusMembers = state.users.filter(u => u.role === 'hallitus')
+          const allVoted = hallitusMembers.every(
+            member => updatedVotes.some(v => v.userId === member.id)
           )
 
           let newTwStatus: TextWorkStatus | null = null

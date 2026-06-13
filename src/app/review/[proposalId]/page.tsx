@@ -40,7 +40,7 @@ export default function ReviewPage() {
   }
 
   const submitter = users.find(u => u.id === snapshot?.createdBy)
-  const isSelectedVoter = proposal.selectedVoters.includes(currentUserId)
+  const isHallitus = currentUser.role === 'hallitus'
   const currentUserVote = proposal.votes.find(v => v.userId === currentUserId)
   const isResolved = !!proposal.resolvedAt
   const isApproved = tw.status === 'hyvaksytty'
@@ -113,40 +113,44 @@ export default function ReviewPage() {
         )}
 
         {/* Voter progress */}
-        <div className={cn(
-          'rounded-lg border p-4 space-y-3',
-          isPending ? 'border-violet-200 bg-violet-50/50' : 'border-stone-200 bg-stone-50'
-        )}>
-          <p className="text-sm font-medium text-stone-700">
-            Äänestys: {proposal.votes.length}/{proposal.selectedVoters.length} äänestänyt
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {proposal.selectedVoters.map(voterId => {
-              const voter = users.find(u => u.id === voterId)
-              const vote = proposal.votes.find(v => v.userId === voterId)
-              return (
-                <span
-                  key={voterId}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full font-medium',
-                    vote
-                      ? vote.decision === 'approve'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-red-100 text-red-800'
-                      : 'bg-stone-100 text-stone-500'
-                  )}
-                >
-                  {voter?.name ?? 'Tuntematon'}
-                  {vote && (
-                    vote.decision === 'approve'
-                      ? <Check className="h-3.5 w-3.5" />
-                      : <X className="h-3.5 w-3.5" />
-                  )}
-                </span>
-              )
-            })}
-          </div>
-        </div>
+        {(() => {
+          const hallitusMembers = users.filter(u => u.role === 'hallitus')
+          return (
+            <div className={cn(
+              'rounded-lg border p-4 space-y-3',
+              isPending ? 'border-violet-200 bg-violet-50/50' : 'border-stone-200 bg-stone-50'
+            )}>
+              <p className="text-sm font-medium text-stone-700">
+                Äänestys: {proposal.votes.length}/{hallitusMembers.length} äänestänyt
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {hallitusMembers.map(member => {
+                  const vote = proposal.votes.find(v => v.userId === member.id)
+                  return (
+                    <span
+                      key={member.id}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full font-medium',
+                        vote
+                          ? vote.decision === 'approve'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-red-100 text-red-800'
+                          : 'bg-stone-100 text-stone-500'
+                      )}
+                    >
+                      {member.name}
+                      {vote && (
+                        vote.decision === 'approve'
+                          ? <Check className="h-3.5 w-3.5" />
+                          : <X className="h-3.5 w-3.5" />
+                      )}
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Diff section */}
         <div>
@@ -174,7 +178,7 @@ export default function ReviewPage() {
         </div>
 
         {/* Voting section — hallitus only, pending */}
-        {isSelectedVoter && isPending && !currentUserVote && (
+        {isHallitus && isPending && !currentUserVote && (
           <div className="rounded-lg border border-violet-200 bg-white p-4 space-y-3">
             <h2 className="text-sm font-medium text-stone-700">Äänestä</h2>
             {showReject ? (
@@ -226,7 +230,7 @@ export default function ReviewPage() {
         )}
 
         {/* Already voted */}
-        {isSelectedVoter && currentUserVote && (
+        {isHallitus && currentUserVote && (
           <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
             <p className="text-sm text-violet-700 flex items-center gap-1.5">
               <Check className="h-4 w-4" />

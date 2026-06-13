@@ -204,7 +204,7 @@ export const SEED_PROPOSALS: Proposal[] = [
     id: 'proposal-tw3',
     textWorkId: 'tw-3',
     snapshotId: 'snapshot-tw3-submission',
-    selectedVoters: ['hallitus-a', 'hallitus-b'],
+    selectedVoters: ['hallitus-a', 'hallitus-b', 'hallitus-c'],
     rationale: 'Ensimmäinen luku on valmis seurantaryhmän palautteen jälkeen. Pyydämme hallituksen hyväksyntää.',
     votes: [
       { userId: 'hallitus-a', decision: 'approve', createdAt: '2026-04-24T10:00:00Z' },
@@ -216,7 +216,7 @@ export const SEED_PROPOSALS: Proposal[] = [
     id: 'proposal-tw4',
     textWorkId: 'tw-4',
     snapshotId: 'snapshot-tw4-submission',
-    selectedVoters: ['hallitus-a', 'hallitus-b'],
+    selectedVoters: ['hallitus-a', 'hallitus-b', 'hallitus-c'],
     rationale: 'Neljäs luku on valmis käsittelyyn.',
     votes: [
       { userId: 'hallitus-a', decision: 'approve', createdAt: '2026-04-24T14:00:00Z' },
@@ -230,7 +230,7 @@ export const SEED_PROPOSALS: Proposal[] = [
     id: 'proposal-tw5',
     textWorkId: 'tw-5',
     snapshotId: 'snapshot-tw5-submission',
-    selectedVoters: ['hallitus-b', 'hallitus-c'],
+    selectedVoters: ['hallitus-a', 'hallitus-b', 'hallitus-c'],
     rationale: 'Viides luku ehdotettu hallitukselle.',
     votes: [
       { userId: 'hallitus-b', decision: 'approve', createdAt: '2026-04-25T09:00:00Z' },

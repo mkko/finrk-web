@@ -4,7 +4,6 @@ import { useState, useMemo } from 'react'
 import { useStore } from '@/lib/store'
 import { getCurrentTextWork } from '@/lib/selectors'
 import { WordDiff } from '@/components/chapter/VersionHistory'
-import { VoterSelectionModal } from '@/components/chapter/VoterSelectionModal'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -12,13 +11,13 @@ export default function LahetysPage() {
   const verses = useStore(s => s.verses)
   const textWorks = useStore(s => s.textWorks)
   const proposals = useStore(s => s.proposals)
+  const submitToHallitus = useStore(s => s.submitToHallitus)
   const currentUserId = useStore(s => s.currentUserId)
   const users = useStore(s => s.users)
   const currentUser = users.find(u => u.id === currentUserId)!
   const currentTw = getCurrentTextWork(textWorks)
 
   const [selectedVerses, setSelectedVerses] = useState<Set<number>>(new Set())
-  const [showVoterModal, setShowVoterModal] = useState(false)
 
   if (currentUser.role !== 'tekstiryhma') {
     return (
@@ -64,6 +63,15 @@ export default function LahetysPage() {
 
   const selectedList = unreviewedVerses.filter(v => selectedVerses.has(v.number))
 
+  const hallitusUsers = users.filter(u => u.role === 'hallitus')
+
+  function handleSubmit() {
+    if (!currentTw || selectedList.length === 0) return
+    const allHallitusIds = hallitusUsers.map(u => u.id)
+    submitToHallitus(currentTw.id, allHallitusIds, '', [...selectedVerses])
+    setSelectedVerses(new Set())
+  }
+
   return (
     <div className="h-full flex flex-col">
       {/* Page header */}
@@ -76,7 +84,7 @@ export default function LahetysPage() {
             </p>
           </div>
           {selectedList.length > 0 && (
-            <Button onClick={() => setShowVoterModal(true)}>
+            <Button onClick={handleSubmit}>
               Lähetä hallitukselle
             </Button>
           )}
@@ -163,18 +171,6 @@ export default function LahetysPage() {
             )}
           </div>
         </div>
-      )}
-
-      {currentTw && (
-        <VoterSelectionModal
-          open={showVoterModal}
-          onClose={() => {
-            setShowVoterModal(false)
-            setSelectedVerses(new Set())
-          }}
-          textWorkId={currentTw.id}
-          selectedVerses={[...selectedVerses]}
-        />
       )}
     </div>
   )

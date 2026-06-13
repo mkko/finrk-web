@@ -33,11 +33,9 @@ export default function HallitusPage() {
     )
   }
 
-  // TextWorks where current user is a selected voter
-  const myVoterProposals = proposals.filter(p =>
-    p.selectedVoters.includes(currentUserId)
-  )
-  const myTwIds = new Set(myVoterProposals.map(p => p.textWorkId))
+  // All proposals (any hallitus member can review)
+  const hallitusMembers = users.filter(u => u.role === 'hallitus')
+  const myTwIds = new Set(proposals.map(p => p.textWorkId))
 
   // Show voter-relevant TextWorks + optionally luonnokset
   const displayTws = textWorks.filter(tw => {
@@ -78,10 +76,9 @@ export default function HallitusPage() {
       ) : (
         <div className="space-y-6">
           {sorted.map(tw => {
-            const proposal = myVoterProposals.find(p => p.textWorkId === tw.id)
+            const proposal = proposals.find(p => p.textWorkId === tw.id)
             const currentUserVote = proposal?.votes.find(v => v.userId === currentUserId)
             const rejectText = proposal ? (rejectTexts[proposal.id] || '') : ''
-            const isMyVoterItem = proposal && proposal.selectedVoters.includes(currentUserId)
 
             return (
               <div key={tw.id} className="bg-white rounded-lg border border-stone-200 overflow-hidden">
@@ -129,15 +126,14 @@ export default function HallitusPage() {
                   {proposal && tw.status === 'lahetetty_hallitukselle' && (
                     <div className="rounded-md border border-violet-200 bg-violet-50/50 p-3 space-y-2">
                       <p className="text-sm font-medium text-violet-800">
-                        Äänestys: {proposal.votes.length}/{proposal.selectedVoters.length} äänestänyt
+                        Äänestys: {proposal.votes.length}/{hallitusMembers.length} äänestänyt
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        {proposal.selectedVoters.map(voterId => {
-                          const voter = users.find(u => u.id === voterId)
-                          const vote = proposal.votes.find(v => v.userId === voterId)
+                        {hallitusMembers.map(member => {
+                          const vote = proposal.votes.find(v => v.userId === member.id)
                           return (
                             <span
-                              key={voterId}
+                              key={member.id}
                               className={cn(
                                 'inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full',
                                 vote
@@ -147,7 +143,7 @@ export default function HallitusPage() {
                                   : 'bg-stone-100 text-stone-500'
                               )}
                             >
-                              {voter?.name ?? 'Tuntematon'}
+                              {member.name}
                               {vote && (vote.decision === 'approve' ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />)}
                             </span>
                           )
@@ -176,7 +172,7 @@ export default function HallitusPage() {
                 </div>
 
                 {/* Voting actions */}
-                {isMyVoterItem && tw.status === 'lahetetty_hallitukselle' && !currentUserVote && proposal && (
+                {tw.status === 'lahetetty_hallitukselle' && !currentUserVote && proposal && (
                   <div className="border-t border-stone-200 px-6 py-4">
                     {showReject[proposal.id] ? (
                       <div className="space-y-2">
@@ -236,7 +232,7 @@ export default function HallitusPage() {
                   </div>
                 )}
 
-                {isMyVoterItem && currentUserVote && (
+                {currentUserVote && (
                   <div className="border-t border-stone-200 px-6 py-4">
                     <p className="text-sm text-violet-700 flex items-center gap-1">
                       <Check className="h-4 w-4" />

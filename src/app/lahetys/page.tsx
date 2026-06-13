@@ -106,79 +106,49 @@ export default function LahetysPage() {
             <p className="text-sm text-stone-400">Ei julkaistuja muutoksia lähetettäväksi.</p>
           </div>
         ) : (
-          <div className="flex-1 min-h-0 flex">
-            {/* Left panel: verse checklist */}
-            <div className="w-72 shrink-0 border-r border-stone-200 overflow-y-auto bg-stone-50">
-              <div className="p-3 space-y-1">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">
-                    Muuttuneet jakeet ({unreviewedVerses.length})
-                  </p>
-                  <button
-                    onClick={toggleAll}
-                    className="text-xs text-stone-500 hover:text-stone-700"
-                  >
-                    {selectedVerses.size === unreviewedVerses.length ? 'Poista valinnat' : 'Valitse kaikki'}
-                  </button>
-                </div>
-                {unreviewedVerses.map(v => (
-                  <label
-                    key={v.number}
-                    className={cn(
-                      'flex items-start gap-2 rounded-md px-3 py-2 text-xs cursor-pointer transition-colors',
-                      selectedVerses.has(v.number)
-                        ? 'bg-violet-50 border border-violet-200'
-                        : 'hover:bg-white/60'
-                    )}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedVerses.has(v.number)}
-                      onChange={() => toggleVerse(v.number)}
-                      className="mt-0.5 h-4 w-4 rounded border-stone-300"
-                    />
-                    <div className="min-w-0">
-                      <span className="font-medium text-stone-700">Jae {v.number}</span>
-                      <p className="text-stone-400 truncate mt-0.5">
-                        {v.approvedText.slice(0, 60)}…
-                      </p>
-                    </div>
-                  </label>
-                ))}
+          <div className="flex-1 min-h-0 overflow-y-auto p-6">
+            <div className="max-w-3xl mx-auto space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-stone-400">
+                  {selectedVerses.size > 0
+                    ? `${selectedVerses.size}/${unreviewedVerses.length} jaetta valittu`
+                    : `${unreviewedVerses.length} muuttunutta jaetta — klikkaa valitaksesi`}
+                </p>
+                <button
+                  onClick={toggleAll}
+                  className="text-xs text-stone-500 hover:text-stone-700"
+                >
+                  {selectedVerses.size === unreviewedVerses.length ? 'Poista valinnat' : 'Valitse kaikki'}
+                </button>
               </div>
-            </div>
-
-            {/* Right panel: diff preview */}
-            <div className="flex-1 overflow-y-auto p-6">
-              {selectedList.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-sm text-stone-400">
-                    Valitse jakeet vasemmalta nähdäksesi muutokset.
-                  </p>
-                </div>
-              ) : (
-                <div className="max-w-3xl mx-auto space-y-4">
-                  <div className="text-xs text-stone-400 mb-4">
-                    {selectedList.length} {selectedList.length === 1 ? 'jae' : 'jaetta'} valittu
-                  </div>
-                  <div
-                    className="bg-white border border-stone-300 shadow-md font-serif text-base leading-7 text-stone-800 rounded-lg"
-                    style={{ padding: '40px 50px' }}
-                  >
-                    {selectedList.map(v => (
-                      <p key={v.number} className="mb-1">
-                        <span
-                          className="text-xs text-stone-400 font-sans"
-                          style={{ verticalAlign: 'super', fontSize: '0.65em', lineHeight: 0 }}
-                        >
-                          {v.number}
-                        </span>{' '}
-                        <WordDiff oldText={v.approvedText} newText={v.baseText} />
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <div
+                className="bg-white border border-stone-300 shadow-md font-serif text-base leading-7 text-stone-800 rounded-lg"
+                style={{ padding: '40px 50px' }}
+              >
+                {unreviewedVerses.map(v => {
+                  const isSelected = selectedVerses.has(v.number)
+                  return (
+                    <p
+                      key={v.number}
+                      onClick={() => toggleVerse(v.number)}
+                      className={cn(
+                        'mb-1 cursor-pointer rounded px-2 -mx-2 py-0.5 transition-all',
+                        isSelected
+                          ? 'bg-violet-50/70'
+                          : 'opacity-35 hover:opacity-60'
+                      )}
+                    >
+                      <span
+                        className="text-xs text-stone-400 font-sans"
+                        style={{ verticalAlign: 'super', fontSize: '0.65em', lineHeight: 0 }}
+                      >
+                        {v.number}
+                      </span>{' '}
+                      <WordDiff oldText={v.approvedText} newText={v.baseText} />
+                    </p>
+                  )
+                })}
+              </div>
             </div>
           </div>
         )}

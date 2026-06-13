@@ -61,14 +61,32 @@ export const useStore = create<AppState>()(
 
       publishDraft: () => {
         const now = new Date().toISOString()
+        const state = get()
+        const tw = state.textWorks[0]
+        const snapshot: Snapshot = {
+          id: `snapshot-pub-${Date.now()}`,
+          textWorkId: tw?.id ?? '',
+          type: 'publication',
+          name: `Julkaisu ${new Date(now).toLocaleDateString('fi-FI', { day: 'numeric', month: 'numeric', year: 'numeric' })}`,
+          createdAt: now,
+          createdBy: state.currentUserId,
+          verseTexts: state.verses.map(v => ({ number: v.number, text: v.text })),
+          footnoteTexts: state.verses.flatMap(v =>
+            (v.footnotes ?? []).map(f => ({ verse: v.number, marker: f.marker, text: f.text }))
+          ),
+          sectionHeaderTexts: state.verses
+            .filter(v => v.sectionHeader)
+            .map(v => ({ verse: v.number, text: v.sectionHeader! })),
+        }
         set(state => ({
           verses: state.verses.map(v => ({ ...v, baseText: v.text })),
+          snapshots: [...state.snapshots, snapshot],
           activity: [
             {
               id: `act-${Date.now()}`,
               timestamp: now,
               userId: state.currentUserId,
-              textWorkId: '',
+              textWorkId: tw?.id ?? '',
               action: 'Julkaistu',
               detail: 'Luonnos julkaistu uudeksi pohjaversioksi',
             },

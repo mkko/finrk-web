@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useStore } from '@/lib/store'
-import { Snapshot } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -77,35 +76,29 @@ export function VersionHistory({ textWorkId }: Props) {
                 : <>Ensimmäinen versio</>
               }
             </div>
-            {selected.verseTexts.map(sv => {
-              const prevText = previous?.verseTexts.find(p => p.number === sv.number)?.text
-              const changed = prevText !== undefined && prevText !== sv.text
-              const isNew = prevText === undefined
+            <div className="bg-white border border-stone-300 shadow-md font-serif text-base leading-7 text-stone-800" style={{ padding: '40px 50px' }}>
+              {selected.verseTexts.map(sv => {
+                const prevText = previous?.verseTexts.find(p => p.number === sv.number)?.text
+                const changed = prevText !== undefined && prevText !== sv.text
+                const isNew = prevText === undefined
 
-              if (!changed && !isNew) return null
-
-              return (
-                <div key={sv.number} className="border border-stone-200 rounded-lg overflow-hidden">
-                  <div className="bg-stone-50 px-3 py-1.5 border-b border-stone-200">
-                    <span className="text-xs font-medium text-stone-500">Jae {sv.number}</span>
-                  </div>
-                  <div className="p-3 font-serif text-sm leading-7">
-                    {isNew ? (
-                      <p className="text-emerald-700 bg-emerald-50 rounded px-2 py-1">{sv.text}</p>
-                    ) : (
+                return (
+                  <p key={sv.number} className="mb-1">
+                    <span className="text-xs text-stone-400 font-sans" style={{ verticalAlign: 'super', fontSize: '0.65em', lineHeight: 0 }}>
+                      {sv.number}
+                    </span>
+                    {' '}
+                    {changed ? (
                       <WordDiff oldText={prevText!} newText={sv.text} />
+                    ) : isNew ? (
+                      <span className="bg-emerald-100/60 rounded-sm px-0.5">{sv.text}</span>
+                    ) : (
+                      sv.text
                     )}
-                  </div>
-                </div>
-              )
-            })}
-            {/* Check for unchanged state */}
-            {selected.verseTexts.every(sv => {
-              const prevText = previous?.verseTexts.find(p => p.number === sv.number)?.text
-              return prevText === sv.text
-            }) && previous && (
-              <p className="text-sm text-stone-400 py-4 text-center">Ei muutoksia tässä versiossa.</p>
-            )}
+                  </p>
+                )
+              })}
+            </div>
           </div>
         )}
       </div>
@@ -123,13 +116,13 @@ interface DiffPart {
 function WordDiff({ oldText, newText }: { oldText: string; newText: string }) {
   const parts = diffWords(oldText, newText)
   return (
-    <p>
+    <span>
       {parts.map((p, i) => {
         if (p.type === 'same') return <span key={i}>{p.text}</span>
         if (p.type === 'del') return <span key={i} className="bg-red-100 text-red-700 line-through rounded-sm px-0.5">{p.text}</span>
         return <span key={i} className="bg-emerald-100 text-emerald-700 rounded-sm px-0.5">{p.text}</span>
       })}
-    </p>
+    </span>
   )
 }
 

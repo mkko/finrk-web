@@ -390,11 +390,12 @@ export const REFERENCE_TRANSLATIONS: ReferenceTranslation[] = [
 ]
 
 export const SEED_SNAPSHOTS: Snapshot[] = [
-  // Publication snapshot for tw-1 (captured when it was briefly published, before pulling back)
+  // Base version — original RK12 text
   {
     id: 'snapshot-tw1-publication',
     textWorkId: 'tw-1',
     type: 'publication',
+    name: 'Pohjaversio (RK12)',
     createdAt: '2026-04-12T10:00:00Z',
     createdBy: 'tekstiryhma-a',
     verseTexts: SEED_VERSES.map(v => ({ number: v.number, text: v.baseText })),

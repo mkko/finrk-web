@@ -125,6 +125,26 @@ function renderTextWithBreaks(text: string, className?: string) {
 
 export function WordDiff({ oldText, newText }: { oldText: string; newText: string }) {
   const parts = diffWords(oldText, newText)
+
+  // If too few words are shared, the inline diff is unreadable — show as block diff instead
+  const sameCount = parts.filter(p => p.type === 'same').reduce((n, p) => n + p.text.trim().split(/\s+/).filter(Boolean).length, 0)
+  const totalWords = Math.max(
+    oldText.trim().split(/\s+/).filter(Boolean).length,
+    newText.trim().split(/\s+/).filter(Boolean).length,
+    1
+  )
+  const similarity = sameCount / totalWords
+
+  if (similarity < 0.4) {
+    return (
+      <span>
+        <span className="bg-red-100 text-red-700 line-through rounded-sm px-0.5">{oldText}</span>
+        {' '}
+        <span className="bg-emerald-100 text-emerald-700 rounded-sm px-0.5">{newText}</span>
+      </span>
+    )
+  }
+
   return (
     <span>
       {parts.map((p, i) => {

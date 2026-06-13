@@ -207,7 +207,12 @@ export function ChapterView() {
             {isTekstiryhma && isDraft && (changedVerseCount > 0 || editorDirty) && (
               <Button
                 size="sm"
-                onClick={() => { publishDraft(); setViewMode('base') }}
+                onClick={() => {
+                  if (window.confirm('Haluatko varmasti julkaista luonnoksen?')) {
+                    publishDraft()
+                    setViewMode('base')
+                  }
+                }}
               >
                 Julkaise
               </Button>

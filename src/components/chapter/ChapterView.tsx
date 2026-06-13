@@ -24,6 +24,7 @@ export function ChapterView() {
   // Two verse states: cursor-following vs explicit selection
   const [cursorVerse, setCursorVerse] = useState<number | null>(null)
   const [sidebarVerse, setSidebarVerse] = useState<number | null>(null)
+  const [sidebarCommentId, setSidebarCommentId] = useState<string | null>(null)
 
   const [showVoterModal, setShowVoterModal] = useState(false)
   const [showSnapshotList, setShowSnapshotList] = useState(false)
@@ -121,29 +122,30 @@ export function ChapterView() {
 
   const handleCursorVerseChange = useCallback((num: number) => {
     setCursorVerse(num)
+    setSidebarCommentId(null)
   }, [])
 
   const dismissOverlay = useCallback(() => {
     setSidebarVerse(null)
+    setSidebarCommentId(null)
   }, [])
 
-  // Margin comment bubbles data — verses with open comments
+  // Margin comment bubbles — one per open comment
   const marginComments = currentTw
-    ? storeVerses
-        .map(v => {
-          const vc = getVerseComments(comments, currentTw.id, v.number)
-          const open = vc.filter(c => c.status === 'avoin')
-          if (open.length === 0) return null
-          const first = open[0]
-          const author = users.find(u => u.id === first.authorId)
-          return {
-            verseNumber: v.number,
-            count: open.length,
-            authorName: author?.name?.split(' ')[0] ?? '',
-            preview: first.text.length > 40 ? first.text.slice(0, 40) + '…' : first.text,
-          }
-        })
-        .filter(Boolean) as { verseNumber: number; count: number; authorName: string; preview: string }[]
+    ? storeVerses.flatMap(v => {
+        const vc = getVerseComments(comments, currentTw.id, v.number)
+        return vc
+          .filter(c => c.status === 'avoin')
+          .map(c => {
+            const author = users.find(u => u.id === c.authorId)
+            return {
+              id: c.id,
+              verseNumber: v.number,
+              authorName: author?.name?.split(' ')[0] ?? '',
+              preview: c.text.length > 40 ? c.text.slice(0, 40) + '…' : c.text,
+            }
+          })
+      })
     : []
 
   return (
@@ -344,26 +346,23 @@ export function ChapterView() {
                 <div className="sticky top-8 space-y-2">
                   {marginComments.map(mc => (
                     <button
-                      key={mc.verseNumber}
-                      onClick={() => { handleSelectVerse(mc.verseNumber); setSidebarVerse(mc.verseNumber) }}
+                      key={mc.id}
+                      onClick={() => { handleSelectVerse(mc.verseNumber); setSidebarVerse(mc.verseNumber); setSidebarCommentId(mc.id) }}
                       className={cn(
                         'transition-colors',
                         // Compact icon mode
                         'w-7 h-7 flex items-center justify-center rounded-full border text-xs font-medium',
                         // Expand to full card on wide
                         'editor-lg:w-full editor-lg:h-auto editor-lg:rounded-md editor-lg:p-2 editor-lg:text-left editor-lg:block',
-                        cursorVerse === mc.verseNumber
+                        sidebarCommentId === mc.id
                           ? 'border-amber-300 bg-amber-50 text-amber-700'
                           : 'border-stone-200 bg-white text-stone-500 hover:border-stone-300 hover:shadow-sm'
                       )}
                     >
-                      {/* Icon mode: comment count */}
-                      <span className="editor-lg:hidden">{mc.count}</span>
+                      {/* Icon mode: verse number */}
+                      <span className="editor-lg:hidden">{mc.verseNumber}</span>
                       {/* Full card mode */}
                       <span className="hidden editor-lg:inline text-stone-400">Jae {mc.verseNumber}</span>
-                      {mc.count > 1 && (
-                        <span className="hidden editor-lg:inline text-stone-400 ml-1">({mc.count})</span>
-                      )}
                       <br className="hidden editor-lg:block" />
                       <span className="hidden editor-lg:inline text-stone-600">
                         {mc.authorName}: {mc.preview}
@@ -383,7 +382,9 @@ export function ChapterView() {
           <VerseDetailPanel
             verseNumber={displayedVerse}
             textWorkId={currentTw?.id}
-            onClose={() => { setCursorVerse(null); setSidebarVerse(null) }}
+            focusCommentId={sidebarCommentId}
+            onFocusComment={setSidebarCommentId}
+            onClose={() => { setCursorVerse(null); setSidebarVerse(null); setSidebarCommentId(null) }}
           />
         </div>
       )}
@@ -405,6 +406,8 @@ export function ChapterView() {
             <VerseDetailPanel
               verseNumber={sidebarVerse}
               textWorkId={currentTw?.id}
+              focusCommentId={sidebarCommentId}
+              onFocusComment={setSidebarCommentId}
               onClose={dismissOverlay}
               overlay
             />

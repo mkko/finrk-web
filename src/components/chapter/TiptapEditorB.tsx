@@ -37,6 +37,7 @@ interface Props {
   onAddFootnote: (verseNumber: number, text: string) => void
   onEditFootnote: (verseNumber: number, marker: string, newText: string) => void
   onEditSectionHeader: (verseNumber: number, newText: string) => void
+  onComment?: (verseNumber: number, selectedText: string, commentText: string) => void
   onDirtyChange?: (dirty: boolean) => void
 }
 
@@ -397,7 +398,7 @@ export function TiptapEditorB({
   readOnly, toolbarRef,
   selectedVerse, onSelectVerse, onEditVerse,
   onAddFootnote, onEditFootnote, onEditSectionHeader,
-  onDirtyChange,
+  onComment, onDirtyChange,
 }: Props) {
   const versesRef = useRef(verses)
   versesRef.current = verses
@@ -410,6 +411,27 @@ export function TiptapEditorB({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Keep editor always editable so clicks/selection work for all roles.
+  // Block content changes when readOnly via filterTransaction.
+  const readOnlyRef = useRef(readOnly)
+  readOnlyRef.current = readOnly
+
+  const ReadOnlyGuard = useMemo(() => {
+    return Extension.create({
+      name: 'readOnlyGuard',
+      addProseMirrorPlugins() {
+        return [
+          new Plugin({
+            filterTransaction(tr) {
+              if (readOnlyRef.current && tr.docChanged) return false
+              return true
+            },
+          }),
+        ]
+      },
+    })
+  }, [])
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -420,15 +442,16 @@ export function TiptapEditorB({
       SectionHeader,
       FootnoteBlock,
       AnnotationBlock,
+      ReadOnlyGuard,
       DecoExt,
     ],
     content: buildContent(verses),
-    editable: !readOnly,
     editorProps: {
       attributes: {
         class: 'focus:outline-none min-h-[200px] font-serif text-base leading-7 text-stone-800',
       },
       handlePaste(view, event) {
+        if (readOnlyRef.current) return true // block paste
         const text = event.clipboardData?.getData('text/plain')
         if (!text) return false
         const parsed = parseVerseLines(text)
@@ -447,27 +470,12 @@ export function TiptapEditorB({
         return true
       },
       handleClick(view) {
-        const { $from } = view.state.selection
-        const parent = $from.parent
-        if (parent.type.name === 'paragraph') {
-          const { verseNum } = parseVersePrefix(parent.textContent)
-          if (verseNum !== null) { onSelectVerse(verseNum); return false }
-        }
-        // For non-paragraph, walk back
-        const idx = $from.index(0)
-        for (let i = idx; i >= 0; i--) {
-          const node = view.state.doc.child(i)
-          if (node.type.name === 'paragraph') {
-            const { verseNum } = parseVersePrefix(node.textContent)
-            if (verseNum !== null) { onSelectVerse(verseNum); return false }
-          }
-        }
+        const verse = verseAtCursor({ state: view.state })
+        if (verse !== null) onSelectVerse(verse)
         return false
       },
     },
   })
-
-  useEffect(() => { editor?.setEditable(!readOnly) }, [editor, readOnly])
   const suppressDirty = useRef(false)
   useEffect(() => {
     if (editor && !editor.isFocused) {
@@ -547,6 +555,94 @@ export function TiptapEditorB({
     editor.chain().focus().setNode(type, attrs).run()
   }, [editor, activeType, cursorVerse])
 
+  // ── Comment popup on text selection ─────────────
+
+  const editorRef = useRef<HTMLDivElement>(null)
+  const popupRef = useRef<HTMLDivElement>(null)
+  const [commentPopup, setCommentPopup] = useState<{ top: number; left: number } | null>(null)
+  const [bubbleComment, setBubbleComment] = useState('')
+  const [highlightRange, setHighlightRange] = useState<{ from: number; to: number } | null>(null)
+
+  // Decoration to keep the selection visually highlighted while the popup is open
+  useEffect(() => {
+    if (!editor) return
+    const key = new PluginKey('commentHighlight')
+    const plugin = new Plugin({
+      key,
+      state: {
+        init() { return DecorationSet.empty },
+        apply() {
+          if (!highlightRange) return DecorationSet.empty
+          return DecorationSet.create(editor.state.doc, [
+            Decoration.inline(highlightRange.from, highlightRange.to, {
+              style: 'background: rgb(191 219 254); border-radius: 2px;',
+            }),
+          ])
+        },
+      },
+      props: {
+        decorations(state) { return this.getState(state) },
+      },
+    })
+    editor.registerPlugin(plugin)
+    return () => { editor.unregisterPlugin(key) }
+  }, [editor, highlightRange])
+
+  useEffect(() => {
+    if (!onComment) return
+
+    function onMouseUp() {
+      requestAnimationFrame(() => {
+        if (!editor || !editorRef.current) return
+        const { from, to } = editor.state.selection
+        if (from === to) return
+        const text = editor.state.doc.textBetween(from, to, ' ').trim()
+        if (!text) return
+
+        const sel = window.getSelection()
+        if (!sel || sel.isCollapsed) return
+        const range = sel.getRangeAt(0)
+        const rect = range.getBoundingClientRect()
+        const containerRect = editorRef.current.getBoundingClientRect()
+
+        setBubbleComment('')
+        setHighlightRange({ from, to })
+        setCommentPopup({
+          top: rect.bottom - containerRect.top + 4,
+          left: rect.left - containerRect.left + rect.width / 2,
+        })
+      })
+    }
+
+    function onMouseDown(e: MouseEvent) {
+      if (popupRef.current?.contains(e.target as Node)) return
+      setCommentPopup(null)
+      setBubbleComment('')
+      setHighlightRange(null)
+    }
+
+    document.addEventListener('mouseup', onMouseUp)
+    document.addEventListener('mousedown', onMouseDown)
+    return () => {
+      document.removeEventListener('mouseup', onMouseUp)
+      document.removeEventListener('mousedown', onMouseDown)
+    }
+  }, [onComment, editor])
+
+  const handleSubmitComment = useCallback(() => {
+    if (!editor || !onComment || !bubbleComment.trim()) return
+    const { from, to } = editor.state.selection
+    const selectedText = editor.state.doc.textBetween(from, to, ' ')
+    const verse = verseAtCursor(editor)
+    if (verse !== null) {
+      onComment(verse, selectedText, bubbleComment.trim())
+      setBubbleComment('')
+      setCommentPopup(null)
+      setHighlightRange(null)
+      window.getSelection()?.removeAllRanges()
+    }
+  }, [editor, onComment, bubbleComment])
+
   // ── Render ───────────────────────────────────────
 
   const toolbar = !readOnly ? (
@@ -559,12 +655,45 @@ export function TiptapEditorB({
   ) : null
 
   return (
-    <div onBlur={handleBlur}>
+    <div ref={editorRef} onBlur={handleBlur} className="relative">
       {toolbar && toolbarRef?.current
         ? createPortal(toolbar, toolbarRef.current)
         : toolbar && <div className="flex items-center mb-3 pb-2 border-b border-stone-200">{toolbar}</div>
       }
       <EditorContent editor={editor} />
+      {commentPopup && onComment && (
+        <div
+          ref={popupRef}
+          className="absolute z-20"
+          style={{
+            top: commentPopup.top,
+            left: commentPopup.left,
+            transform: 'translateX(-50%)',
+          }}
+        >
+          <div className="bg-white rounded-lg shadow-lg border border-stone-200 p-3 w-72">
+            <textarea
+              value={bubbleComment}
+              onChange={e => setBubbleComment(e.target.value)}
+              placeholder="Kirjoita kommentti..."
+              className="w-full text-sm border border-stone-200 rounded px-2.5 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-stone-400"
+              rows={2}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmitComment()
+                if (e.key === 'Escape') { setCommentPopup(null); setBubbleComment(''); setHighlightRange(null) }
+              }}
+            />
+            <button
+              onMouseDown={e => e.preventDefault()}
+              onClick={handleSubmitComment}
+              disabled={!bubbleComment.trim()}
+              className="mt-2 w-full text-sm rounded-md bg-stone-800 text-white px-3 py-1.5 hover:bg-stone-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Kommentoi
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

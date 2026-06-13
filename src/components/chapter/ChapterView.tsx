@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useStore } from '@/lib/store'
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
@@ -32,6 +32,7 @@ export function ChapterView() {
   const addFootnote = useStore(s => s.addFootnote)
   const editFootnote = useStore(s => s.editFootnote)
   const editSectionHeader = useStore(s => s.editSectionHeader)
+  const addComment = useStore(s => s.addComment)
   const currentUserId = useStore(s => s.currentUserId)
   const currentUser = useStore(s => s.users.find(u => u.id === s.currentUserId)!)
   const textWorks = useStore(s => s.textWorks)
@@ -64,6 +65,19 @@ export function ChapterView() {
 
   const canEdit = canEditVerses(currentTw?.status ?? 'luonnos', currentUser.role)
   const readOnly = !isDraft || !canEdit || !!viewedSnapshot
+
+  const canComment = currentUser.role === 'tekstiryhma' || currentUser.role === 'seurantaryhma'
+  const handleComment = useCallback((verseNumber: number, selectedText: string, commentText: string) => {
+    if (!currentTw) return
+    addComment({
+      textWorkId: currentTw.id,
+      verseAnchor: { verseStart: verseNumber },
+      verseSnapshot: selectedText,
+      authorId: currentUserId,
+      text: commentText,
+      thread: currentUser.role === 'seurantaryhma' ? 'seurantaryhma' : 'tekstiryhma',
+    })
+  }, [currentTw, addComment, currentUserId, currentUser.role])
 
   const openComments = currentTw ? getOpenCommentCount(comments, currentTw.id) : 0
   const availableTransitions = currentTw
@@ -263,6 +277,7 @@ export function ChapterView() {
                   onAddFootnote={addFootnote}
                   onEditFootnote={editFootnote}
                   onEditSectionHeader={editSectionHeader}
+                  onComment={canComment ? handleComment : undefined}
                   onDirtyChange={setEditorDirty}
                 />
               </div>

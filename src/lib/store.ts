@@ -14,7 +14,12 @@ function initialState() {
     currentUserId: 'tekstiryhma-a',
     users: SEED_USERS,
     verses: SEED_VERSES.map(v => ({ ...v, text: v.baseText })),
-    textWorks: [] as typeof SEED_TEXT_WORKS,
+    textWorks: [{
+      id: 'tw-1',
+      scope: { book: '1Thess', chapter: 2 },
+      status: 'luonnos' as const,
+      statusChangedAt: new Date().toISOString(),
+    }],
     proposals: [] as typeof SEED_PROPOSALS,
     comments: [] as Comment[],
     merkinnat: [] as Merkinta[],
@@ -445,7 +450,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'raamattu-kaannostyo',
-      version: 16,
+      version: 17,
       migrate: () => initialState(),
     }
   )

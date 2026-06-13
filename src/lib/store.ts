@@ -16,7 +16,7 @@ function initialState() {
     type: 'publication',
     name: 'Pohjaversio (RK12)',
     createdAt: '2026-04-12T10:00:00Z',
-    createdBy: 'tekstiryhma-a',
+    createdBy: 'tekstiryhma-leino-kimmo',
     verseTexts: SEED_VERSES.map(v => ({ number: v.number, text: v.baseText })),
     footnoteTexts: SEED_VERSES.flatMap(v =>
       (v.footnotes ?? []).map(fn => ({ verse: v.number, marker: fn.marker, text: fn.baseText }))
@@ -27,7 +27,7 @@ function initialState() {
   }
 
   return {
-    currentUserId: 'tekstiryhma-a',
+    currentUserId: 'tekstiryhma-leino-kimmo',
     users: SEED_USERS,
     verses: SEED_VERSES.map(v => ({ ...v, text: v.baseText, approvedText: v.approvedText ?? v.baseText })),
     textWorks: [{
@@ -47,7 +47,7 @@ function initialState() {
 
 function demoState() {
   return {
-    currentUserId: 'tekstiryhma-a',
+    currentUserId: 'tekstiryhma-leino-kimmo',
     users: SEED_USERS,
     verses: [...SEED_VERSES],
     textWorks: [...SEED_TEXT_WORKS],
@@ -562,7 +562,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'raamattu-kaannostyo',
-      version: 20,
+      version: 21,
       migrate: () => initialState(),
     }
   )

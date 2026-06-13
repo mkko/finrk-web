@@ -145,13 +145,22 @@ export const SEED_VERSES: Verse[] = [
 ]
 
 export const SEED_USERS: User[] = [
-  { id: 'tekstiryhma-a', name: 'Tekstiryhmän jäsen A', role: 'tekstiryhma', roleLabel: 'Tekstiryhmän jäsen' },
-  { id: 'tekstiryhma-b', name: 'Tekstiryhmän jäsen B', role: 'tekstiryhma', roleLabel: 'Tekstiryhmän jäsen' },
-  { id: 'seurantaryhma-a', name: 'Seurantaryhmän jäsen A', role: 'seurantaryhma', roleLabel: 'Seurantaryhmän jäsen' },
-  { id: 'seurantaryhma-b', name: 'Seurantaryhmän jäsen B', role: 'seurantaryhma', roleLabel: 'Seurantaryhmän jäsen' },
-  { id: 'hallitus-a', name: 'Hallituksen jäsen A', role: 'hallitus', roleLabel: 'Hallituksen jäsen' },
-  { id: 'hallitus-b', name: 'Hallituksen jäsen B', role: 'hallitus', roleLabel: 'Hallituksen jäsen' },
-  { id: 'hallitus-c', name: 'Hallituksen jäsen C', role: 'hallitus', roleLabel: 'Hallituksen jäsen' },
+  // Tekstiryhmä
+  { id: 'tekstiryhma-leino-kimmo', name: 'Kimmo Leino', role: 'tekstiryhma', roleLabel: 'Tekstiryhmä (1. varapj.)' },
+  { id: 'tekstiryhma-peltola-kimmo', name: 'Kimmo Peltola', role: 'tekstiryhma', roleLabel: 'Tekstiryhmä' },
+  { id: 'tekstiryhma-ahvenainen-martti', name: 'Martti Ahvenainen', role: 'tekstiryhma', roleLabel: 'Tekstiryhmä' },
+  { id: 'tekstiryhma-kivinen-riku', name: 'Riku Kivinen', role: 'tekstiryhma', roleLabel: 'Tekstiryhmä (2. varapj.)' },
+  // Seurantaryhmä
+  { id: 'seurantaryhma-a', name: 'Seurantaryhmän jäsen A', role: 'seurantaryhma', roleLabel: 'Seurantaryhmä' },
+  { id: 'seurantaryhma-b', name: 'Seurantaryhmän jäsen B', role: 'seurantaryhma', roleLabel: 'Seurantaryhmä' },
+  // Hallitus (varsinaiset jäsenet)
+  { id: 'hallitus-liukko-arto', name: 'Arto Liukko', role: 'hallitus', roleLabel: 'Hallitus (pj.)' },
+  { id: 'hallitus-kaikkonen-sointu', name: 'Sointu Kaikkonen', role: 'hallitus', roleLabel: 'Hallitus' },
+  { id: 'hallitus-mantsinen-matti', name: 'Matti Mantsinen', role: 'hallitus', roleLabel: 'Hallitus' },
+  { id: 'hallitus-valimaki-maria', name: 'Maria Välimäki', role: 'hallitus', roleLabel: 'Hallitus (sihteeri)' },
+  { id: 'hallitus-ahvenainen-martti', name: 'Martti Ahvenainen', role: 'hallitus', roleLabel: 'Hallitus' },
+  { id: 'hallitus-kivinen-riku', name: 'Riku Kivinen', role: 'hallitus', roleLabel: 'Hallitus (2. varapj.)' },
+  { id: 'hallitus-leino-kimmo', name: 'Kimmo Leino', role: 'hallitus', roleLabel: 'Hallitus (1. varapj.)' },
 ]
 
 export const SEED_TEXT_WORKS: TextWork[] = [
@@ -199,15 +208,15 @@ export const SEED_TEXT_WORKS: TextWork[] = [
 ]
 
 export const SEED_PROPOSALS: Proposal[] = [
-  // tw-3: partial votes (hallitus-a approved, hallitus-b pending)
+  // tw-3: partial votes (Arto approved, others pending)
   {
     id: 'proposal-tw3',
     textWorkId: 'tw-3',
     snapshotId: 'snapshot-tw3-submission',
-    selectedVoters: ['hallitus-a', 'hallitus-b', 'hallitus-c'],
+    selectedVoters: ['hallitus-liukko-arto', 'hallitus-kaikkonen-sointu', 'hallitus-mantsinen-matti', 'hallitus-valimaki-maria', 'hallitus-ahvenainen-martti', 'hallitus-kivinen-riku', 'hallitus-leino-kimmo'],
     rationale: 'Ensimmäinen luku on valmis seurantaryhmän palautteen jälkeen. Pyydämme hallituksen hyväksyntää.',
     votes: [
-      { userId: 'hallitus-a', decision: 'approve', createdAt: '2026-04-24T10:00:00Z' },
+      { userId: 'hallitus-liukko-arto', decision: 'approve', createdAt: '2026-04-24T10:00:00Z' },
     ],
     createdAt: '2026-04-22T14:00:00Z',
   },
@@ -216,25 +225,30 @@ export const SEED_PROPOSALS: Proposal[] = [
     id: 'proposal-tw4',
     textWorkId: 'tw-4',
     snapshotId: 'snapshot-tw4-submission',
-    selectedVoters: ['hallitus-a', 'hallitus-b', 'hallitus-c'],
+    selectedVoters: ['hallitus-liukko-arto', 'hallitus-kaikkonen-sointu', 'hallitus-mantsinen-matti', 'hallitus-valimaki-maria', 'hallitus-ahvenainen-martti', 'hallitus-kivinen-riku', 'hallitus-leino-kimmo'],
     rationale: 'Neljäs luku on valmis käsittelyyn.',
     votes: [
-      { userId: 'hallitus-a', decision: 'approve', createdAt: '2026-04-24T14:00:00Z' },
-      { userId: 'hallitus-b', decision: 'approve', createdAt: '2026-04-25T16:00:00Z' },
+      { userId: 'hallitus-liukko-arto', decision: 'approve', createdAt: '2026-04-24T14:00:00Z' },
+      { userId: 'hallitus-kaikkonen-sointu', decision: 'approve', createdAt: '2026-04-24T15:00:00Z' },
+      { userId: 'hallitus-mantsinen-matti', decision: 'approve', createdAt: '2026-04-24T16:00:00Z' },
+      { userId: 'hallitus-valimaki-maria', decision: 'approve', createdAt: '2026-04-25T09:00:00Z' },
+      { userId: 'hallitus-ahvenainen-martti', decision: 'approve', createdAt: '2026-04-25T10:00:00Z' },
+      { userId: 'hallitus-kivinen-riku', decision: 'approve', createdAt: '2026-04-25T14:00:00Z' },
+      { userId: 'hallitus-leino-kimmo', decision: 'approve', createdAt: '2026-04-25T16:00:00Z' },
     ],
     createdAt: '2026-04-20T12:00:00Z',
     resolvedAt: '2026-04-25T16:00:00Z',
   },
-  // tw-5: rejected
+  // tw-5: rejected (single rejection resolves immediately)
   {
     id: 'proposal-tw5',
     textWorkId: 'tw-5',
     snapshotId: 'snapshot-tw5-submission',
-    selectedVoters: ['hallitus-a', 'hallitus-b', 'hallitus-c'],
+    selectedVoters: ['hallitus-liukko-arto', 'hallitus-kaikkonen-sointu', 'hallitus-mantsinen-matti', 'hallitus-valimaki-maria', 'hallitus-ahvenainen-martti', 'hallitus-kivinen-riku', 'hallitus-leino-kimmo'],
     rationale: 'Viides luku ehdotettu hallitukselle.',
     votes: [
-      { userId: 'hallitus-b', decision: 'approve', createdAt: '2026-04-25T09:00:00Z' },
-      { userId: 'hallitus-c', decision: 'reject', comment: 'Jakeiden 4–6 käännösratkaisut vaativat vielä tarkistamista. Erityisesti jae 5 on epäselvä.', createdAt: '2026-04-26T11:00:00Z' },
+      { userId: 'hallitus-kaikkonen-sointu', decision: 'approve', createdAt: '2026-04-25T09:00:00Z' },
+      { userId: 'hallitus-mantsinen-matti', decision: 'reject', comment: 'Jakeiden 4–6 käännösratkaisut vaativat vielä tarkistamista. Erityisesti jae 5 on epäselvä.', createdAt: '2026-04-26T11:00:00Z' },
     ],
     createdAt: '2026-04-23T10:00:00Z',
     resolvedAt: '2026-04-26T11:00:00Z',
@@ -274,7 +288,7 @@ export const SEED_COMMENTS: Comment[] = [
     text: 'Hyvä muotoilu, ei huomautettavaa.',
     thread: 'seurantaryhma',
     status: 'kasitelty',
-    resolvedBy: 'tekstiryhma-a',
+    resolvedBy: 'tekstiryhma-leino-kimmo',
     resolvedAt: '2026-04-20T08:00:00Z',
     createdAt: '2026-04-19T15:00:00Z',
   },
@@ -284,7 +298,7 @@ export const SEED_COMMENTS: Comment[] = [
     textWorkId: 'tw-1',
     verseAnchor: { verseStart: 7 },
     verseSnapshot: 'vaikka Kristuksen apostoleina olisimmekin voineet vaatia arvonantoa. Olimme sen sijaan teidän keskuudessanne lempeitä kuin imettävä äiti, joka hoivaa lapsiaan.',
-    authorId: 'tekstiryhma-b',
+    authorId: 'tekstiryhma-peltola-kimmo',
     text: 'Tekstikriittinen huomio: ēpioi vs. nēpioi vaikuttaa käännökseen merkittävästi.',
     thread: 'tekstiryhma',
     status: 'avoin',
@@ -295,7 +309,7 @@ export const SEED_COMMENTS: Comment[] = [
     textWorkId: 'tw-1',
     verseAnchor: { verseStart: 12 },
     verseSnapshot: 'ja tähdensimme, että teidän tulee vaeltaa Jumalan arvon mukaisesti, hänen, joka kutsuu teidät valtakuntaansa ja kirkkauteensa.',
-    authorId: 'tekstiryhma-a',
+    authorId: 'tekstiryhma-leino-kimmo',
     text: '"Tähdensimme" on vanhahtava — harkitaan "korostimme" tai "painotimme".',
     thread: 'tekstiryhma',
     status: 'avoin',
@@ -307,7 +321,7 @@ export const SEED_COMMENTS: Comment[] = [
     textWorkId: 'tw-5',
     verseAnchor: { verseStart: 5 },
     verseSnapshot: 'Luvun 5 jae 5 teksti.',
-    authorId: 'hallitus-c',
+    authorId: 'hallitus-mantsinen-matti',
     text: 'Jakeen 5 käännös on epäselvä. Alkutekstin merkitys ei välity riittävästi.',
     thread: 'tekstiryhma',
     status: 'avoin',
@@ -319,47 +333,47 @@ export const SEED_MERKINNAT: Merkinta[] = [
   {
     id: 'merkinta-1',
     verses: [{ verseNumber: 3, text: 'Kehotuksemme' }],
-    authorId: 'tekstiryhma-a',
+    authorId: 'tekstiryhma-leino-kimmo',
     note: 'kr. paraklesis, voi tarkoittaa myös lohdutusta',
     createdAt: '2026-04-16T08:00:00Z',
   },
   {
     id: 'merkinta-2',
     verses: [{ verseNumber: 3, text: 'epäpuhtaista vaikuttimista' }],
-    authorId: 'tekstiryhma-a',
+    authorId: 'tekstiryhma-leino-kimmo',
     createdAt: '2026-04-16T08:30:00Z',
   },
   {
     id: 'merkinta-3',
     verses: [{ verseNumber: 7, text: 'imettävä' }],
-    authorId: 'tekstiryhma-a',
+    authorId: 'tekstiryhma-leino-kimmo',
     note: 'Tekstikriittinen: ēpioi vs. nēpioi — NA28 lukee ēpioi',
     createdAt: '2026-04-17T10:30:00Z',
   },
   {
     id: 'merkinta-4',
     verses: [{ verseNumber: 7, text: 'lempeät' }],
-    authorId: 'tekstiryhma-a',
+    authorId: 'tekstiryhma-leino-kimmo',
     createdAt: '2026-04-17T10:35:00Z',
   },
   {
     id: 'merkinta-5',
     verses: [{ verseNumber: 12, text: 'vaatineet' }],
-    authorId: 'tekstiryhma-a',
+    authorId: 'tekstiryhma-leino-kimmo',
     note: 'kr. martyromenoi — vertaa: todistaneet, vakuuttaneet',
     createdAt: '2026-04-19T09:15:00Z',
   },
   {
     id: 'merkinta-6',
     verses: [{ verseNumber: 16, text: 'viha' }],
-    authorId: 'tekstiryhma-a',
+    authorId: 'tekstiryhma-leino-kimmo',
     note: 'eis telos — eschatologinen vai historiallinen viittaus?',
     createdAt: '2026-04-20T11:00:00Z',
   },
   {
     id: 'merkinta-7',
     verses: [{ verseNumber: 9, text: 'Yötä päivää' }],
-    authorId: 'tekstiryhma-b',
+    authorId: 'tekstiryhma-peltola-kimmo',
     note: 'Heprealainen sanajärjestys (ilta ensin)',
     createdAt: '2026-04-18T16:00:00Z',
   },
@@ -417,7 +431,7 @@ export const SEED_SNAPSHOTS: Snapshot[] = [
     type: 'publication',
     name: 'Pohjaversio (RK12)',
     createdAt: '2026-04-12T10:00:00Z',
-    createdBy: 'tekstiryhma-a',
+    createdBy: 'tekstiryhma-leino-kimmo',
     verseTexts: SEED_VERSES.map(v => ({ number: v.number, text: v.baseText })),
     footnoteTexts: SEED_VERSES.flatMap(v =>
       (v.footnotes ?? []).map(fn => ({ verse: v.number, marker: fn.marker, text: fn.baseText }))
@@ -433,7 +447,7 @@ export const SEED_SNAPSHOTS: Snapshot[] = [
     type: 'internal',
     name: 'Ensimmäinen luonnoskierros',
     createdAt: '2026-04-14T17:00:00Z',
-    createdBy: 'tekstiryhma-a',
+    createdBy: 'tekstiryhma-leino-kimmo',
     verseTexts: SEED_VERSES.map(v => ({ number: v.number, text: v.baseText })),
     footnoteTexts: SEED_VERSES.flatMap(v =>
       (v.footnotes ?? []).map(fn => ({ verse: v.number, marker: fn.marker, text: fn.baseText }))
@@ -448,7 +462,7 @@ export const SEED_SNAPSHOTS: Snapshot[] = [
     textWorkId: 'tw-3',
     type: 'submission',
     createdAt: '2026-04-22T14:00:00Z',
-    createdBy: 'tekstiryhma-a',
+    createdBy: 'tekstiryhma-leino-kimmo',
     verseTexts: [{ number: 1, text: 'Luvun 1 teksti (tiivistelmä).' }],
     footnoteTexts: [],
     sectionHeaderTexts: [],
@@ -459,7 +473,7 @@ export const SEED_SNAPSHOTS: Snapshot[] = [
     textWorkId: 'tw-4',
     type: 'submission',
     createdAt: '2026-04-20T12:00:00Z',
-    createdBy: 'tekstiryhma-b',
+    createdBy: 'tekstiryhma-peltola-kimmo',
     verseTexts: [{ number: 1, text: 'Luvun 4 teksti (tiivistelmä).' }],
     footnoteTexts: [],
     sectionHeaderTexts: [],
@@ -470,7 +484,7 @@ export const SEED_SNAPSHOTS: Snapshot[] = [
     textWorkId: 'tw-5',
     type: 'submission',
     createdAt: '2026-04-23T10:00:00Z',
-    createdBy: 'tekstiryhma-a',
+    createdBy: 'tekstiryhma-leino-kimmo',
     verseTexts: [{ number: 1, text: 'Luvun 5 teksti (tiivistelmä).' }],
     footnoteTexts: [],
     sectionHeaderTexts: [],
@@ -481,7 +495,7 @@ export const SEED_ACTIVITY: ActivityEntry[] = [
   {
     id: 'act-1',
     timestamp: '2026-04-26T11:00:00Z',
-    userId: 'hallitus-c',
+    userId: 'hallitus-mantsinen-matti',
     textWorkId: 'tw-5',
     action: 'Hylätty',
     detail: '1. Tess. luku 5 — hallitus hylkäsi',
@@ -489,7 +503,7 @@ export const SEED_ACTIVITY: ActivityEntry[] = [
   {
     id: 'act-2',
     timestamp: '2026-04-25T16:00:00Z',
-    userId: 'hallitus-b',
+    userId: 'hallitus-kaikkonen-sointu',
     textWorkId: 'tw-4',
     action: 'Hyväksytty',
     detail: '1. Tess. luku 4 — hallitus hyväksyi yksimielisesti',
@@ -497,7 +511,7 @@ export const SEED_ACTIVITY: ActivityEntry[] = [
   {
     id: 'act-3',
     timestamp: '2026-04-24T10:00:00Z',
-    userId: 'hallitus-a',
+    userId: 'hallitus-liukko-arto',
     textWorkId: 'tw-3',
     action: 'Äänestetty',
     detail: '1. Tess. luku 1 — ääni annettu',
@@ -505,7 +519,7 @@ export const SEED_ACTIVITY: ActivityEntry[] = [
   {
     id: 'act-4',
     timestamp: '2026-04-22T14:00:00Z',
-    userId: 'tekstiryhma-a',
+    userId: 'tekstiryhma-leino-kimmo',
     textWorkId: 'tw-3',
     action: 'Lähetetty hallitukselle',
     detail: '1. Tess. luku 1 — lähetetty hallitukselle',
@@ -521,7 +535,7 @@ export const SEED_ACTIVITY: ActivityEntry[] = [
   {
     id: 'act-6',
     timestamp: '2026-04-18T10:00:00Z',
-    userId: 'tekstiryhma-a',
+    userId: 'tekstiryhma-leino-kimmo',
     textWorkId: 'tw-2',
     action: 'Julkaistu palautteelle',
     detail: '1. Tess. luku 3 — julkaistu seurantaryhmälle',

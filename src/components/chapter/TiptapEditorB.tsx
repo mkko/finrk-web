@@ -37,8 +37,10 @@ interface Props {
   onAddFootnote: (verseNumber: number, text: string) => void
   onEditFootnote: (verseNumber: number, marker: string, newText: string) => void
   onEditSectionHeader: (verseNumber: number, newText: string) => void
+  onCursorVerseChange?: (verseNumber: number) => void
   onComment?: (verseNumber: number, selectedText: string, commentText: string) => void
   onDirtyChange?: (dirty: boolean) => void
+  onOpenSidebar?: (verseNumber: number) => void
 }
 
 // ── Verse number detection ────────────────────────────
@@ -396,9 +398,10 @@ function parseVerseLines(text: string): { number: number; text: string }[] | nul
 export function TiptapEditorB({
   verses, users, currentUserId,
   readOnly, toolbarRef,
-  selectedVerse, onSelectVerse, onEditVerse,
+  selectedVerse, onSelectVerse, onCursorVerseChange,
+  onEditVerse,
   onAddFootnote, onEditFootnote, onEditSectionHeader,
-  onComment, onDirtyChange,
+  onComment, onDirtyChange, onOpenSidebar,
 }: Props) {
   const versesRef = useRef(verses)
   versesRef.current = verses
@@ -495,6 +498,21 @@ export function TiptapEditorB({
     return () => { editor.off('update', handler) }
   }, [editor, onDirtyChange])
 
+  // ── Cursor-following verse detection ────────────
+  useEffect(() => {
+    if (!editor || !onCursorVerseChange) return
+    let lastVerse: number | null = null
+    const handler = () => {
+      const v = verseAtCursor(editor)
+      if (v !== null && v !== lastVerse) {
+        lastVerse = v
+        onCursorVerseChange(v)
+      }
+    }
+    editor.on('selectionUpdate', handler)
+    return () => { editor.off('selectionUpdate', handler) }
+  }, [editor, onCursorVerseChange])
+
   // ── Blur → save changes ──────────────────────────
 
   const handleBlur = useCallback(() => {
@@ -555,9 +573,69 @@ export function TiptapEditorB({
     editor.chain().focus().setNode(type, attrs).run()
   }, [editor, activeType, cursorVerse])
 
-  // ── Comment popup on text selection ─────────────
+  // ── Info button positioning (narrow layout — follows mouse hover) ──
 
   const editorRef = useRef<HTMLDivElement>(null)
+  const hoverZoneRef = useRef<HTMLDivElement>(null)
+  const [infoButtonPos, setInfoButtonPos] = useState<{ top: number; verse: number } | null>(null)
+
+  useEffect(() => {
+    if (!editor || !onOpenSidebar) return
+    const hoverZone = hoverZoneRef.current
+    const container = editorRef.current
+    if (!hoverZone || !container) return
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      // Walk up to find the block-level node rendered by ProseMirror
+      const block = target.closest<HTMLElement>('p, h3[data-section], p[data-footnote-block], p[data-annotation]')
+      if (!block || !container.contains(block)) return
+      // Resolve the ProseMirror position from the DOM node
+      const pos = editor.view.posAtDOM(block, 0)
+      const resolved = editor.state.doc.resolve(pos)
+      const node = resolved.parent
+
+      // Determine verse number from the block
+      let verseNum: number | null = null
+      if (node.type.name === 'paragraph') {
+        verseNum = parseVersePrefix(node.textContent).verseNum
+      } else if (node.attrs?.verse > 0) {
+        verseNum = node.attrs.verse
+      }
+      // For continuation paragraphs, walk back
+      if (verseNum === null) {
+        const idx = resolved.index(0)
+        for (let i = idx - 1; i >= 0; i--) {
+          const prev = editor.state.doc.child(i)
+          if (prev.type.name === 'paragraph') {
+            const v = parseVersePrefix(prev.textContent).verseNum
+            if (v !== null) { verseNum = v; break }
+          }
+          if (prev.type.name === 'footnoteBlock' && prev.attrs.verse > 0) {
+            verseNum = prev.attrs.verse; break
+          }
+        }
+      }
+
+      if (verseNum === null) return
+
+      const blockRect = block.getBoundingClientRect()
+      const containerRect = container.getBoundingClientRect()
+      setInfoButtonPos({ top: blockRect.top - containerRect.top, verse: verseNum })
+    }
+
+    const handleMouseLeave = () => setInfoButtonPos(null)
+
+    hoverZone.addEventListener('mousemove', handleMouseMove)
+    hoverZone.addEventListener('mouseleave', handleMouseLeave)
+    return () => {
+      hoverZone.removeEventListener('mousemove', handleMouseMove)
+      hoverZone.removeEventListener('mouseleave', handleMouseLeave)
+    }
+  }, [editor, onOpenSidebar])
+
+  // ── Comment popup on text selection ─────────────
+
   const popupRef = useRef<HTMLDivElement>(null)
   const [commentPopup, setCommentPopup] = useState<{ top: number; left: number } | null>(null)
   const [bubbleComment, setBubbleComment] = useState('')
@@ -655,12 +733,28 @@ export function TiptapEditorB({
   ) : null
 
   return (
+    <div ref={hoverZoneRef} className="relative" style={{ marginRight: '-2.5rem', paddingRight: '2.5rem' }}>
     <div ref={editorRef} onBlur={handleBlur} className="relative">
       {toolbar && toolbarRef?.current
         ? createPortal(toolbar, toolbarRef.current)
         : toolbar && <div className="flex items-center mb-3 pb-2 border-b border-stone-200">{toolbar}</div>
       }
       <EditorContent editor={editor} />
+      {infoButtonPos && onOpenSidebar && (
+        <button
+          type="button"
+          className="absolute z-10 editor-md:hidden flex items-center justify-center w-7 h-7 rounded-full bg-stone-100 border border-stone-300 text-stone-500 hover:bg-stone-200 hover:text-stone-700 transition-colors shadow-sm"
+          style={{ top: infoButtonPos.top, right: '-2.25rem' }}
+          onClick={() => onOpenSidebar(infoButtonPos.verse)}
+          aria-label="Näytä jakeen tiedot"
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="8" cy="8" r="6.5" />
+            <line x1="8" y1="7" x2="8" y2="11.5" />
+            <circle cx="8" cy="5" r="0.5" fill="currentColor" stroke="none" />
+          </svg>
+        </button>
+      )}
       {commentPopup && onComment && (
         <div
           ref={popupRef}
@@ -694,6 +788,7 @@ export function TiptapEditorB({
           </div>
         </div>
       )}
+    </div>
     </div>
   )
 }

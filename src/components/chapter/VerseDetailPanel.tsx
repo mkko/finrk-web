@@ -16,16 +16,18 @@ interface VerseDetailPanelProps {
   verseNumber: number
   textWorkId?: string
   onClose: () => void
+  overlay?: boolean
 }
 
-export function VerseDetailPanel({ verseNumber, textWorkId, onClose }: VerseDetailPanelProps) {
+export function VerseDetailPanel({ verseNumber, textWorkId, onClose, overlay }: VerseDetailPanelProps) {
   useEffect(() => {
+    if (overlay) return // overlay backdrop handles dismiss
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
+  }, [onClose, overlay])
 
   return <PanelContent verseNumber={verseNumber} textWorkId={textWorkId} onClose={onClose} />
 }

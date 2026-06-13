@@ -5,7 +5,8 @@ import { useSearchParams } from 'next/navigation'
 import { useStore } from '@/lib/store'
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
 import { canEditVerses, getAvailableTransitions, getTransitionLabel } from '@/lib/state-machine'
-import { getCurrentTextWork, getOpenCommentCount } from '@/lib/selectors'
+import { getCurrentTextWork, getOpenCommentCount, getVerseComments } from '@/lib/selectors'
+import { useLayoutMode } from '@/hooks/useLayoutMode'
 import { VerseDetailPanel } from './VerseDetailPanel'
 import { TiptapEditorB } from './TiptapEditorB'
 import { VoterSelectionModal } from './VoterSelectionModal'
@@ -18,7 +19,12 @@ type ViewMode = 'base' | 'draft'
 
 export function ChapterView() {
   const searchParams = useSearchParams()
-  const [selectedVerse, setSelectedVerse] = useState<number | null>(null)
+  const layoutMode = useLayoutMode()
+
+  // Two verse states: cursor-following vs explicit selection
+  const [cursorVerse, setCursorVerse] = useState<number | null>(null)
+  const [sidebarVerse, setSidebarVerse] = useState<number | null>(null)
+
   const [showVoterModal, setShowVoterModal] = useState(false)
   const [showSnapshotList, setShowSnapshotList] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode | null>(null)
@@ -94,16 +100,58 @@ export function ChapterView() {
     const v = searchParams.get('verse')
     if (v) {
       const num = Number(v)
-      if (num >= 1 && num <= 20) setSelectedVerse(num)
+      if (num >= 1 && num <= 20) {
+        setCursorVerse(num)
+        setSidebarVerse(num)
+      }
     }
   }, [searchParams])
 
+  // In automatic mode (medium/wide), the sidebar shows cursorVerse
+  // In manual mode (narrow), it shows sidebarVerse only when explicitly set
+  const displayedVerse = layoutMode === 'narrow' ? sidebarVerse : cursorVerse
+
+  const handleSelectVerse = useCallback((num: number) => {
+    setCursorVerse(num)
+  }, [])
+
+  const handleOpenSidebar = useCallback((num: number) => {
+    setSidebarVerse(num)
+  }, [])
+
+  const handleCursorVerseChange = useCallback((num: number) => {
+    setCursorVerse(num)
+  }, [])
+
+  const dismissOverlay = useCallback(() => {
+    setSidebarVerse(null)
+  }, [])
+
+  // Margin comment bubbles data — verses with open comments
+  const marginComments = currentTw
+    ? storeVerses
+        .map(v => {
+          const vc = getVerseComments(comments, currentTw.id, v.number)
+          const open = vc.filter(c => c.status === 'avoin')
+          if (open.length === 0) return null
+          const first = open[0]
+          const author = users.find(u => u.id === first.authorId)
+          return {
+            verseNumber: v.number,
+            count: open.length,
+            authorName: author?.name?.split(' ')[0] ?? '',
+            preview: first.text.length > 40 ? first.text.slice(0, 40) + '…' : first.text,
+          }
+        })
+        .filter(Boolean) as { verseNumber: number; count: number; authorName: string; preview: string }[]
+    : []
+
   return (
     <div className="h-full flex">
-      {/* Main document column */}
+      {/* Main content column */}
       <div className="flex-1 min-h-0 flex flex-col">
 
-        {/* Document toolbar — fixed below header */}
+        {/* Document toolbar */}
         {!viewedSnapshot && (
           <div className={cn(
             'flex-none border-b px-4 py-2 flex items-center gap-3 transition-colors duration-200',
@@ -201,106 +249,168 @@ export function ChapterView() {
           'flex-1 min-h-0 overflow-y-auto transition-colors duration-200',
           isDraft ? 'bg-amber-50/20' : 'bg-stone-100'
         )}>
-          <div className="max-w-3xl mx-auto py-8 px-4">
-            {/* A4-like page */}
-            <div
-              className={cn(
-                'border shadow-md transition-colors duration-200',
-                isDraft ? 'border-amber-200/50' : 'border-stone-300'
-              )}
-              style={{
-                padding: '40px 50px',
-                minHeight: '800px',
-                backgroundColor: isDraft ? '#fffdf7' : '#ffffff',
-                boxShadow: isDraft ? 'inset 3px 0 0 #fcd34d' : undefined,
-              }}
-            >
-              {/* Document header */}
-              <p className="font-serif text-sm text-stone-400 mb-1">1. Tessalonikalaiskirje</p>
-              <h1 className="font-serif text-2xl font-semibold text-stone-800 leading-tight mb-4">Luku 2</h1>
+          <div className="py-8 px-4 flex justify-center gap-4">
+            {/* Left spacer — mirrors margin width for centering (wide only) */}
+            <div className="w-48 shrink-0 hidden editor-lg:block" />
 
-              {/* Action bar — transition buttons, snapshots, voting */}
-              {currentTw && (availableTransitions.length > 0 || isTekstiryhma || (currentTw.status === 'lahetetty_hallitukselle' && isSelectedVoter)) && (
-                <div className="flex flex-wrap items-center gap-2 mb-6 pb-4 border-b border-stone-200">
-                  {availableTransitions.map(target => {
-                    if (target === 'lahetetty_hallitukselle') {
+            {/* A4 page — fixed max-width, shrinks on mobile */}
+            <div className="w-full max-w-3xl shrink-0">
+              <div
+                className={cn(
+                  'border shadow-md transition-colors duration-200',
+                  isDraft ? 'border-amber-200/50' : 'border-stone-300'
+                )}
+                style={{
+                  padding: '40px 50px',
+                  minHeight: '800px',
+                  backgroundColor: isDraft ? '#fffdf7' : '#ffffff',
+                  boxShadow: isDraft ? 'inset 3px 0 0 #fcd34d' : undefined,
+                }}
+              >
+                {/* Document header */}
+                <p className="font-serif text-sm text-stone-400 mb-1">1. Tessalonikalaiskirje</p>
+                <h1 className="font-serif text-2xl font-semibold text-stone-800 leading-tight mb-4">Luku 2</h1>
+
+                {/* Action bar — transition buttons, snapshots, voting */}
+                {currentTw && (availableTransitions.length > 0 || isTekstiryhma || (currentTw.status === 'lahetetty_hallitukselle' && isSelectedVoter)) && (
+                  <div className="flex flex-wrap items-center gap-2 mb-6 pb-4 border-b border-stone-200">
+                    {availableTransitions.map(target => {
+                      if (target === 'lahetetty_hallitukselle') {
+                        return (
+                          <Button key={target} size="sm" onClick={() => setShowVoterModal(true)}>
+                            {getTransitionLabel(currentTw.status, target)}
+                          </Button>
+                        )
+                      }
                       return (
-                        <Button key={target} size="sm" onClick={() => setShowVoterModal(true)}>
+                        <Button
+                          key={target}
+                          size="sm"
+                          variant={target === 'luonnos' ? 'outline' : 'default'}
+                          onClick={() => updateTextWorkStatus(currentTw.id, target)}
+                        >
                           {getTransitionLabel(currentTw.status, target)}
                         </Button>
                       )
-                    }
-                    return (
-                      <Button
-                        key={target}
-                        size="sm"
-                        variant={target === 'luonnos' ? 'outline' : 'default'}
-                        onClick={() => updateTextWorkStatus(currentTw.id, target)}
-                      >
-                        {getTransitionLabel(currentTw.status, target)}
+                    })}
+
+                    {isTekstiryhma && (
+                      <Button size="sm" variant="outline" onClick={() => setShowSnapshotList(true)}>
+                        Tilannekuvat
                       </Button>
-                    )
-                  })}
+                    )}
 
-                  {isTekstiryhma && (
-                    <Button size="sm" variant="outline" onClick={() => setShowSnapshotList(true)}>
-                      Tilannekuvat
-                    </Button>
-                  )}
+                    {currentTw.status === 'lahetetty_hallitukselle' && isSelectedVoter && !hasVoted && activeProposal && (
+                      <div className="w-full mt-2 rounded-md border border-violet-200 bg-violet-50/50 p-3 space-y-2">
+                        <p className="text-sm font-medium text-violet-800">Äänestyksesi vaaditaan</p>
+                        <p className="text-xs text-violet-600">
+                          {activeProposal.votes.length}/{activeProposal.selectedVoters.length} äänestänyt
+                        </p>
+                        <VotingButtons proposalId={activeProposal.id} onVote={castVote} />
+                      </div>
+                    )}
+                    {currentTw.status === 'lahetetty_hallitukselle' && isSelectedVoter && hasVoted && (
+                      <span className="text-xs text-violet-600">Olet äänestänyt</span>
+                    )}
+                  </div>
+                )}
 
-                  {currentTw.status === 'lahetetty_hallitukselle' && isSelectedVoter && !hasVoted && activeProposal && (
-                    <div className="w-full mt-2 rounded-md border border-violet-200 bg-violet-50/50 p-3 space-y-2">
-                      <p className="text-sm font-medium text-violet-800">Äänestyksesi vaaditaan</p>
-                      <p className="text-xs text-violet-600">
-                        {activeProposal.votes.length}/{activeProposal.selectedVoters.length} äänestänyt
-                      </p>
-                      <VotingButtons proposalId={activeProposal.id} onVote={castVote} />
-                    </div>
-                  )}
-                  {currentTw.status === 'lahetetty_hallitukselle' && isSelectedVoter && hasVoted && (
-                    <span className="text-xs text-violet-600">Olet äänestänyt</span>
-                  )}
+                {/* Verses */}
+                <div className="font-serif text-base leading-7 text-stone-800">
+                  <TiptapEditorB
+                    verses={verses}
+                    users={users}
+                    currentUserId={currentUserId}
+                    readOnly={readOnly}
+                    toolbarRef={toolbarRef}
+                    selectedVerse={cursorVerse}
+                    onSelectVerse={handleSelectVerse}
+                    onCursorVerseChange={handleCursorVerseChange}
+                    onEditVerse={editVerse}
+                    onAddFootnote={addFootnote}
+                    onEditFootnote={editFootnote}
+                    onEditSectionHeader={editSectionHeader}
+                    onComment={canComment ? handleComment : undefined}
+                    onDirtyChange={setEditorDirty}
+                    onOpenSidebar={handleOpenSidebar}
+                  />
                 </div>
-              )}
-
-              {/* Verses */}
-              <div className="font-serif text-base leading-7 text-stone-800">
-                <TiptapEditorB
-                  verses={verses}
-                  users={users}
-                  currentUserId={currentUserId}
-                  readOnly={readOnly}
-                  toolbarRef={toolbarRef}
-                  selectedVerse={selectedVerse}
-                  onSelectVerse={setSelectedVerse}
-                  onEditVerse={editVerse}
-                  onAddFootnote={addFootnote}
-                  onEditFootnote={editFootnote}
-                  onEditSectionHeader={editSectionHeader}
-                  onComment={canComment ? handleComment : undefined}
-                  onDirtyChange={setEditorDirty}
-                />
               </div>
             </div>
+
+            {/* Right margin: comment bubbles — icons on narrow, full cards on wide */}
+            {marginComments.length > 0 && (
+              <div className="shrink-0 w-8 editor-lg:w-48">
+                <div className="sticky top-8 space-y-2">
+                  {marginComments.map(mc => (
+                    <button
+                      key={mc.verseNumber}
+                      onClick={() => { handleSelectVerse(mc.verseNumber); setSidebarVerse(mc.verseNumber) }}
+                      className={cn(
+                        'transition-colors',
+                        // Compact icon mode
+                        'w-7 h-7 flex items-center justify-center rounded-full border text-xs font-medium',
+                        // Expand to full card on wide
+                        'editor-lg:w-full editor-lg:h-auto editor-lg:rounded-md editor-lg:p-2 editor-lg:text-left editor-lg:block',
+                        cursorVerse === mc.verseNumber
+                          ? 'border-amber-300 bg-amber-50 text-amber-700'
+                          : 'border-stone-200 bg-white text-stone-500 hover:border-stone-300 hover:shadow-sm'
+                      )}
+                    >
+                      {/* Icon mode: comment count */}
+                      <span className="editor-lg:hidden">{mc.count}</span>
+                      {/* Full card mode */}
+                      <span className="hidden editor-lg:inline text-stone-400">Jae {mc.verseNumber}</span>
+                      {mc.count > 1 && (
+                        <span className="hidden editor-lg:inline text-stone-400 ml-1">({mc.count})</span>
+                      )}
+                      <br className="hidden editor-lg:block" />
+                      <span className="hidden editor-lg:inline text-stone-600">
+                        {mc.authorName}: {mc.preview}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Sidebar */}
-      <div className="w-96 shrink-0 border-l border-stone-200 bg-white flex flex-col overflow-hidden">
-        {selectedVerse !== null
-          ? <VerseDetailPanel
-              verseNumber={selectedVerse}
+      {/* Inline sidebar — medium and wide */}
+      {displayedVerse !== null && layoutMode !== 'narrow' && (
+        <div className="hidden editor-md:flex w-96 shrink-0 border-l border-stone-200 bg-white flex-col overflow-hidden">
+          <VerseDetailPanel
+            verseNumber={displayedVerse}
+            textWorkId={currentTw?.id}
+            onClose={() => { setCursorVerse(null); setSidebarVerse(null) }}
+          />
+        </div>
+      )}
+
+      {/* Empty sidebar placeholder when no verse selected — medium and wide */}
+      {displayedVerse === null && layoutMode !== 'narrow' && (
+        <div className="hidden editor-md:flex w-96 shrink-0 border-l border-stone-200 bg-white flex-col overflow-hidden">
+          <div className="flex-1 flex items-center justify-center p-8 text-center">
+            <p className="text-sm text-stone-400">Valitse jae nähdäksesi tiedot</p>
+          </div>
+        </div>
+      )}
+
+      {/* Floating sidebar overlay — narrow, on-demand */}
+      {layoutMode === 'narrow' && sidebarVerse !== null && (
+        <>
+          <div className="fixed inset-0 bg-black/20 z-20" onClick={dismissOverlay} />
+          <div className="fixed inset-y-0 right-0 w-96 max-w-[90vw] z-30 bg-white border-l border-stone-200 shadow-xl flex flex-col overflow-hidden">
+            <VerseDetailPanel
+              verseNumber={sidebarVerse}
               textWorkId={currentTw?.id}
-              onClose={() => setSelectedVerse(null)}
+              onClose={dismissOverlay}
+              overlay
             />
-          : (
-            <div className="flex-1 flex items-center justify-center p-8 text-center">
-              <p className="text-sm text-stone-400">Valitse jae nähdäksesi tiedot</p>
-            </div>
-          )
-        }
-      </div>
+          </div>
+        </>
+      )}
 
       {/* Modals */}
       {currentTw && (

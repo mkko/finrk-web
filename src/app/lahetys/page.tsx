@@ -67,12 +67,19 @@ export default function LahetysPage() {
   return (
     <div className="h-full flex flex-col">
       {/* Page header */}
-      <div className="flex-none border-b border-stone-200 bg-white px-4 sm:px-6 py-4">
-        <div className="mx-auto max-w-5xl">
-          <h1 className="text-xl font-semibold text-stone-800">Lähetys hallitukselle</h1>
-          <p className="text-sm text-stone-500 mt-1">
-            Valitse julkaistut muutokset ja lähetä ne hallituksen tarkistettavaksi.
-          </p>
+      <div className="flex-none border-b border-stone-200 bg-white px-4 sm:px-6 py-2">
+        <div className="mx-auto max-w-5xl flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold text-stone-800">Lähetys hallitukselle</h1>
+            <p className="text-sm text-stone-500 mt-0.5">
+              Valitse julkaistut muutokset ja lähetä ne hallituksen tarkistettavaksi.
+            </p>
+          </div>
+          {selectedList.length > 0 && (
+            <Button onClick={() => setShowVoterModal(true)}>
+              Lähetä hallitukselle
+            </Button>
+          )}
         </div>
       </div>
 
@@ -155,18 +162,6 @@ export default function LahetysPage() {
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {/* Bottom bar */}
-      {selectedList.length > 0 && (
-        <div className="flex-none border-t border-stone-200 bg-white px-6 py-3 flex items-center justify-between">
-          <p className="text-sm text-stone-600">
-            {selectedList.length} {selectedList.length === 1 ? 'jae' : 'jaetta'} valittu lähetettäväksi
-          </p>
-          <Button onClick={() => setShowVoterModal(true)}>
-            Lähetä hallitukselle
-          </Button>
         </div>
       )}
 

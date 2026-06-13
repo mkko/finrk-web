@@ -218,21 +218,6 @@ export function ChapterView() {
 
             <div className="flex-1" />
 
-            {/* Publish button */}
-            {isTekstiryhma && isDraft && (changedVerseCount > 0 || editorDirty) && (
-              <Button
-                size="sm"
-                onClick={() => {
-                  if (window.confirm('Haluatko varmasti julkaista luonnoksen?')) {
-                    publishDraft()
-                    setViewMode('base')
-                  }
-                }}
-              >
-                Julkaise
-              </Button>
-            )}
-
             {/* Status badge */}
             {currentTw && (
               <Badge variant="outline" className={cn('text-xs', STATUS_COLORS[currentTw.status])}>
@@ -297,44 +282,6 @@ export function ChapterView() {
                 {/* Document header */}
                 <p className="font-serif text-sm text-stone-400 mb-1">1. Tessalonikalaiskirje</p>
                 <h1 className="font-serif text-2xl font-semibold text-stone-800 leading-tight mb-4">Luku 2</h1>
-
-                {/* Action bar — transition buttons, snapshots, voting */}
-                {currentTw && (availableTransitions.length > 0 || isTekstiryhma || (currentTw.status === 'lahetetty_hallitukselle' && isSelectedVoter)) && (
-                  <div className="flex flex-wrap items-center gap-2 mb-6 pb-4 border-b border-stone-200">
-                    {availableTransitions.map(target => {
-                      if (target === 'lahetetty_hallitukselle') {
-                        return (
-                          <Button key={target} size="sm" onClick={() => setShowVoterModal(true)}>
-                            {getTransitionLabel(currentTw.status, target)}
-                          </Button>
-                        )
-                      }
-                      return (
-                        <Button
-                          key={target}
-                          size="sm"
-                          variant={target === 'luonnos' ? 'outline' : 'default'}
-                          onClick={() => updateTextWorkStatus(currentTw.id, target)}
-                        >
-                          {getTransitionLabel(currentTw.status, target)}
-                        </Button>
-                      )
-                    })}
-
-                    {currentTw.status === 'lahetetty_hallitukselle' && isSelectedVoter && !hasVoted && activeProposal && (
-                      <div className="w-full mt-2 rounded-md border border-violet-200 bg-violet-50/50 p-3 space-y-2">
-                        <p className="text-sm font-medium text-violet-800">Äänestyksesi vaaditaan</p>
-                        <p className="text-xs text-violet-600">
-                          {activeProposal.votes.length}/{activeProposal.selectedVoters.length} äänestänyt
-                        </p>
-                        <VotingButtons proposalId={activeProposal.id} onVote={castVote} />
-                      </div>
-                    )}
-                    {currentTw.status === 'lahetetty_hallitukselle' && isSelectedVoter && hasVoted && (
-                      <span className="text-xs text-violet-600">Olet äänestänyt</span>
-                    )}
-                  </div>
-                )}
 
                 {/* Verses */}
                 <div className="font-serif text-base leading-7 text-stone-800">

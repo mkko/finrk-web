@@ -87,15 +87,15 @@ export default function LahetysPage() {
                 <ArrowLeft className="h-5 w-5" />
               </button>
               <div>
-                <h1 className="text-xl font-semibold text-stone-800">Uusi lähetys</h1>
+                <h1 className="text-xl font-semibold text-stone-800">Uusi ehdotus</h1>
                 <p className="text-sm text-stone-500 mt-0.5">
-                  Valitse jakeet ja lähetä hallituksen tarkistettavaksi.
+                  Valitse jakeet ja ehdota hallituksen tarkistettavaksi.
                 </p>
               </div>
             </div>
             {selectedList.length > 0 && (
               <Button onClick={handleSubmit}>
-                Lähetä hallitukselle
+                Ehdota hallitukselle
               </Button>
             )}
           </div>
@@ -181,7 +181,7 @@ export default function LahetysPage() {
           {unreviewedVerses.length > 0 && (
             <Button onClick={() => setView('new')}>
               <Plus className="h-4 w-4 mr-1" />
-              Uusi lähetys
+              Uusi ehdotus
             </Button>
           )}
         </div>

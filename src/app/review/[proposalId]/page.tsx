@@ -76,7 +76,7 @@ export default function ReviewPage() {
       <div className="mx-auto max-w-4xl px-4 sm:px-6 py-8 space-y-6">
         {/* Back link */}
         <Link
-          href="/hallitus"
+          href={isHallitus ? '/hallitus' : '/lahetys'}
           className="text-sm text-stone-500 hover:text-stone-700 inline-flex items-center gap-1"
         >
           <ArrowLeft className="h-4 w-4" /> Takaisin
@@ -112,8 +112,8 @@ export default function ReviewPage() {
           </div>
         )}
 
-        {/* Voter progress */}
-        {(() => {
+        {/* Voter progress — hallitus only */}
+        {isHallitus && (() => {
           const hallitusMembers = users.filter(u => u.role === 'hallitus')
           return (
             <div className={cn(

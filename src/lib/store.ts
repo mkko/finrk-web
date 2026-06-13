@@ -168,7 +168,7 @@ export const useStore = create<AppState>()(
         const now = new Date().toISOString()
         const state = get()
         const tw = state.textWorks.find(t => t.id === textWorkId)
-        if (!tw || tw.status !== 'julkaistu_palautteelle') return
+        if (!tw) return
 
         // Create submission snapshot (only selected verses if specified)
         const snapshotId = `snapshot-${Date.now()}`

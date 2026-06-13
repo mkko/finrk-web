@@ -128,24 +128,34 @@ export default function LahetysPage() {
                 {unreviewedVerses.map(v => {
                   const isSelected = selectedVerses.has(v.number)
                   return (
-                    <p
+                    <div
                       key={v.number}
                       onClick={() => toggleVerse(v.number)}
                       className={cn(
-                        'mb-1 cursor-pointer rounded px-2 -mx-2 py-0.5 transition-all',
+                        'flex items-start gap-3 cursor-pointer rounded-md px-3 -mx-3 py-2 mb-1 transition-all border',
                         isSelected
-                          ? 'bg-violet-50/70'
-                          : 'opacity-35 hover:opacity-60'
+                          ? 'bg-violet-50 border-violet-200'
+                          : 'border-transparent opacity-30 hover:opacity-50'
                       )}
                     >
-                      <span
-                        className="text-xs text-stone-400 font-sans"
-                        style={{ verticalAlign: 'super', fontSize: '0.65em', lineHeight: 0 }}
-                      >
-                        {v.number}
-                      </span>{' '}
-                      <WordDiff oldText={v.approvedText} newText={v.baseText} />
-                    </p>
+                      <p className="flex-1 min-w-0">
+                        <span
+                          className="text-xs text-stone-400 font-sans"
+                          style={{ verticalAlign: 'super', fontSize: '0.65em', lineHeight: 0 }}
+                        >
+                          {v.number}
+                        </span>{' '}
+                        <WordDiff oldText={v.approvedText} newText={v.baseText} />
+                      </p>
+                      <span className={cn(
+                        'shrink-0 mt-1 h-5 w-5 rounded-full flex items-center justify-center transition-colors',
+                        isSelected
+                          ? 'bg-violet-600 text-white'
+                          : 'border-2 border-stone-300'
+                      )}>
+                        {isSelected && <Check className="h-3 w-3" />}
+                      </span>
+                    </div>
                   )
                 })}
               </div>

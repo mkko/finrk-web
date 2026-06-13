@@ -11,11 +11,12 @@ import { VerseDetailPanel } from './VerseDetailPanel'
 import { TiptapEditorB } from './TiptapEditorB'
 import { VoterSelectionModal } from './VoterSelectionModal'
 import { SnapshotList } from './SnapshotList'
+import { VersionHistory } from './VersionHistory'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-type ViewMode = 'base' | 'draft'
+type ViewMode = 'base' | 'draft' | 'history'
 
 export function ChapterView() {
   const searchParams = useSearchParams()
@@ -60,6 +61,7 @@ export function ChapterView() {
 
   const effectiveViewMode = viewMode ?? (isTekstiryhma ? 'draft' : 'base')
   const isDraft = effectiveViewMode === 'draft'
+  const isHistory = effectiveViewMode === 'history'
 
   useEffect(() => { setViewMode(null) }, [currentUserId])
 
@@ -175,6 +177,19 @@ export function ChapterView() {
               >
                 Julkaistu
               </button>
+              {isTekstiryhma && (
+                <button
+                  onClick={() => setViewMode('history')}
+                  className={cn(
+                    'px-3 py-1 text-xs rounded transition-colors',
+                    isHistory
+                      ? 'bg-white text-stone-800 font-medium shadow-sm'
+                      : 'text-stone-400 hover:text-stone-600'
+                  )}
+                >
+                  Aiemmat versiot
+                </button>
+              )}
               <button
                 onClick={() => setViewMode('draft')}
                 className={cn(
@@ -237,7 +252,7 @@ export function ChapterView() {
         {viewedSnapshot && (
           <div className="flex-none border-b border-blue-200 bg-blue-50 px-6 py-2.5 flex items-center justify-between">
             <p className="text-sm text-blue-800">
-              <span className="font-medium">Tilannekuva:</span> {viewedSnapshot.name}
+              <span className="font-medium">Aiempi versio:</span> {viewedSnapshot.name}
               <span className="text-blue-600 ml-2">
                 ({new Date(viewedSnapshot.createdAt).toLocaleDateString('fi-FI', { day: 'numeric', month: 'long', year: 'numeric' })})
               </span>
@@ -251,8 +266,13 @@ export function ChapterView() {
           </div>
         )}
 
+        {/* Version history view */}
+        {isHistory && currentTw && (
+          <VersionHistory textWorkId={currentTw.id} />
+        )}
+
         {/* Scrollable document area */}
-        <div className={cn(
+        {!isHistory && <div className={cn(
           'flex-1 min-h-0 overflow-y-auto transition-colors duration-200',
           isDraft ? 'bg-amber-50/20' : 'bg-stone-100'
         )}>
@@ -300,12 +320,6 @@ export function ChapterView() {
                         </Button>
                       )
                     })}
-
-                    {isTekstiryhma && (
-                      <Button size="sm" variant="outline" onClick={() => setShowSnapshotList(true)}>
-                        Tilannekuvat
-                      </Button>
-                    )}
 
                     {currentTw.status === 'lahetetty_hallitukselle' && isSelectedVoter && !hasVoted && activeProposal && (
                       <div className="w-full mt-2 rounded-md border border-violet-200 bg-violet-50/50 p-3 space-y-2">
@@ -378,7 +392,7 @@ export function ChapterView() {
               </div>
             )}
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* Inline sidebar — medium and wide */}

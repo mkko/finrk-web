@@ -48,9 +48,9 @@ export function SnapshotList({ open, onClose, textWorkId }: SnapshotListProps) {
     <Dialog open={open} onOpenChange={(v) => { if (!v) { onClose(); setConfirmRestore(null) } }}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Tilannekuvat</DialogTitle>
+          <DialogTitle>Aiemmat versiot</DialogTitle>
           <DialogDescription>
-            Sisäiset tilannekuvat tästä tekstistä. Voit palauttaa aikaisemman version.
+            Aiemmat versiot tästä tekstistä. Voit palauttaa aikaisemman version.
           </DialogDescription>
         </DialogHeader>
 

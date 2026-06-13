@@ -170,7 +170,7 @@ export function ChapterView() {
                 onClick={() => setViewMode('base')}
                 className={cn(
                   'px-3 py-1 text-xs rounded transition-colors',
-                  !isDraft
+                  effectiveViewMode === 'base'
                     ? 'bg-white text-stone-800 font-medium shadow-sm'
                     : 'text-stone-400 hover:text-stone-600'
                 )}
@@ -217,6 +217,21 @@ export function ChapterView() {
             <div ref={toolbarRef} />
 
             <div className="flex-1" />
+
+            {/* Publish button */}
+            {isTekstiryhma && isDraft && (changedVerseCount > 0 || editorDirty) && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  if (window.confirm('Haluatko varmasti julkaista luonnoksen?')) {
+                    publishDraft()
+                    setViewMode('base')
+                  }
+                }}
+              >
+                Julkaise
+              </Button>
+            )}
 
             {/* Status badge */}
             {currentTw && (

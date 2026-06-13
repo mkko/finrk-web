@@ -17,9 +17,10 @@ interface VoterSelectionModalProps {
   open: boolean
   onClose: () => void
   textWorkId: string
+  selectedVerses?: number[]
 }
 
-export function VoterSelectionModal({ open, onClose, textWorkId }: VoterSelectionModalProps) {
+export function VoterSelectionModal({ open, onClose, textWorkId, selectedVerses }: VoterSelectionModalProps) {
   const users = useStore(s => s.users)
   const submitToHallitus = useStore(s => s.submitToHallitus)
 
@@ -37,7 +38,7 @@ export function VoterSelectionModal({ open, onClose, textWorkId }: VoterSelectio
 
   function handleSubmit() {
     if (selectedVoters.length === 0) return
-    submitToHallitus(textWorkId, selectedVoters, rationale.trim())
+    submitToHallitus(textWorkId, selectedVoters, rationale.trim(), selectedVerses)
     setSelectedVoters([])
     setRationale('')
     onClose()

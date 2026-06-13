@@ -123,7 +123,7 @@ function renderTextWithBreaks(text: string, className?: string) {
   ))
 }
 
-function WordDiff({ oldText, newText }: { oldText: string; newText: string }) {
+export function WordDiff({ oldText, newText }: { oldText: string; newText: string }) {
   const parts = diffWords(oldText, newText)
   return (
     <span>

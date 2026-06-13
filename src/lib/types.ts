@@ -60,6 +60,7 @@ export interface Proposal {
   textWorkId: string
   snapshotId: string
   selectedVoters: string[]
+  selectedVerses?: number[]
   rationale: string
   votes: Vote[]
   createdAt: string
@@ -98,6 +99,7 @@ export interface Verse {
   number: number
   text: string
   baseText: string
+  approvedText: string
   sectionHeader?: string
   footnotes?: Footnote[]
 }
@@ -146,7 +148,7 @@ export interface AppState {
   editVerse: (verseNumber: number, newText: string) => void
   publishDraft: () => void
   updateTextWorkStatus: (textWorkId: string, newStatus: TextWorkStatus) => void
-  submitToHallitus: (textWorkId: string, selectedVoters: string[], rationale: string) => void
+  submitToHallitus: (textWorkId: string, selectedVoters: string[], rationale: string, selectedVerses?: number[]) => void
   castVote: (proposalId: string, decision: 'approve' | 'reject', comment?: string) => void
   addComment: (comment: Omit<Comment, 'id' | 'createdAt' | 'status'>) => void
   resolveComment: (commentId: string) => void

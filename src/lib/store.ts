@@ -10,10 +10,26 @@ import {
 } from './seed-data'
 
 function initialState() {
+  const baseSnapshot: Snapshot = {
+    id: 'snapshot-base',
+    textWorkId: 'tw-1',
+    type: 'publication',
+    name: 'Pohjaversio (RK12)',
+    createdAt: '2026-04-12T10:00:00Z',
+    createdBy: 'tekstiryhma-a',
+    verseTexts: SEED_VERSES.map(v => ({ number: v.number, text: v.baseText })),
+    footnoteTexts: SEED_VERSES.flatMap(v =>
+      (v.footnotes ?? []).map(fn => ({ verse: v.number, marker: fn.marker, text: fn.baseText }))
+    ),
+    sectionHeaderTexts: SEED_VERSES
+      .filter(v => v.sectionHeader)
+      .map(v => ({ verse: v.number, text: v.sectionHeader! })),
+  }
+
   return {
     currentUserId: 'tekstiryhma-a',
     users: SEED_USERS,
-    verses: SEED_VERSES.map(v => ({ ...v, text: v.baseText })),
+    verses: SEED_VERSES.map(v => ({ ...v, text: v.baseText, approvedText: v.approvedText ?? v.baseText })),
     textWorks: [{
       id: 'tw-1',
       scope: { book: '1Thess', chapter: 2 },
@@ -24,7 +40,7 @@ function initialState() {
     comments: [] as Comment[],
     merkinnat: [] as Merkinta[],
     activity: [] as typeof SEED_ACTIVITY,
-    snapshots: [] as Snapshot[],
+    snapshots: [baseSnapshot] as Snapshot[],
     viewingSnapshotId: null as string | null,
   }
 }
@@ -148,25 +164,28 @@ export const useStore = create<AppState>()(
         }))
       },
 
-      submitToHallitus: (textWorkId: string, selectedVoters: string[], rationale: string) => {
+      submitToHallitus: (textWorkId: string, selectedVoters: string[], rationale: string, selectedVerses?: number[]) => {
         const now = new Date().toISOString()
         const state = get()
         const tw = state.textWorks.find(t => t.id === textWorkId)
         if (!tw || tw.status !== 'julkaistu_palautteelle') return
 
-        // Create submission snapshot
+        // Create submission snapshot (only selected verses if specified)
         const snapshotId = `snapshot-${Date.now()}`
+        const versesToSnapshot = selectedVerses
+          ? state.verses.filter(v => selectedVerses.includes(v.number))
+          : state.verses
         const snapshot: Snapshot = {
           id: snapshotId,
           textWorkId,
           type: 'submission',
           createdAt: now,
           createdBy: state.currentUserId,
-          verseTexts: state.verses.map(v => ({ number: v.number, text: v.text })),
-          footnoteTexts: state.verses.flatMap(v =>
+          verseTexts: versesToSnapshot.map(v => ({ number: v.number, text: v.text })),
+          footnoteTexts: versesToSnapshot.flatMap(v =>
             (v.footnotes ?? []).map(fn => ({ verse: v.number, marker: fn.marker, text: fn.text }))
           ),
-          sectionHeaderTexts: state.verses
+          sectionHeaderTexts: versesToSnapshot
             .filter(v => v.sectionHeader)
             .map(v => ({ verse: v.number, text: v.sectionHeader! })),
         }
@@ -193,6 +212,7 @@ export const useStore = create<AppState>()(
               textWorkId,
               snapshotId,
               selectedVoters,
+              selectedVerses,
               rationale,
               votes: [],
               createdAt: now,
@@ -245,6 +265,11 @@ export const useStore = create<AppState>()(
             newTwStatus = allApproved ? 'hyvaksytty' : 'hylatty'
           }
 
+          // When approved, update approvedText for verses in the proposal's snapshot
+          const snapshot = newTwStatus === 'hyvaksytty'
+            ? state.snapshots.find(s => s.id === proposal.snapshotId)
+            : null
+
           return {
             proposals: state.proposals.map(p =>
               p.id === proposalId
@@ -262,6 +287,12 @@ export const useStore = create<AppState>()(
                     : t
                 )
               : state.textWorks,
+            verses: snapshot
+              ? state.verses.map(v => {
+                  const sv = snapshot.verseTexts.find(sv => sv.number === v.number)
+                  return sv ? { ...v, approvedText: sv.text } : v
+                })
+              : state.verses,
             activity: [
               {
                 id: `act-${Date.now()}`,
@@ -468,7 +499,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'raamattu-kaannostyo',
-      version: 17,
+      version: 19,
       migrate: () => initialState(),
     }
   )

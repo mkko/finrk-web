@@ -19,6 +19,7 @@ export function Header() {
 
   const navItems = [
     { href: '/', label: 'Luku' },
+    ...(currentUser.role === 'tekstiryhma' ? [{ href: '/lahetys', label: 'Tarkistus' }] : []),
     { href: '/ehdotukset', label: ehdotuksetLabel },
     { href: '/edistyminen', label: 'Edistyminen' },
   ]
@@ -47,7 +48,7 @@ export function Header() {
                   href={item.href}
                   className={cn(
                     'rounded-md px-3 py-1.5 text-sm transition-colors',
-                    pathname === item.href
+                    pathname === item.href || (item.href === '/hallitus' && pathname.startsWith('/review/'))
                       ? 'bg-stone-100 text-stone-900 font-medium'
                       : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
                   )}

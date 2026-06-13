@@ -91,9 +91,9 @@ export default function HallitusPage() {
                       <h3
                         className={cn(
                           'font-medium text-stone-800',
-                          tw.scope.chapter === 2 && 'cursor-pointer hover:text-stone-600'
+                          proposal && 'cursor-pointer hover:text-stone-600'
                         )}
-                        onClick={() => tw.scope.chapter === 2 && router.push('/')}
+                        onClick={() => proposal && router.push(`/review/${proposal.id}`)}
                       >
                         {textWorkLabel(tw)}
                       </h3>
@@ -107,6 +107,16 @@ export default function HallitusPage() {
                       {STATUS_LABELS[tw.status]}
                     </Badge>
                   </div>
+
+                  {/* Review link */}
+                  {proposal && (
+                    <button
+                      onClick={() => router.push(`/review/${proposal.id}`)}
+                      className="text-sm text-violet-700 hover:text-violet-900 font-medium"
+                    >
+                      Katso muutokset →
+                    </button>
+                  )}
 
                   {/* Rationale */}
                   {proposal?.rationale && (

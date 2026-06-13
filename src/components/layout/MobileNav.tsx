@@ -18,6 +18,7 @@ export function MobileNav() {
 
   const items = [
     { href: '/', label: 'Luku' },
+    ...(currentUser.role === 'tekstiryhma' ? [{ href: '/lahetys', label: 'Tarkistus' }] : []),
     { href: '/ehdotukset', label: ehdotuksetLabel },
     { href: '/edistyminen', label: 'Edistyminen' },
     ...(currentUser.role === 'seurantaryhma' ? [{ href: '/seurantaryhma', label: 'Arviointi' }] : []),
@@ -33,7 +34,7 @@ export function MobileNav() {
             href={item.href}
             className={cn(
               'whitespace-nowrap rounded-md px-3 py-2 text-sm transition-colors',
-              pathname === item.href
+              pathname === item.href || (item.href === '/hallitus' && pathname.startsWith('/review/'))
                 ? 'bg-stone-100 text-stone-900 font-medium'
                 : 'text-stone-600 hover:text-stone-900'
             )}

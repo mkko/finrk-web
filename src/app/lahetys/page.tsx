@@ -173,7 +173,7 @@ export default function LahetysPage() {
       <div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-xl font-semibold text-stone-800">Tarkistus</h1>
+            <h1 className="text-xl font-semibold text-stone-800">Ehdotukset hallitukselle</h1>
             <p className="text-sm text-stone-500 mt-1">
               Hallitukselle lähetetyt ehdotukset ja niiden käsittelytilanne.
             </p>

@@ -21,7 +21,7 @@ export function Header() {
 
   const navItems = currentUser ? [
     { href: '/', label: 'Luku' },
-    ...(roles.includes('tekstiryhma') ? [{ href: '/lahetys', label: 'Tarkistus' }] : []),
+    ...(roles.includes('tekstiryhma') ? [{ href: '/lahetys', label: 'Ehdota' }] : []),
     { href: '/ehdotukset', label: ehdotuksetLabel },
     { href: '/edistyminen', label: 'Edistyminen' },
   ] : []

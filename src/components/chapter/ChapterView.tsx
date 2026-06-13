@@ -319,8 +319,8 @@ export function ChapterView() {
             </div>
 
             {/* Right margin: comment bubbles — icons on narrow, full cards on wide */}
-            {marginComments.length > 0 && (
-              <div className="shrink-0 w-8 editor-lg:w-48">
+            <div className="shrink-0 w-8 editor-lg:w-48">
+              {marginComments.length > 0 && (
                 <div className="sticky top-8 space-y-2">
                   {marginComments.map(mc => (
                     <button
@@ -348,8 +348,8 @@ export function ChapterView() {
                     </button>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>}
       </div>

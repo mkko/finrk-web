@@ -19,14 +19,14 @@ export default function ProgressPage() {
   const currentUser = users.find(u => u.id === currentUserId)
   if (!currentUser) return null
 
-  const visibleTws = getVisibleTextWorks(textWorks, currentUser.role)
+  const visibleTws = getVisibleTextWorks(textWorks, currentUser.roles)
 
   const totalTextWorks = visibleTws.length
   const approvedCount = visibleTws.filter(tw => tw.status === 'hyvaksytty').length
 
   const statusCounts = STATUS_ORDER
     .filter(s => {
-      if (currentUser.role === 'seurantaryhma' && (s === 'luonnos' || s === 'hylatty')) return false
+      if (currentUser.roles.includes('seurantaryhma') && !currentUser.roles.includes('tekstiryhma') && (s === 'luonnos' || s === 'hylatty')) return false
       return true
     })
     .map(status => ({

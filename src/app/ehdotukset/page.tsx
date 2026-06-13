@@ -23,7 +23,8 @@ export default function ProposalsPage() {
   const currentUser = users.find(u => u.id === currentUserId)
   if (!currentUser) return null
 
-  const visibleTws = getVisibleTextWorks(textWorks, currentUser.role)
+  const roles = currentUser.roles
+  const visibleTws = getVisibleTextWorks(textWorks, roles)
 
   // Hallitus: hide luonnos by default, with toggle
   const [showLuonnokset, setShowLuonnokset] = useState(false)
@@ -34,15 +35,15 @@ export default function ProposalsPage() {
     }
   }, [])
 
-  const isHallitus = currentUser.role === 'hallitus'
+  const isHallitus = roles.includes('hallitus')
   const displayTws = isHallitus && !showLuonnokset
     ? visibleTws.filter(tw => tw.status !== 'luonnos')
     : visibleTws
 
   // Default filter
-  const defaultFilter = currentUser.role === 'hallitus'
+  const defaultFilter = roles.includes('hallitus')
     ? 'lahetetty_hallitukselle'
-    : currentUser.role === 'seurantaryhma'
+    : roles.includes('seurantaryhma')
       ? 'julkaistu_palautteelle'
       : 'kaikki'
 
@@ -62,15 +63,15 @@ export default function ProposalsPage() {
     ...ALL_STATUSES
       .filter(s => {
         if (isHallitus && s === 'luonnos' && !showLuonnokset) return false
-        if (currentUser.role === 'seurantaryhma' && (s === 'luonnos' || s === 'hylatty')) return false
+        if (roles.includes('seurantaryhma') && !roles.includes('tekstiryhma') && (s === 'luonnos' || s === 'hylatty')) return false
         return true
       })
       .map(s => ({ value: s, label: STATUS_LABELS[s] })),
   ]
 
-  const pageTitle = currentUser.role === 'tekstiryhma'
+  const pageTitle = roles.includes('tekstiryhma')
     ? 'Tekstit'
-    : currentUser.role === 'seurantaryhma'
+    : roles.includes('seurantaryhma')
       ? 'Julkaistut tekstit'
       : 'Hyväksyttävät tekstit'
 
@@ -93,7 +94,7 @@ export default function ProposalsPage() {
               Näytä myös luonnokset
             </label>
           )}
-          {currentUser.role === 'tekstiryhma' && (
+          {roles.includes('tekstiryhma') && (
             <Link
               href="/"
               className="inline-flex items-center gap-1.5 rounded-lg bg-stone-800 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 transition-colors"

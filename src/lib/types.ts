@@ -3,8 +3,16 @@ export type PersonaRole = 'tekstiryhma' | 'seurantaryhma' | 'hallitus'
 export interface User {
   id: string
   name: string
-  role: PersonaRole
+  roles: PersonaRole[]
   roleLabel: string
+}
+
+export function hasRole(user: User | undefined, role: PersonaRole): boolean {
+  return !!user && user.roles.includes(role)
+}
+
+export function primaryRole(user: User): PersonaRole {
+  return user.roles[0]
 }
 
 export type TextWorkStatus =

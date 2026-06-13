@@ -13,7 +13,7 @@ export default function HallitusPage() {
   const currentUser = users.find(u => u.id === currentUserId)
   if (!currentUser) return null
 
-  if (currentUser.role !== 'hallitus') {
+  if (!currentUser.roles.includes('hallitus')) {
     return (
       <div className="h-full overflow-y-auto"><div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
         <p className="text-stone-500">Tämä näkymä on tarkoitettu hallituksen jäsenille.</p>

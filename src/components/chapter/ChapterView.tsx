@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useStore } from '@/lib/store'
-import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
+import { STATUS_LABELS, STATUS_COLORS, hasRole } from '@/lib/types'
 import { canEditVerses, getAvailableTransitions, getTransitionLabel } from '@/lib/state-machine'
 import { getCurrentTextWork, getOpenCommentCount, getVerseComments } from '@/lib/selectors'
 import { useLayoutMode } from '@/hooks/useLayoutMode'
@@ -42,7 +42,7 @@ export function ChapterView() {
   const editSectionHeader = useStore(s => s.editSectionHeader)
   const addComment = useStore(s => s.addComment)
   const currentUserId = useStore(s => s.currentUserId)
-  const currentUser = useStore(s => s.users.find(u => u.id === s.currentUserId)) ?? { id: '', name: '', role: 'tekstiryhma' as const, roleLabel: '' }
+  const currentUser = useStore(s => s.users.find(u => u.id === s.currentUserId)) ?? { id: '', name: '', roles: ['tekstiryhma'] as const, roleLabel: '' }
   const textWorks = useStore(s => s.textWorks)
   const comments = useStore(s => s.comments)
   const proposals = useStore(s => s.proposals)
@@ -54,7 +54,7 @@ export function ChapterView() {
   const viewSnapshotAction = useStore(s => s.viewSnapshot)
 
   const currentTw = getCurrentTextWork(textWorks)
-  const isTekstiryhma = currentUser.role === 'tekstiryhma'
+  const isTekstiryhma = hasRole(currentUser, 'tekstiryhma')
 
   const baseVerses = storeVerses.map(v => ({ ...v, text: v.baseText }))
   const changedVerseCount = storeVerses.filter(v => v.text !== v.baseText).length
@@ -72,10 +72,10 @@ export function ChapterView() {
       })
     : isDraft ? storeVerses : baseVerses
 
-  const canEdit = canEditVerses(currentTw?.status ?? 'luonnos', currentUser.role)
+  const canEdit = canEditVerses(currentTw?.status ?? 'luonnos', currentUser.roles)
   const readOnly = !isDraft || !canEdit || !!viewedSnapshot
 
-  const canComment = currentUser.role === 'tekstiryhma' || currentUser.role === 'seurantaryhma'
+  const canComment = hasRole(currentUser, 'tekstiryhma') || hasRole(currentUser, 'seurantaryhma')
   const handleComment = useCallback((verseNumber: number, selectedText: string, commentText: string) => {
     if (!currentTw) return
     addComment({
@@ -84,13 +84,13 @@ export function ChapterView() {
       verseSnapshot: selectedText,
       authorId: currentUserId,
       text: commentText,
-      thread: currentUser.role === 'seurantaryhma' ? 'seurantaryhma' : 'tekstiryhma',
+      thread: hasRole(currentUser, 'seurantaryhma') ? 'seurantaryhma' : 'tekstiryhma',
     })
-  }, [currentTw, addComment, currentUserId, currentUser.role])
+  }, [currentTw, addComment, currentUserId, currentUser.roles])
 
   const openComments = currentTw ? getOpenCommentCount(comments, currentTw.id) : 0
   const availableTransitions = currentTw
-    ? getAvailableTransitions(currentTw.status, currentUser.role)
+    ? getAvailableTransitions(currentTw.status, currentUser.roles)
     : []
 
   const activeProposal = currentTw?.submissionProposalId

@@ -24,7 +24,7 @@ export function VoterSelectionModal({ open, onClose, textWorkId, selectedVerses 
   const users = useStore(s => s.users)
   const submitToHallitus = useStore(s => s.submitToHallitus)
 
-  const hallitusUsers = users.filter(u => u.role === 'hallitus')
+  const hallitusUsers = users.filter(u => u.roles.includes('hallitus'))
   const [selectedVoters, setSelectedVoters] = useState<string[]>([])
   const [rationale, setRationale] = useState('')
 

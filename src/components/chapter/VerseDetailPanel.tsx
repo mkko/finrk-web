@@ -37,7 +37,7 @@ export function VerseDetailPanel({ verseNumber, textWorkId, focusCommentId, onFo
 function PanelContent({ verseNumber, textWorkId, focusCommentId, onFocusComment, onClose }: { verseNumber: number; textWorkId?: string; focusCommentId?: string | null; onFocusComment?: (id: string | null) => void; onClose: () => void }) {
   const verses = useStore(s => s.verses)
   const users = useStore(s => s.users)
-  const currentUser = useStore(s => s.users.find(u => u.id === s.currentUserId)) ?? { id: '', name: '', role: 'tekstiryhma' as const, roleLabel: '' }
+  const currentUser = useStore(s => s.users.find(u => u.id === s.currentUserId)) ?? { id: '', name: '', roles: ['tekstiryhma'] as const, roleLabel: '' }
   const allComments = useStore(s => s.comments)
   const addComment = useStore(s => s.addComment)
   const resolveComment = useStore(s => s.resolveComment)
@@ -48,8 +48,8 @@ function PanelContent({ verseNumber, textWorkId, focusCommentId, onFocusComment,
   const verse = verses.find(v => v.number === verseNumber)!
   const hasBeenRevised = verse.text !== verse.baseText
 
-  const isTekstiRyhma = currentUser.role === 'tekstiryhma'
-  const isSeurantaryhma = currentUser.role === 'seurantaryhma'
+  const isTekstiRyhma = currentUser.roles.includes('tekstiryhma')
+  const isSeurantaryhma = currentUser.roles.includes('seurantaryhma')
 
   // Comments for this verse
   const verseComments = textWorkId ? getVerseComments(allComments, textWorkId, verseNumber) : []

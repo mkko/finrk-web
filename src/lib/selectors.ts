@@ -1,8 +1,8 @@
 import { TextWork, Comment, Snapshot, Verse, PersonaRole } from './types'
 import { getVisibleStatuses } from './state-machine'
 
-export function getVisibleTextWorks(textWorks: TextWork[], role: PersonaRole): TextWork[] {
-  const statuses = getVisibleStatuses(role)
+export function getVisibleTextWorks(textWorks: TextWork[], roles: PersonaRole | PersonaRole[]): TextWork[] {
+  const statuses = getVisibleStatuses(roles)
   return textWorks.filter(tw => statuses.includes(tw.status))
 }
 

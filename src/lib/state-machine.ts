@@ -21,13 +21,18 @@ const TRANSITIONS: Record<TextWorkStatus, Transition[]> = {
   ],
 }
 
-export function canTransition(status: TextWorkStatus, target: TextWorkStatus, role: PersonaRole): boolean {
-  return TRANSITIONS[status].some(t => t.target === target && t.actors.includes(role))
+function matchesRole(actors: PersonaRole[], roles: PersonaRole | PersonaRole[]): boolean {
+  const r = Array.isArray(roles) ? roles : [roles]
+  return r.some(role => actors.includes(role))
 }
 
-export function getAvailableTransitions(status: TextWorkStatus, role: PersonaRole): TextWorkStatus[] {
+export function canTransition(status: TextWorkStatus, target: TextWorkStatus, roles: PersonaRole | PersonaRole[]): boolean {
+  return TRANSITIONS[status].some(t => t.target === target && matchesRole(t.actors, roles))
+}
+
+export function getAvailableTransitions(status: TextWorkStatus, roles: PersonaRole | PersonaRole[]): TextWorkStatus[] {
   return TRANSITIONS[status]
-    .filter(t => t.actors.includes(role))
+    .filter(t => matchesRole(t.actors, roles))
     .map(t => t.target)
 }
 
@@ -38,15 +43,18 @@ export function getTransitionLabel(from: TextWorkStatus, to: TextWorkStatus): st
   return ''
 }
 
-export function canEditVerses(status: TextWorkStatus, role: PersonaRole): boolean {
-  // Tekstiryhma can always edit — work continues even during review
-  return role === 'tekstiryhma'
+export function canEditVerses(status: TextWorkStatus, roles: PersonaRole | PersonaRole[]): boolean {
+  const r = Array.isArray(roles) ? roles : [roles]
+  return r.includes('tekstiryhma')
 }
 
-export function getVisibleStatuses(role: PersonaRole): TextWorkStatus[] {
-  if (role === 'seurantaryhma') {
+export function getVisibleStatuses(roles: PersonaRole | PersonaRole[]): TextWorkStatus[] {
+  const r = Array.isArray(roles) ? roles : [roles]
+  if (r.includes('tekstiryhma') || r.includes('hallitus')) {
+    return ['luonnos', 'julkaistu_palautteelle', 'lahetetty_hallitukselle', 'hyvaksytty', 'hylatty']
+  }
+  if (r.includes('seurantaryhma')) {
     return ['julkaistu_palautteelle', 'lahetetty_hallitukselle', 'hyvaksytty']
   }
-  // tekstiryhma and hallitus see all
   return ['luonnos', 'julkaistu_palautteelle', 'lahetetty_hallitukselle', 'hyvaksytty', 'hylatty']
 }

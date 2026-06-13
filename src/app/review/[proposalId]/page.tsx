@@ -42,8 +42,8 @@ export default function ReviewPage() {
   }
 
   const submitter = users.find(u => u.id === snapshot?.createdBy)
-  const isHallitus = currentUser.role === 'hallitus'
-  const isTekstiryhma = currentUser.role === 'tekstiryhma'
+  const isHallitus = currentUser.roles.includes('hallitus')
+  const isTekstiryhma = currentUser.roles.includes('tekstiryhma')
   const currentUserVote = proposal.votes.find(v => v.userId === currentUserId)
   const isResolved = !!proposal.resolvedAt
   const isCancelled = !!proposal.cancelledAt
@@ -141,7 +141,7 @@ export default function ReviewPage() {
         {/* Voter progress + management */}
         {isHallitus && !isCancelled && (() => {
           const selectedMembers = proposal.selectedVoters.map(id => users.find(u => u.id === id)).filter(Boolean)
-          const allHallitus = users.filter(u => u.role === 'hallitus')
+          const allHallitus = users.filter(u => u.roles.includes('hallitus'))
           const nonSelectedHallitus = allHallitus.filter(u => !proposal.selectedVoters.includes(u.id))
           const votedIds = new Set(proposal.votes.map(v => v.userId))
 

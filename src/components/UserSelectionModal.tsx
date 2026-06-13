@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button'
 import { RotateCcw, DatabaseZap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const ROLE_ORDER = ['tekstiryhma', 'hallitus', 'seurantaryhma'] as const
 const ROLE_LABELS: Record<string, string> = {
   tekstiryhma: 'Tekstiryhmä',
   seurantaryhma: 'Seurantaryhmä',
@@ -39,35 +38,26 @@ export function UserSelectionModal({ open, onClose, dismissable = true }: UserSe
           <DialogTitle>Valitse käyttäjä</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 py-2">
-          {ROLE_ORDER.map(role => {
-            const roleUsers = users.filter(u => u.role === role)
-            if (roleUsers.length === 0) return null
+        <div className="space-y-1 py-2">
+          {users.map(user => {
+            const rolesText = user.roles.map(r => ROLE_LABELS[r]).join(', ')
             return (
-              <div key={role}>
-                <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-2">
-                  {ROLE_LABELS[role]}
-                </p>
-                <div className="space-y-1">
-                  {roleUsers.map(user => (
-                    <button
-                      key={user.id}
-                      onClick={() => selectUser(user.id)}
-                      className={cn(
-                        'w-full text-left rounded-md border px-4 py-2.5 text-sm transition-colors',
-                        user.id === currentUserId
-                          ? 'border-stone-400 bg-stone-100 font-medium text-stone-900'
-                          : 'border-stone-200 hover:border-stone-300 hover:bg-stone-50 text-stone-700'
-                      )}
-                    >
-                      <span className="font-medium">{user.name}</span>
-                      {user.roleLabel && user.roleLabel !== ROLE_LABELS[role] && (
-                        <span className="ml-2 text-xs text-stone-400">{user.roleLabel}</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <button
+                key={user.id}
+                onClick={() => selectUser(user.id)}
+                className={cn(
+                  'w-full text-left rounded-md border px-4 py-2.5 text-sm transition-colors',
+                  user.id === currentUserId
+                    ? 'border-stone-400 bg-stone-100 font-medium text-stone-900'
+                    : 'border-stone-200 hover:border-stone-300 hover:bg-stone-50 text-stone-700'
+                )}
+              >
+                <span className="font-medium">{user.name}</span>
+                <span className="ml-2 text-xs text-stone-400">{rolesText}</span>
+                {user.roleLabel && (
+                  <span className="ml-1 text-xs text-stone-400">({user.roleLabel})</span>
+                )}
+              </button>
             )
           })}
         </div>

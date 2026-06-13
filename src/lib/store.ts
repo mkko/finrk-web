@@ -16,7 +16,7 @@ function initialState() {
     type: 'publication',
     name: 'Pohjaversio (RK12)',
     createdAt: '2026-04-12T10:00:00Z',
-    createdBy: 'tekstiryhma-leino-kimmo',
+    createdBy: 'leino-kimmo',
     verseTexts: SEED_VERSES.map(v => ({ number: v.number, text: v.baseText })),
     footnoteTexts: SEED_VERSES.flatMap(v =>
       (v.footnotes ?? []).map(fn => ({ verse: v.number, marker: fn.marker, text: fn.baseText }))
@@ -47,7 +47,7 @@ function initialState() {
 
 function demoState() {
   return {
-    currentUserId: 'tekstiryhma-leino-kimmo',
+    currentUserId: 'leino-kimmo',
     users: SEED_USERS,
     verses: [...SEED_VERSES],
     textWorks: [...SEED_TEXT_WORKS],
@@ -117,7 +117,7 @@ export const useStore = create<AppState>()(
         const currentUser = state.users.find(u => u.id === state.currentUserId)
         const tw = state.textWorks.find(t => t.id === textWorkId)
         if (!tw || !currentUser) return
-        if (!canTransition(tw.status, newStatus, currentUser.role)) return
+        if (!canTransition(tw.status, newStatus, currentUser.roles)) return
 
         // Create a publication snapshot when publishing for feedback
         const newSnapshots: Snapshot[] = []
@@ -243,7 +243,7 @@ export const useStore = create<AppState>()(
 
           // Must be a selected voter
           const voter = state.users.find(u => u.id === state.currentUserId)
-          if (!voter || voter.role !== 'hallitus') return state
+          if (!voter || !voter.roles.includes('hallitus')) return state
           if (!proposal.selectedVoters.includes(state.currentUserId)) return state
 
           // No duplicate votes
@@ -562,7 +562,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'raamattu-kaannostyo',
-      version: 22,
+      version: 23,
       migrate: () => initialState(),
     }
   )

@@ -11,19 +11,21 @@ export function MobileNav() {
   const currentUser = users.find(u => u.id === currentUserId)
   if (!currentUser) return null
 
-  const ehdotuksetLabel = currentUser.role === 'tekstiryhma'
+  const roles = currentUser.roles
+
+  const ehdotuksetLabel = roles.includes('tekstiryhma')
     ? 'Tekstit'
-    : currentUser.role === 'seurantaryhma'
+    : roles.includes('seurantaryhma')
       ? 'Julkaistut tekstit'
       : 'Hyväksyttävät tekstit'
 
   const items = [
     { href: '/', label: 'Luku' },
-    ...(currentUser.role === 'tekstiryhma' ? [{ href: '/lahetys', label: 'Tarkistus' }] : []),
+    ...(roles.includes('tekstiryhma') ? [{ href: '/lahetys', label: 'Tarkistus' }] : []),
     { href: '/ehdotukset', label: ehdotuksetLabel },
     { href: '/edistyminen', label: 'Edistyminen' },
-    ...(currentUser.role === 'seurantaryhma' ? [{ href: '/seurantaryhma', label: 'Arviointi' }] : []),
-    ...(currentUser.role === 'hallitus' ? [{ href: '/hallitus', label: 'Ratifiointi' }] : []),
+    ...(roles.includes('seurantaryhma') ? [{ href: '/seurantaryhma', label: 'Arviointi' }] : []),
+    ...(roles.includes('hallitus') ? [{ href: '/hallitus', label: 'Ratifiointi' }] : []),
   ]
 
   return (

@@ -26,7 +26,7 @@ export default function LahetysPage() {
 
   const [view, setView] = useState<View>('list')
   const [selectedVerses, setSelectedVerses] = useState<Set<number>>(new Set())
-  if (currentUser.role !== 'tekstiryhma') {
+  if (!currentUser.roles.includes('tekstiryhma')) {
     return (
       <div className="h-full overflow-y-auto">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
@@ -63,7 +63,7 @@ export default function LahetysPage() {
 
   const selectedList = unreviewedVerses.filter(v => selectedVerses.has(v.number))
 
-  const hallitusMembers = users.filter(u => u.role === 'hallitus')
+  const hallitusMembers = users.filter(u => u.roles.includes('hallitus'))
 
   function handleSubmit() {
     if (!currentTw || selectedList.length === 0) return

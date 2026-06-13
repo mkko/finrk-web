@@ -47,7 +47,7 @@ function initialState() {
 
 function demoState() {
   return {
-    currentUserId: 'leino-kimmo',
+    currentUserId: '',
     users: SEED_USERS,
     verses: [...SEED_VERSES],
     textWorks: [...SEED_TEXT_WORKS],

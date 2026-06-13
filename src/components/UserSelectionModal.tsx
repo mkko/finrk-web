@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useStore } from '@/lib/store'
 import {
   Dialog,
@@ -26,10 +27,23 @@ interface UserSelectionModalProps {
 
 export function UserSelectionModal({ open, onClose, dismissable = true }: UserSelectionModalProps) {
   const { currentUserId, users, setCurrentUser, resetState, loadDemoData } = useStore()
+  const [notification, setNotification] = useState<string | null>(null)
 
   function selectUser(userId: string) {
     setCurrentUser(userId)
     onClose()
+  }
+
+  function handleLoadDemo() {
+    loadDemoData()
+    setNotification('Esimerkkidata ladattu')
+    setTimeout(() => setNotification(null), 2000)
+  }
+
+  function handleReset() {
+    resetState()
+    setNotification('Data tyhjennetty')
+    setTimeout(() => setNotification(null), 2000)
   }
 
   return (
@@ -72,12 +86,12 @@ export function UserSelectionModal({ open, onClose, dismissable = true }: UserSe
           })}
         </div>
 
-        <div className="flex gap-2 pt-2 border-t border-stone-200">
+        <div className="flex items-center gap-2 pt-2 border-t border-stone-200">
           <Button
             variant="outline"
             size="sm"
             className="text-stone-500"
-            onClick={() => { loadDemoData(); onClose() }}
+            onClick={handleLoadDemo}
           >
             <DatabaseZap className="h-4 w-4 mr-1.5" />
             Lataa esimerkkidata
@@ -86,11 +100,14 @@ export function UserSelectionModal({ open, onClose, dismissable = true }: UserSe
             variant="outline"
             size="sm"
             className="text-stone-500"
-            onClick={() => resetState()}
+            onClick={handleReset}
           >
             <RotateCcw className="h-4 w-4 mr-1.5" />
             Tyhjennä data
           </Button>
+          {notification && (
+            <span className="text-xs text-emerald-600 font-medium ml-auto">{notification}</span>
+          )}
         </div>
       </DialogContent>
     </Dialog>

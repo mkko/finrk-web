@@ -161,7 +161,12 @@ export default function ProposalsPage() {
                     key={tw.id}
                     onClick={() => {
                       if (tw.scope.chapter === 2) {
-                        router.push('/')
+                        // Hallitus: go to review page if there's an active proposal
+                        if (isHallitus && proposal) {
+                          router.push(`/review/${proposal.id}`)
+                        } else {
+                          router.push('/')
+                        }
                       }
                     }}
                     className={cn(

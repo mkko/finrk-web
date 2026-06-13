@@ -25,7 +25,6 @@ export default function LahetysPage() {
 
   const [view, setView] = useState<View>('list')
   const [selectedVerses, setSelectedVerses] = useState<Set<number>>(new Set())
-
   if (currentUser.role !== 'tekstiryhma') {
     return (
       <div className="h-full overflow-y-auto">
@@ -35,8 +34,6 @@ export default function LahetysPage() {
       </div>
     )
   }
-
-  const hallitusMembers = users.filter(u => u.role === 'hallitus')
 
   // Proposals sorted newest first
   const sortedProposals = [...proposals].sort(
@@ -64,6 +61,8 @@ export default function LahetysPage() {
   }
 
   const selectedList = unreviewedVerses.filter(v => selectedVerses.has(v.number))
+
+  const hallitusMembers = users.filter(u => u.role === 'hallitus')
 
   function handleSubmit() {
     if (!currentTw || selectedList.length === 0) return
@@ -182,6 +181,7 @@ export default function LahetysPage() {
             </div>
           </div>
         )}
+
       </div>
     )
   }
@@ -220,14 +220,17 @@ export default function LahetysPage() {
             {sortedProposals.map(proposal => {
               const tw = textWorks.find(t => t.id === proposal.textWorkId)
               if (!tw) return null
+              const isCancelled = !!proposal.cancelledAt
               const isResolved = !!proposal.resolvedAt
               const isApproved = isResolved && proposal.votes.every(v => v.decision === 'approve')
               const isRejected = isResolved && !isApproved
 
-              const statusLabel = isApproved ? 'Hyväksytty'
+              const statusLabel = isCancelled ? 'Peruutettu'
+                : isApproved ? 'Hyväksytty'
                 : isRejected ? 'Hylätty'
                 : 'Käsittelyssä'
-              const statusColor = isApproved ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+              const statusColor = isCancelled ? 'bg-stone-100 text-stone-600 border-stone-300'
+                : isApproved ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                 : isRejected ? 'bg-red-50 text-red-800 border-red-300'
                 : 'bg-violet-50 text-violet-800 border-violet-300'
 
@@ -259,17 +262,18 @@ export default function LahetysPage() {
                     </div>
 
                     {/* Voter progress */}
-                    {!isResolved && (
+                    {!isResolved && !isCancelled && (
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-stone-400">
-                          {proposal.votes.length}/{hallitusMembers.length} äänestänyt
+                          {proposal.votes.length}/{proposal.selectedVoters.length} äänestänyt
                         </span>
                         <div className="flex gap-1">
-                          {hallitusMembers.map(member => {
-                            const vote = proposal.votes.find(v => v.userId === member.id)
+                          {proposal.selectedVoters.map(voterId => {
+                            const member = users.find(u => u.id === voterId)
+                            const vote = proposal.votes.find(v => v.userId === voterId)
                             return (
                               <span
-                                key={member.id}
+                                key={voterId}
                                 className={cn(
                                   'inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full',
                                   vote
@@ -279,7 +283,7 @@ export default function LahetysPage() {
                                     : 'bg-stone-100 text-stone-400'
                                 )}
                               >
-                                {member.name.split(' ')[0]}
+                                {member?.name.split(' ')[0] ?? '?'}
                                 {vote && (vote.decision === 'approve' ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />)}
                               </span>
                             )

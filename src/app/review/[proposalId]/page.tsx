@@ -9,14 +9,14 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { Check, X, ArrowLeft } from 'lucide-react'
+import { Check, X, ArrowLeft, MessageSquare, UserPlus, UserMinus } from 'lucide-react'
 import Link from 'next/link'
 
 export default function ReviewPage() {
   const params = useParams()
   const proposalId = params.proposalId as string
 
-  const { proposals, textWorks, users, verses, snapshots, currentUserId, castVote } = useStore()
+  const { proposals, textWorks, users, verses, snapshots, comments, currentUserId, castVote, cancelProposal, updateSelectedVoters } = useStore()
   const currentUser = users.find(u => u.id === currentUserId)!
 
   const proposal = proposals.find(p => p.id === proposalId)
@@ -25,6 +25,7 @@ export default function ReviewPage() {
 
   const [rejectText, setRejectText] = useState('')
   const [showReject, setShowReject] = useState(false)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
   if (!proposal || !tw) {
     return (
@@ -41,13 +42,16 @@ export default function ReviewPage() {
 
   const submitter = users.find(u => u.id === snapshot?.createdBy)
   const isHallitus = currentUser.role === 'hallitus'
+  const isTekstiryhma = currentUser.role === 'tekstiryhma'
   const currentUserVote = proposal.votes.find(v => v.userId === currentUserId)
   const isResolved = !!proposal.resolvedAt
-  const isApproved = tw.status === 'hyvaksytty'
-  const isRejected = tw.status === 'hylatty'
-  const isPending = tw.status === 'lahetetty_hallitukselle'
+  const isCancelled = !!proposal.cancelledAt
+  const isApproved = isResolved && proposal.votes.every(v => v.decision === 'approve')
+  const isRejected = isResolved && !isApproved
+  const isPending = !isResolved && !isCancelled && tw.status === 'lahetetty_hallitukselle'
+  const canVote = isHallitus && isPending && !currentUserVote && proposal.selectedVoters.includes(currentUserId)
 
-  // Build diff data: compare approvedText (before) → proposed text (snapshot)
+  // Build diff data
   const diffVerses = snapshot
     ? snapshot.verseTexts.map(sv => {
         const currentVerse = verses.find(v => v.number === sv.number)
@@ -59,6 +63,22 @@ export default function ReviewPage() {
       })
     : []
 
+  // Discussion context: comments for the textWork filtered by proposal verse range
+  const proposalVerseNumbers = proposal.selectedVerses && proposal.selectedVerses.length > 0
+    ? new Set(proposal.selectedVerses)
+    : new Set(snapshot?.verseTexts.map(sv => sv.number) ?? [])
+
+  const relatedComments = comments.filter(c => {
+    if (c.textWorkId !== proposal.textWorkId) return false
+    return proposalVerseNumbers.has(c.verseAnchor.verseStart)
+  }).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+
+  // Status for display
+  const displayStatus = isCancelled ? 'Peruutettu' : STATUS_LABELS[tw.status]
+  const displayStatusColor = isCancelled
+    ? 'bg-stone-100 text-stone-600 border-stone-300'
+    : STATUS_COLORS[tw.status]
+
   function handleApprove() {
     castVote(proposalId, 'approve')
   }
@@ -69,6 +89,11 @@ export default function ReviewPage() {
       setRejectText('')
       setShowReject(false)
     }
+  }
+
+  function handleCancel() {
+    cancelProposal(proposalId)
+    setShowCancelConfirm(false)
   }
 
   return (
@@ -100,8 +125,8 @@ export default function ReviewPage() {
               {submitter && <> — {submitter.name}</>}
             </p>
           </div>
-          <Badge variant="outline" className={cn('text-xs', STATUS_COLORS[tw.status])}>
-            {STATUS_LABELS[tw.status]}
+          <Badge variant="outline" className={cn('text-xs', displayStatusColor)}>
+            {displayStatus}
           </Badge>
         </div>
 
@@ -112,20 +137,35 @@ export default function ReviewPage() {
           </div>
         )}
 
-        {/* Voter progress — hallitus only */}
-        {isHallitus && (() => {
-          const hallitusMembers = users.filter(u => u.role === 'hallitus')
+        {/* Voter progress + management */}
+        {isHallitus && !isCancelled && (() => {
+          const selectedMembers = proposal.selectedVoters.map(id => users.find(u => u.id === id)).filter(Boolean)
+          const allHallitus = users.filter(u => u.role === 'hallitus')
+          const nonSelectedHallitus = allHallitus.filter(u => !proposal.selectedVoters.includes(u.id))
+          const votedIds = new Set(proposal.votes.map(v => v.userId))
+
+          function toggleVoter(userId: string) {
+            if (proposal!.selectedVoters.includes(userId)) {
+              if (votedIds.has(userId)) return // can't remove someone who already voted
+              updateSelectedVoters(proposalId, proposal!.selectedVoters.filter(id => id !== userId))
+            } else {
+              updateSelectedVoters(proposalId, [...proposal!.selectedVoters, userId])
+            }
+          }
+
           return (
             <div className={cn(
               'rounded-lg border p-4 space-y-3',
               isPending ? 'border-violet-200 bg-violet-50/50' : 'border-stone-200 bg-stone-50'
             )}>
               <p className="text-sm font-medium text-stone-700">
-                Äänestys: {proposal.votes.length}/{hallitusMembers.length} äänestänyt
+                Äänestys: {proposal.votes.length}/{proposal.selectedVoters.length} äänestänyt
               </p>
               <div className="flex flex-wrap gap-2">
-                {hallitusMembers.map(member => {
+                {selectedMembers.map(member => {
+                  if (!member) return null
                   const vote = proposal.votes.find(v => v.userId === member.id)
+                  const hasVoted = votedIds.has(member.id)
                   return (
                     <span
                       key={member.id}
@@ -144,13 +184,64 @@ export default function ReviewPage() {
                           ? <Check className="h-3.5 w-3.5" />
                           : <X className="h-3.5 w-3.5" />
                       )}
+                      {isPending && !hasVoted && (
+                        <button
+                          onClick={() => toggleVoter(member.id)}
+                          className="ml-0.5 text-stone-400 hover:text-red-600 transition-colors"
+                          title="Poista äänestäjä"
+                        >
+                          <UserMinus className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </span>
                   )
                 })}
+                {/* Add voter buttons for non-selected hallitus members */}
+                {isPending && nonSelectedHallitus.map(member => (
+                  <button
+                    key={member.id}
+                    onClick={() => toggleVoter(member.id)}
+                    className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full font-medium border border-dashed border-stone-300 text-stone-400 hover:border-violet-400 hover:text-violet-600 transition-colors"
+                    title="Lisää äänestäjä"
+                  >
+                    {member.name}
+                    <UserPlus className="h-3.5 w-3.5" />
+                  </button>
+                ))}
               </div>
             </div>
           )
         })()}
+
+        {/* Vote audit trail — hallitus only */}
+        {isHallitus && proposal.votes.length > 0 && (
+          <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 space-y-2">
+            <h2 className="text-sm font-medium text-stone-700 mb-2">Äänestysloki</h2>
+            {proposal.votes.map((vote, i) => {
+              const voter = users.find(u => u.id === vote.userId)
+              return (
+                <div key={i} className="flex items-center gap-3 text-sm">
+                  <span className={cn(
+                    'inline-flex items-center gap-1 font-medium',
+                    vote.decision === 'approve' ? 'text-emerald-700' : 'text-red-700'
+                  )}>
+                    {vote.decision === 'approve' ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
+                    {vote.decision === 'approve' ? 'Hyväksy' : 'Hylkää'}
+                  </span>
+                  <span className="text-stone-600">{voter?.name ?? 'Tuntematon'}</span>
+                  <span className="text-stone-400">
+                    {new Date(vote.createdAt).toLocaleDateString('fi-FI', {
+                      day: 'numeric', month: 'numeric', year: 'numeric',
+                    })}
+                  </span>
+                  {vote.comment && (
+                    <span className="text-stone-500 italic">&quot;{vote.comment}&quot;</span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
 
         {/* Diff section */}
         <div>
@@ -177,8 +268,62 @@ export default function ReviewPage() {
           </div>
         </div>
 
-        {/* Voting section — hallitus only, pending */}
-        {isHallitus && isPending && !currentUserVote && (
+        {/* Discussion context */}
+        {relatedComments.length > 0 && (
+          <div>
+            <h2 className="text-sm font-medium text-stone-700 mb-3 flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Keskustelu
+            </h2>
+            <div className="space-y-3">
+              {relatedComments.map(comment => {
+                const author = users.find(u => u.id === comment.authorId)
+                const threadLabel = comment.thread === 'tekstiryhma' ? 'Tekstiryhmä' : 'Seurantaryhmä'
+                return (
+                  <div
+                    key={comment.id}
+                    className={cn(
+                      'rounded-lg border p-4',
+                      comment.status === 'kasitelty'
+                        ? 'border-stone-200 bg-stone-50'
+                        : 'border-amber-200 bg-amber-50/50'
+                    )}
+                  >
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-sm font-medium text-stone-700">
+                        {author?.name ?? 'Tuntematon'}
+                      </span>
+                      <span className="text-xs text-stone-400">
+                        {new Date(comment.createdAt).toLocaleDateString('fi-FI', {
+                          day: 'numeric', month: 'numeric', year: 'numeric',
+                        })}
+                      </span>
+                      <Badge variant="outline" className="text-xs">
+                        {threadLabel}
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          'text-xs',
+                          comment.status === 'avoin'
+                            ? 'bg-amber-50 text-amber-700 border-amber-300'
+                            : 'bg-stone-100 text-stone-500 border-stone-300'
+                        )}
+                      >
+                        {comment.status === 'avoin' ? 'Avoin' : 'Käsitelty'}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-stone-400 mb-1">Jae {comment.verseAnchor.verseStart}</p>
+                    <p className="text-sm text-stone-600">{comment.text}</p>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Voting section — hallitus only, pending, selected voter */}
+        {canVote && (
           <div className="rounded-lg border border-violet-200 bg-white p-4 space-y-3">
             <h2 className="text-sm font-medium text-stone-700">Äänestä</h2>
             {showReject ? (
@@ -263,6 +408,52 @@ export default function ReviewPage() {
                   </p>
                 )
               })}
+          </div>
+        )}
+
+        {/* Cancelled notice */}
+        {isCancelled && (
+          <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+            <p className="text-sm text-stone-600">
+              Äänestys peruutettu {new Date(proposal.cancelledAt!).toLocaleDateString('fi-FI', {
+                day: 'numeric', month: 'long', year: 'numeric',
+              })}
+            </p>
+          </div>
+        )}
+
+        {/* Cancel button — tekstiryhma only, pending */}
+        {isTekstiryhma && isPending && (
+          <div className="rounded-lg border border-stone-200 bg-white p-4">
+            {showCancelConfirm ? (
+              <div className="space-y-3">
+                <p className="text-sm text-stone-600">
+                  Haluatko varmasti peruuttaa äänestyksen? Teksti palautuu palautteelle-tilaan.
+                </p>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setShowCancelConfirm(false)}>
+                    Ei, älä peruuta
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-red-700"
+                    onClick={handleCancel}
+                  >
+                    Kyllä, peruuta äänestys
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-red-700"
+                onClick={() => setShowCancelConfirm(true)}
+              >
+                Peruuta äänestys
+              </Button>
+            )}
           </div>
         )}
       </div>

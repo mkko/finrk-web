@@ -236,14 +236,15 @@ export const useStore = create<AppState>()(
         const now = new Date().toISOString()
         set(state => {
           const proposal = state.proposals.find(p => p.id === proposalId)
-          if (!proposal) return state
+          if (!proposal || proposal.resolvedAt || proposal.cancelledAt) return state
 
           const tw = state.textWorks.find(t => t.id === proposal.textWorkId)
           if (!tw || tw.status !== 'lahetetty_hallitukselle') return state
 
-          // Must be a hallitus member
+          // Must be a selected voter
           const voter = state.users.find(u => u.id === state.currentUserId)
           if (!voter || voter.role !== 'hallitus') return state
+          if (!proposal.selectedVoters.includes(state.currentUserId)) return state
 
           // No duplicate votes
           if (proposal.votes.some(v => v.userId === state.currentUserId)) return state
@@ -256,15 +257,18 @@ export const useStore = create<AppState>()(
           }
           const updatedVotes = [...proposal.votes, newVote]
 
-          const hallitusMembers = state.users.filter(u => u.role === 'hallitus')
-          const allVoted = hallitusMembers.every(
-            member => updatedVotes.some(v => v.userId === member.id)
-          )
-
+          // Single rejection resolves immediately
           let newTwStatus: TextWorkStatus | null = null
-          if (allVoted) {
-            const allApproved = updatedVotes.every(v => v.decision === 'approve')
-            newTwStatus = allApproved ? 'hyvaksytty' : 'hylatty'
+          if (decision === 'reject') {
+            newTwStatus = 'hylatty'
+          } else {
+            const allSelectedVoted = proposal.selectedVoters.every(
+              voterId => updatedVotes.some(v => v.userId === voterId)
+            )
+            if (allSelectedVoted) {
+              const allApproved = updatedVotes.every(v => v.decision === 'approve')
+              newTwStatus = allApproved ? 'hyvaksytty' : 'hylatty'
+            }
           }
 
           // When approved, update approvedText for verses in the proposal's snapshot
@@ -314,6 +318,63 @@ export const useStore = create<AppState>()(
               },
               ...state.activity,
             ],
+          }
+        })
+      },
+
+      cancelProposal: (proposalId: string) => {
+        const now = new Date().toISOString()
+        set(state => {
+          const proposal = state.proposals.find(p => p.id === proposalId)
+          if (!proposal || proposal.resolvedAt || proposal.cancelledAt) return state
+
+          const tw = state.textWorks.find(t => t.id === proposal.textWorkId)
+          if (!tw || tw.status !== 'lahetetty_hallitukselle') return state
+
+          return {
+            proposals: state.proposals.map(p =>
+              p.id === proposalId
+                ? { ...p, cancelledAt: now }
+                : p
+            ),
+            textWorks: state.textWorks.map(t =>
+              t.id === proposal.textWorkId
+                ? {
+                    ...t,
+                    status: 'julkaistu_palautteelle' as TextWorkStatus,
+                    statusChangedAt: now,
+                    submissionProposalId: undefined,
+                  }
+                : t
+            ),
+            activity: [
+              {
+                id: `act-${Date.now()}`,
+                timestamp: now,
+                userId: state.currentUserId,
+                textWorkId: proposal.textWorkId,
+                action: 'Äänestys peruutettu',
+                detail: `${textWorkLabel(tw)} — äänestys peruutettu`,
+              },
+              ...state.activity,
+            ],
+          }
+        })
+      },
+
+      updateSelectedVoters: (proposalId: string, voterIds: string[]) => {
+        set(state => {
+          const proposal = state.proposals.find(p => p.id === proposalId)
+          if (!proposal || proposal.resolvedAt || proposal.cancelledAt) return state
+          // Don't remove voters who already voted
+          const votedIds = new Set(proposal.votes.map(v => v.userId))
+          const safeVoterIds = [...new Set([...voterIds, ...votedIds])]
+          return {
+            proposals: state.proposals.map(p =>
+              p.id === proposalId
+                ? { ...p, selectedVoters: safeVoterIds }
+                : p
+            ),
           }
         })
       },
@@ -501,7 +562,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'raamattu-kaannostyo',
-      version: 19,
+      version: 20,
       migrate: () => initialState(),
     }
   )

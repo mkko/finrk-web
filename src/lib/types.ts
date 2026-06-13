@@ -65,6 +65,7 @@ export interface Proposal {
   votes: Vote[]
   createdAt: string
   resolvedAt?: string
+  cancelledAt?: string
 }
 
 export interface Comment {
@@ -150,6 +151,8 @@ export interface AppState {
   updateTextWorkStatus: (textWorkId: string, newStatus: TextWorkStatus) => void
   submitToHallitus: (textWorkId: string, selectedVoters: string[], rationale: string, selectedVerses?: number[]) => void
   castVote: (proposalId: string, decision: 'approve' | 'reject', comment?: string) => void
+  cancelProposal: (proposalId: string) => void
+  updateSelectedVoters: (proposalId: string, voterIds: string[]) => void
   addComment: (comment: Omit<Comment, 'id' | 'createdAt' | 'status'>) => void
   resolveComment: (commentId: string) => void
   addMerkinta: (verses: { verseNumber: number; text: string }[], note?: string) => void

@@ -10,7 +10,6 @@ const TRANSITIONS: Record<TextWorkStatus, Transition[]> = {
     { target: 'julkaistu_palautteelle', actors: ['tekstiryhma'] },
   ],
   julkaistu_palautteelle: [
-    { target: 'luonnos', actors: ['tekstiryhma'] },
     { target: 'lahetetty_hallitukselle', actors: ['tekstiryhma'] },
   ],
   lahetetty_hallitukselle: [
@@ -33,8 +32,7 @@ export function getAvailableTransitions(status: TextWorkStatus, role: PersonaRol
 }
 
 export function getTransitionLabel(from: TextWorkStatus, to: TextWorkStatus): string {
-  if (from === 'luonnos' && to === 'julkaistu_palautteelle') return 'Julkaise palautteelle'
-  if (from === 'julkaistu_palautteelle' && to === 'luonnos') return 'Vedä takaisin luonnokseksi'
+  if (from === 'luonnos' && to === 'julkaistu_palautteelle') return 'Julkaise'
   if (from === 'julkaistu_palautteelle' && to === 'lahetetty_hallitukselle') return 'Lähetä hallitukselle'
   if (from === 'hylatty' && to === 'luonnos') return 'Palauta luonnokseksi'
   return ''

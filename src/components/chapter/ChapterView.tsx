@@ -276,10 +276,7 @@ export function ChapterView() {
           'flex-1 min-h-0 overflow-y-auto transition-colors duration-200',
           isDraft ? 'bg-amber-50/20' : 'bg-stone-100'
         )}>
-          <div className="py-8 px-4 flex justify-center gap-4">
-            {/* Left spacer — mirrors margin width for centering (wide only) */}
-            <div className="w-48 shrink-0 hidden editor-lg:block" />
-
+          <div className="py-8 px-4 flex justify-start editor-lg:justify-center gap-4 editor-lg:pl-8">
             {/* A4 page — fixed max-width, shrinks on mobile */}
             <div className="w-full max-w-3xl shrink-0">
               <div

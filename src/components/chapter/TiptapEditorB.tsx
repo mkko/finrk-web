@@ -254,11 +254,12 @@ function buildContent(verses: Verse[]) {
           type: 'paragraph',
           content: [{ type: 'text', text: `${verse.number} ${line}` }],
         })
-      } else if (line.trim()) {
-        content.push({
-          type: 'paragraph',
-          content: [{ type: 'text', text: line }],
-        })
+      } else {
+        content.push(
+          line
+            ? { type: 'paragraph', content: [{ type: 'text', text: line }] }
+            : { type: 'paragraph' }
+        )
       }
     }
 
@@ -328,12 +329,9 @@ function extractData(doc: any): ExtractedData {
       verses.set(verseNum, body.trim())
       lastVerseNum = verseNum
     } else if (lastVerseNum !== null) {
-      // Continuation paragraph
-      const trimmed = text.trim()
-      if (trimmed) {
-        const existing = verses.get(lastVerseNum) ?? ''
-        verses.set(lastVerseNum, existing + '\n' + trimmed)
-      }
+      // Continuation paragraph — preserve empty lines
+      const existing = verses.get(lastVerseNum) ?? ''
+      verses.set(lastVerseNum, existing + '\n' + text.trim())
     }
 
     return false

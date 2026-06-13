@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Source_Serif_4, Inter } from "next/font/google";
 import { Header } from "@/components/layout/Header";
 import { MobileNav } from "@/components/layout/MobileNav";
+import { AppShell } from "@/components/layout/AppShell";
 import "./globals.css";
 
 const serif = Source_Serif_4({
@@ -29,11 +30,13 @@ export default function RootLayout({
   return (
     <html lang="fi" className={`${serif.variable} ${sans.variable} h-full antialiased`}>
       <body className="h-screen overflow-hidden flex flex-col font-sans bg-stone-50 text-stone-900">
-        <Header />
-        <MobileNav />
-        <main className="flex-1 min-h-0 overflow-hidden">
-          {children}
-        </main>
+        <AppShell>
+          <Header />
+          <MobileNav />
+          <main className="flex-1 min-h-0 overflow-hidden">
+            {children}
+          </main>
+        </AppShell>
       </body>
     </html>
   );

@@ -8,7 +8,8 @@ import { cn } from '@/lib/utils'
 export function MobileNav() {
   const pathname = usePathname()
   const { currentUserId, users } = useStore()
-  const currentUser = users.find(u => u.id === currentUserId)!
+  const currentUser = users.find(u => u.id === currentUserId)
+  if (!currentUser) return null
 
   const ehdotuksetLabel = currentUser.role === 'tekstiryhma'
     ? 'Tekstit'

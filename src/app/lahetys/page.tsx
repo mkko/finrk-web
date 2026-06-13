@@ -20,7 +20,8 @@ export default function LahetysPage() {
   const submitToHallitus = useStore(s => s.submitToHallitus)
   const currentUserId = useStore(s => s.currentUserId)
   const users = useStore(s => s.users)
-  const currentUser = users.find(u => u.id === currentUserId)!
+  const currentUser = users.find(u => u.id === currentUserId)
+  if (!currentUser) return null
   const currentTw = getCurrentTextWork(textWorks)
 
   const [view, setView] = useState<View>('list')

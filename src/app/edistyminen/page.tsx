@@ -16,7 +16,8 @@ const STATUS_ORDER: TextWorkStatus[] = [
 
 export default function ProgressPage() {
   const { textWorks, activity, users, currentUserId } = useStore()
-  const currentUser = users.find(u => u.id === currentUserId)!
+  const currentUser = users.find(u => u.id === currentUserId)
+  if (!currentUser) return null
 
   const visibleTws = getVisibleTextWorks(textWorks, currentUser.role)
 

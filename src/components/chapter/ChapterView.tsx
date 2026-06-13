@@ -42,7 +42,7 @@ export function ChapterView() {
   const editSectionHeader = useStore(s => s.editSectionHeader)
   const addComment = useStore(s => s.addComment)
   const currentUserId = useStore(s => s.currentUserId)
-  const currentUser = useStore(s => s.users.find(u => u.id === s.currentUserId)!)
+  const currentUser = useStore(s => s.users.find(u => u.id === s.currentUserId)) ?? { id: '', name: '', role: 'tekstiryhma' as const, roleLabel: '' }
   const textWorks = useStore(s => s.textWorks)
   const comments = useStore(s => s.comments)
   const proposals = useStore(s => s.proposals)

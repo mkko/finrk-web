@@ -10,7 +10,8 @@ import { Check, X, Clock, CircleDot } from 'lucide-react'
 export default function HallitusPage() {
   const router = useRouter()
   const { textWorks, proposals, users, currentUserId } = useStore()
-  const currentUser = users.find(u => u.id === currentUserId)!
+  const currentUser = users.find(u => u.id === currentUserId)
+  if (!currentUser) return null
 
   if (currentUser.role !== 'hallitus') {
     return (

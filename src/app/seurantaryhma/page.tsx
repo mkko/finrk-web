@@ -12,7 +12,8 @@ import { MessageSquare } from 'lucide-react'
 export default function SeurantaryhmaPage() {
   const router = useRouter()
   const { textWorks, comments, users, currentUserId } = useStore()
-  const currentUser = users.find(u => u.id === currentUserId)!
+  const currentUser = users.find(u => u.id === currentUserId)
+  if (!currentUser) return null
 
   if (currentUser.role !== 'seurantaryhma') {
     return (

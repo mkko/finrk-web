@@ -27,7 +27,7 @@ function initialState() {
   }
 
   return {
-    currentUserId: 'tekstiryhma-leino-kimmo',
+    currentUserId: '',
     users: SEED_USERS,
     verses: SEED_VERSES.map(v => ({ ...v, text: v.baseText, approvedText: v.approvedText ?? v.baseText })),
     textWorks: [{
@@ -562,7 +562,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'raamattu-kaannostyo',
-      version: 21,
+      version: 22,
       migrate: () => initialState(),
     }
   )

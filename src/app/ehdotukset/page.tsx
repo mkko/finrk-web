@@ -20,7 +20,8 @@ const ALL_STATUSES: TextWorkStatus[] = [
 export default function ProposalsPage() {
   const router = useRouter()
   const { textWorks, proposals, comments, users, currentUserId } = useStore()
-  const currentUser = users.find(u => u.id === currentUserId)!
+  const currentUser = users.find(u => u.id === currentUserId)
+  if (!currentUser) return null
 
   const visibleTws = getVisibleTextWorks(textWorks, currentUser.role)
 

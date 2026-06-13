@@ -37,7 +37,7 @@ export function VerseDetailPanel({ verseNumber, textWorkId, focusCommentId, onFo
 function PanelContent({ verseNumber, textWorkId, focusCommentId, onFocusComment, onClose }: { verseNumber: number; textWorkId?: string; focusCommentId?: string | null; onFocusComment?: (id: string | null) => void; onClose: () => void }) {
   const verses = useStore(s => s.verses)
   const users = useStore(s => s.users)
-  const currentUser = useStore(s => s.users.find(u => u.id === s.currentUserId)!)
+  const currentUser = useStore(s => s.users.find(u => u.id === s.currentUserId)) ?? { id: '', name: '', role: 'tekstiryhma' as const, roleLabel: '' }
   const allComments = useStore(s => s.comments)
   const addComment = useStore(s => s.addComment)
   const resolveComment = useStore(s => s.resolveComment)

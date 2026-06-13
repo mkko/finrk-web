@@ -17,7 +17,8 @@ export default function ReviewPage() {
   const proposalId = params.proposalId as string
 
   const { proposals, textWorks, users, verses, snapshots, comments, currentUserId, castVote, cancelProposal, updateSelectedVoters } = useStore()
-  const currentUser = users.find(u => u.id === currentUserId)!
+  const currentUser = users.find(u => u.id === currentUserId)
+  if (!currentUser) return null
 
   const proposal = proposals.find(p => p.id === proposalId)
   const tw = proposal ? textWorks.find(t => t.id === proposal.textWorkId) : null

@@ -9,25 +9,25 @@ import { cn } from '@/lib/utils'
 export function Header() {
   const pathname = usePathname()
   const { currentUserId, users } = useStore()
-  const currentUser = users.find(u => u.id === currentUserId)!
+  const currentUser = users.find(u => u.id === currentUserId)
 
-  const ehdotuksetLabel = currentUser.role === 'tekstiryhma'
+  const ehdotuksetLabel = currentUser?.role === 'tekstiryhma'
     ? 'Tekstit'
-    : currentUser.role === 'seurantaryhma'
+    : currentUser?.role === 'seurantaryhma'
       ? 'Julkaistut tekstit'
       : 'Hyväksyttävät tekstit'
 
-  const navItems = [
+  const navItems = currentUser ? [
     { href: '/', label: 'Luku' },
     ...(currentUser.role === 'tekstiryhma' ? [{ href: '/lahetys', label: 'Tarkistus' }] : []),
     { href: '/ehdotukset', label: ehdotuksetLabel },
     { href: '/edistyminen', label: 'Edistyminen' },
-  ]
+  ] : []
 
   // Role-specific nav items
-  const roleItems = currentUser.role === 'seurantaryhma'
+  const roleItems = currentUser?.role === 'seurantaryhma'
     ? [{ href: '/seurantaryhma', label: 'Arviointi' }]
-    : currentUser.role === 'hallitus'
+    : currentUser?.role === 'hallitus'
       ? [{ href: '/hallitus', label: 'Ratifiointi' }]
       : []
 

@@ -19,16 +19,6 @@ export default function LahetysPage() {
 
   const [selectedVerses, setSelectedVerses] = useState<Set<number>>(new Set())
 
-  if (currentUser.role !== 'tekstiryhma') {
-    return (
-      <div className="h-full overflow-y-auto">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
-          <p className="text-stone-500">Tämä näkymä on tarkoitettu tekstiryhmän jäsenille.</p>
-        </div>
-      </div>
-    )
-  }
-
   // Find verses in active (unresolved) proposals
   const activeProposalVerses = useMemo(() => {
     const active = proposals.filter(p => !p.resolvedAt && p.selectedVerses)
@@ -38,6 +28,16 @@ export default function LahetysPage() {
     }
     return nums
   }, [proposals])
+
+  if (currentUser.role !== 'tekstiryhma') {
+    return (
+      <div className="h-full overflow-y-auto">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
+          <p className="text-stone-500">Tämä näkymä on tarkoitettu tekstiryhmän jäsenille.</p>
+        </div>
+      </div>
+    )
+  }
 
   // Published but unreviewed: baseText !== approvedText and not in active proposal
   const unreviewedVerses = verses.filter(v =>

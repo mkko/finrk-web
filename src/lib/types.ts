@@ -48,7 +48,7 @@ export const STATUS_INDICATOR_COLORS: Record<TextWorkStatus, string> = {
 
 export interface TextWork {
   id: string
-  scope: { book: string; chapter: number }
+  scope: { book: string; chapter?: number }
   status: TextWorkStatus
   statusChangedAt: string
   publishedForFeedbackAt?: string
@@ -136,11 +136,20 @@ export interface ActivityEntry {
 
 export function textWorkLabel(tw: TextWork): string {
   const bookLabels: Record<string, string> = {
-    '1Thess': '1. Tess.',
-    'Phil': 'Fil.',
+    '1Thess': '1. Tessalonikalaiskirje',
+    'Phil': 'Filippiläiskirje',
+    'Gal': 'Galatalaiskirje',
+    'Eph': 'Efesolaiskirje',
+    'Col': 'Kolossalaiskirje',
+    '1Tim': '1. Timoteuskirje',
+    '2Tim': '2. Timoteuskirje',
+    'Rom': 'Roomalaiskirje',
   }
   const bookLabel = bookLabels[tw.scope.book] ?? tw.scope.book
-  return `${bookLabel} luku ${tw.scope.chapter}`
+  if (tw.scope.chapter) {
+    return `${bookLabel} luku ${tw.scope.chapter}`
+  }
+  return bookLabel
 }
 
 export interface AppState {

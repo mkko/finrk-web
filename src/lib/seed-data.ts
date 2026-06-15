@@ -188,21 +188,21 @@ export const SEED_USERS: User[] = [
 export const SEED_TEXT_WORKS: TextWork[] = [
   {
     id: 'tw-1',
-    scope: { book: 'Phil', chapter: 4 },
+    scope: { book: 'Phil' },
     status: 'luonnos',
     statusChangedAt: '2026-04-16T09:00:00Z',
     publishedForFeedbackAt: '2026-04-12T10:00:00Z',
   },
   {
     id: 'tw-2',
-    scope: { book: 'Phil', chapter: 3 },
+    scope: { book: 'Col' },
     status: 'julkaistu_palautteelle',
     statusChangedAt: '2026-04-18T10:00:00Z',
     publishedForFeedbackAt: '2026-04-18T10:00:00Z',
   },
   {
     id: 'tw-3',
-    scope: { book: 'Phil', chapter: 1 },
+    scope: { book: 'Gal' },
     status: 'lahetetty_hallitukselle',
     statusChangedAt: '2026-04-22T14:00:00Z',
     publishedForFeedbackAt: '2026-04-15T09:00:00Z',
@@ -211,7 +211,7 @@ export const SEED_TEXT_WORKS: TextWork[] = [
   },
   {
     id: 'tw-4',
-    scope: { book: 'Phil', chapter: 2 },
+    scope: { book: '1Thess' },
     status: 'hyvaksytty',
     statusChangedAt: '2026-04-25T16:00:00Z',
     publishedForFeedbackAt: '2026-04-10T09:00:00Z',
@@ -229,7 +229,7 @@ export const SEED_PROPOSALS: Proposal[] = [
     textWorkId: 'tw-3',
     snapshotId: 'snapshot-tw3-submission',
     selectedVoters: ALL_VOTERS,
-    rationale: 'Ensimmäinen luku on valmis seurantaryhmän palautteen jälkeen. Pyydämme hallituksen hyväksyntää.',
+    rationale: 'Galatalaiskirje on valmis seurantaryhmän palautteen jälkeen. Pyydämme hallituksen hyväksyntää.',
     votes: [
       { userId: 'liukko-arto', decision: 'approve', createdAt: '2026-04-24T10:00:00Z' },
     ],
@@ -241,7 +241,7 @@ export const SEED_PROPOSALS: Proposal[] = [
     textWorkId: 'tw-4',
     snapshotId: 'snapshot-tw4-submission',
     selectedVoters: ALL_VOTERS,
-    rationale: 'Toinen luku on valmis käsittelyyn.',
+    rationale: '1. Tessalonikalaiskirje on valmis käsittelyyn.',
     votes: [
       { userId: 'liukko-arto', decision: 'approve', createdAt: '2026-04-24T14:00:00Z' },
       { userId: 'kaikkonen-sointu', decision: 'approve', createdAt: '2026-04-24T15:00:00Z' },
@@ -406,7 +406,7 @@ export const SEED_SNAPSHOTS: Snapshot[] = [
     type: 'submission',
     createdAt: '2026-04-22T14:00:00Z',
     createdBy: 'leino-kimmo',
-    verseTexts: [{ number: 1, text: 'Fil. luku 1 teksti (tiivistelmä).' }],
+    verseTexts: [{ number: 1, text: 'Galatalaiskirje jae 1 (tiivistelmä).' }],
     footnoteTexts: [],
     sectionHeaderTexts: [],
   },
@@ -417,7 +417,7 @@ export const SEED_SNAPSHOTS: Snapshot[] = [
     type: 'submission',
     createdAt: '2026-04-20T12:00:00Z',
     createdBy: 'peltola-kimmo',
-    verseTexts: [{ number: 1, text: 'Fil. luku 2 teksti (tiivistelmä).' }],
+    verseTexts: [{ number: 1, text: '1. Tessalonikalaiskirje jae 1 (tiivistelmä).' }],
     footnoteTexts: [],
     sectionHeaderTexts: [],
   },
@@ -430,7 +430,7 @@ export const SEED_ACTIVITY: ActivityEntry[] = [
     userId: 'kaikkonen-sointu',
     textWorkId: 'tw-4',
     action: 'Hyväksytty',
-    detail: 'Fil. luku 2 — hallitus hyväksyi yksimielisesti',
+    detail: '1. Tessalonikalaiskirje — hallitus hyväksyi yksimielisesti',
   },
   {
     id: 'act-3',
@@ -438,7 +438,7 @@ export const SEED_ACTIVITY: ActivityEntry[] = [
     userId: 'liukko-arto',
     textWorkId: 'tw-3',
     action: 'Äänestetty',
-    detail: 'Fil. luku 1 — ääni annettu',
+    detail: 'Galatalaiskirje — ääni annettu',
   },
   {
     id: 'act-4',
@@ -446,7 +446,7 @@ export const SEED_ACTIVITY: ActivityEntry[] = [
     userId: 'leino-kimmo',
     textWorkId: 'tw-3',
     action: 'Lähetetty hallitukselle',
-    detail: 'Fil. luku 1 — lähetetty hallitukselle',
+    detail: 'Galatalaiskirje — lähetetty hallitukselle',
   },
   {
     id: 'act-5',
@@ -454,7 +454,7 @@ export const SEED_ACTIVITY: ActivityEntry[] = [
     userId: 'seurantaryhma-a',
     textWorkId: 'tw-2',
     action: 'Uusi kommentti',
-    detail: 'Fil. luku 3 — uusi kommentti',
+    detail: 'Kolossalaiskirje — uusi kommentti',
   },
   {
     id: 'act-6',
@@ -462,6 +462,6 @@ export const SEED_ACTIVITY: ActivityEntry[] = [
     userId: 'leino-kimmo',
     textWorkId: 'tw-2',
     action: 'Julkaistu palautteelle',
-    detail: 'Fil. luku 3 — julkaistu seurantaryhmälle',
+    detail: 'Kolossalaiskirje — julkaistu seurantaryhmälle',
   },
 ]

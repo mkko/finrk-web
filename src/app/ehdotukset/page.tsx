@@ -162,7 +162,7 @@ export default function ProposalsPage() {
                   <tr
                     key={tw.id}
                     onClick={() => {
-                      if (tw.scope.chapter === 2) {
+                      if (tw.scope.book === 'Phil') {
                         // Hallitus: go to review page if there's an active proposal
                         if (isHallitus && proposal) {
                           router.push(`/review/${proposal.id}`)
@@ -173,7 +173,7 @@ export default function ProposalsPage() {
                     }}
                     className={cn(
                       'border-b border-stone-100 last:border-0 transition-colors',
-                      tw.scope.chapter === 2 ? 'hover:bg-stone-50 cursor-pointer' : 'opacity-60'
+                      tw.scope.book === 'Phil' ? 'hover:bg-stone-50 cursor-pointer' : 'opacity-60'
                     )}
                   >
                     <td className="px-4 py-3 font-medium text-stone-800">

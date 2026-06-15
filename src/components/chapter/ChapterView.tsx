@@ -292,8 +292,7 @@ export function ChapterView() {
                 }}
               >
                 {/* Document header */}
-                <p className="font-serif text-sm text-stone-400 mb-1">Kirje filippiläisille</p>
-                <h1 className="font-serif text-2xl font-semibold text-stone-800 leading-tight mb-4">Luku 4</h1>
+                <h1 className="font-serif text-2xl font-semibold text-stone-800 leading-tight mb-4">Kirje filippiläisille</h1>
 
                 {/* Verses */}
                 <div className="font-serif text-base leading-7 text-stone-800">

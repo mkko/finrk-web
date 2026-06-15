@@ -57,9 +57,9 @@ export default function SeurantaryhmaPage() {
                 key={tw.id}
                 className={cn(
                   'bg-white rounded-lg border border-stone-200 px-6 py-4 flex items-center justify-between',
-                  tw.scope.chapter === 2 && 'cursor-pointer hover:bg-stone-50 transition-colors'
+                  tw.scope.book === 'Phil' && 'cursor-pointer hover:bg-stone-50 transition-colors'
                 )}
-                onClick={() => tw.scope.chapter === 2 && router.push('/')}
+                onClick={() => tw.scope.book === 'Phil' && router.push('/')}
               >
                 <div>
                   <h3 className="font-medium text-stone-800">{textWorkLabel(tw)}</h3>

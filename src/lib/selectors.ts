@@ -15,7 +15,7 @@ export function getOpenCommentCount(comments: Comment[], textWorkId: string): nu
 }
 
 export function getCurrentTextWork(textWorks: TextWork[]): TextWork | undefined {
-  return textWorks.find(tw => tw.scope.book === '1Thess' && tw.scope.chapter === 2)
+  return textWorks.find(tw => tw.scope.book === 'Phil' && tw.scope.chapter === 4)
 }
 
 export function getVerseComments(comments: Comment[], textWorkId: string, verseNumber: number): Comment[] {

@@ -137,6 +137,7 @@ export interface ActivityEntry {
 export function textWorkLabel(tw: TextWork): string {
   const bookLabels: Record<string, string> = {
     '1Thess': '1. Tess.',
+    'Phil': 'Fil.',
   }
   const bookLabel = bookLabels[tw.scope.book] ?? tw.scope.book
   return `${bookLabel} luku ${tw.scope.chapter}`

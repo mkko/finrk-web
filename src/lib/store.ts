@@ -32,7 +32,7 @@ function initialState() {
     verses: SEED_VERSES.map(v => ({ ...v, text: v.baseText, approvedText: v.approvedText ?? v.baseText })),
     textWorks: [{
       id: 'tw-1',
-      scope: { book: '1Thess', chapter: 2 },
+      scope: { book: 'Phil', chapter: 4 },
       status: 'luonnos' as const,
       statusChangedAt: new Date().toISOString(),
     }],
@@ -562,7 +562,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'raamattu-kaannostyo',
-      version: 24,
+      version: 25,
       migrate: () => initialState(),
     }
   )

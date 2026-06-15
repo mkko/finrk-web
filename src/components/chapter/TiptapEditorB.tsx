@@ -116,6 +116,21 @@ const AnnotationBlock = TiptapNode.create({
   },
 })
 
+const FootnoteSeparator = TiptapNode.create({
+  name: 'footnoteSeparator',
+  group: 'block',
+  atom: true,
+
+  parseHTML() { return [{ tag: 'hr[data-fn-separator]' }] },
+  renderHTML() {
+    return ['hr', {
+      'data-fn-separator': '',
+      contenteditable: 'false',
+      style: 'border: none; border-top: 1px dashed #d6d3d1; margin: 1.5rem 0 0.75rem; pointer-events: none;',
+    }]
+  },
+})
+
 // ── Decorations ───────────────────────────────────────
 // Verse number superscript styling + collapsible original-text widget.
 
@@ -231,8 +246,11 @@ function buildDecos(doc: any, verses: Verse[]): DecorationSet {
 
 // ── Build editor content from verse data ──────────────
 
-function buildContent(verses: Verse[]) {
+type FootnoteMode = 'inline' | 'endOfChapter'
+
+function buildContent(verses: Verse[], mode: FootnoteMode = 'inline') {
   const content: any[] = []
+  const collectedFootnotes: any[] = []
 
   for (const verse of verses) {
     // Section header
@@ -263,16 +281,27 @@ function buildContent(verses: Verse[]) {
       }
     }
 
-    // Footnotes as separate blocks
+    // Footnotes
     if (verse.footnotes) {
       for (const fn of verse.footnotes) {
-        content.push({
+        const fnNode = {
           type: 'footnoteBlock',
           attrs: { verse: verse.number },
           content: [{ type: 'text', text: `${fn.marker} ${fn.text}` }],
-        })
+        }
+        if (mode === 'endOfChapter') {
+          collectedFootnotes.push(fnNode)
+        } else {
+          content.push(fnNode)
+        }
       }
     }
+  }
+
+  // End-of-chapter mode: append separator + all footnotes at the end
+  if (mode === 'endOfChapter' && collectedFootnotes.length > 0) {
+    content.push({ type: 'footnoteSeparator' })
+    content.push(...collectedFootnotes)
   }
 
   if (content.length === 0) {
@@ -290,13 +319,15 @@ interface ExtractedData {
   sectionHeaders: Map<number, string>
 }
 
-function extractData(doc: any): ExtractedData {
+function extractData(doc: any, mode: FootnoteMode = 'inline'): ExtractedData {
   const verses = new Map<number, string>()
   const footnotes: { verse: number; marker: string; text: string }[] = []
   const sectionHeaders = new Map<number, string>()
   let lastVerseNum: number | null = null
 
   doc.descendants((node: any) => {
+    if (node.type.name === 'footnoteSeparator') return false
+
     if (node.type.name === 'sectionHeader') {
       const v = node.attrs.verse
       if (v > 0) sectionHeaders.set(v, node.textContent.trim())
@@ -304,8 +335,9 @@ function extractData(doc: any): ExtractedData {
     }
 
     if (node.type.name === 'footnoteBlock') {
-      const v = node.attrs.verse || lastVerseNum
-      if (v) {
+      // In endOfChapter mode, require explicit verse attr (no fallback to lastVerseNum)
+      const v = mode === 'endOfChapter' ? node.attrs.verse : (node.attrs.verse || lastVerseNum)
+      if (v && v > 0) {
         const raw = node.textContent.trim()
         const m = raw.match(/^(\S+)\s+(.*)/)
         if (m) {
@@ -391,6 +423,47 @@ function parseVerseLines(text: string): { number: number; text: string }[] | nul
   return parsed.length > 0 ? parsed : null
 }
 
+// ── Parse pasted verse lines (end-of-chapter mode) ───
+
+function parseVerseLinesEndOfChapter(text: string): { number: number; text: string; footnotes: { marker: string; text: string }[] }[] | null {
+  const lines = text.split('\n').filter(l => l.trim())
+  const result: { number: number; text: string; footnotes: { marker: string; text: string }[] }[] = []
+  let expectedNext: number | null = null
+
+  for (const line of lines) {
+    const m = line.match(/^(\d+)\s+(.+)/)
+    if (m) {
+      const num = parseInt(m[1], 10)
+      if (expectedNext === null || num === expectedNext) {
+        // Sequential verse
+        result.push({ number: num, text: m[2].trim(), footnotes: [] })
+        expectedNext = num + 1
+      } else if (result.length > 0) {
+        // Non-sequential number → footnote for previous verse
+        const prev = result[result.length - 1]
+        prev.footnotes.push({ marker: m[1], text: m[2].trim() })
+      }
+    } else if (result.length > 0) {
+      const trimmed = line.trim()
+      // Cross-reference patterns or footnote-like content
+      if (/^[a-z]\)/.test(trimmed) || /^[\u2020\u2021*†‡§]/.test(trimmed) || /^\(/.test(trimmed)) {
+        const prev = result[result.length - 1]
+        const markerMatch = trimmed.match(/^(\S+)\s+(.*)/)
+        if (markerMatch) {
+          prev.footnotes.push({ marker: markerMatch[1], text: markerMatch[2] })
+        } else {
+          prev.footnotes.push({ marker: `${prev.number}`, text: trimmed })
+        }
+      } else {
+        // Continuation text
+        result[result.length - 1].text += '\n' + trimmed
+      }
+    }
+  }
+
+  return result.length > 0 ? result : null
+}
+
 // ── Component ─────────────────────────────────────────
 
 export function TiptapEditorB({
@@ -401,6 +474,10 @@ export function TiptapEditorB({
   onAddFootnote, onEditFootnote, onEditSectionHeader,
   onComment, onDirtyChange, onOpenSidebar,
 }: Props) {
+  const [footnoteMode, setFootnoteMode] = useState<FootnoteMode>('endOfChapter')
+  const footnoteModeRef = useRef<FootnoteMode>(footnoteMode)
+  footnoteModeRef.current = footnoteMode
+
   const versesRef = useRef(verses)
   versesRef.current = verses
 
@@ -442,11 +519,12 @@ export function TiptapEditorB({
       }),
       SectionHeader,
       FootnoteBlock,
+      FootnoteSeparator,
       AnnotationBlock,
       ReadOnlyGuard,
       DecoExt,
     ],
-    content: buildContent(verses),
+    content: buildContent(verses, footnoteMode),
     editorProps: {
       attributes: {
         class: 'focus:outline-none min-h-[200px] font-serif text-base leading-7 text-stone-800',
@@ -455,10 +533,44 @@ export function TiptapEditorB({
         if (readOnlyRef.current) return true // block paste
         const text = event.clipboardData?.getData('text/plain')
         if (!text) return false
+
+        const { schema } = view.state
+
+        if (footnoteModeRef.current === 'endOfChapter') {
+          const parsed = parseVerseLinesEndOfChapter(text)
+          if (!parsed) return false
+
+          const nodes: any[] = []
+          const fnNodes: any[] = []
+
+          for (const v of parsed) {
+            const lines = v.text.split('\n')
+            for (let i = 0; i < lines.length; i++) {
+              nodes.push(schema.nodes.paragraph.create(null, [
+                schema.text(i === 0 ? `${v.number} ${lines[i]}` : lines[i]),
+              ]))
+            }
+            for (const fn of v.footnotes) {
+              fnNodes.push(schema.nodes.footnoteBlock.create(
+                { verse: v.number },
+                [schema.text(`${fn.marker} ${fn.text}`)]
+              ))
+            }
+          }
+
+          if (fnNodes.length > 0) {
+            nodes.push(schema.nodes.footnoteSeparator.create())
+            nodes.push(...fnNodes)
+          }
+
+          view.dispatch(view.state.tr.replaceSelection(new Slice(Fragment.from(nodes), 0, 0)))
+          return true
+        }
+
+        // Inline mode: existing behavior
         const parsed = parseVerseLines(text)
         if (!parsed) return false
 
-        const { schema } = view.state
         const nodes = parsed.flatMap(v => {
           const lines = v.text.split('\n')
           return lines.map((line, i) =>
@@ -481,12 +593,11 @@ export function TiptapEditorB({
   useEffect(() => {
     if (editor && !editor.isFocused) {
       suppressDirty.current = true
-      editor.commands.setContent(buildContent(verses))
+      editor.commands.setContent(buildContent(verses, footnoteMode))
       onDirtyChange?.(false)
-      // Allow the update event to fire first, then unsuppress
       requestAnimationFrame(() => { suppressDirty.current = false })
     }
-  }, [editor, verses, onDirtyChange])
+  }, [editor, verses, footnoteMode, onDirtyChange])
 
   // Signal dirty state only on user-initiated content changes
   useEffect(() => {
@@ -515,7 +626,7 @@ export function TiptapEditorB({
 
   const handleBlur = useCallback(() => {
     if (!editor || readOnly) return
-    const data = extractData(editor.state.doc)
+    const data = extractData(editor.state.doc, footnoteMode)
 
     for (const verse of verses) {
       const newText = data.verses.get(verse.number)
@@ -542,7 +653,19 @@ export function TiptapEditorB({
     }
 
     onDirtyChange?.(false)
-  }, [editor, verses, readOnly, onEditVerse, onEditFootnote, onEditSectionHeader, onDirtyChange])
+  }, [editor, verses, readOnly, footnoteMode, onEditVerse, onEditFootnote, onEditSectionHeader, onDirtyChange])
+
+  // ── Mode switch handler ─────────────────────────
+  const handleModeSwitch = useCallback((newMode: FootnoteMode) => {
+    if (!editor || newMode === footnoteMode) return
+    // Save current edits before switching
+    handleBlur()
+    // Force-rebuild content with new mode (the sync effect guards on !isFocused)
+    suppressDirty.current = true
+    editor.commands.setContent(buildContent(versesRef.current, newMode))
+    requestAnimationFrame(() => { suppressDirty.current = false })
+    setFootnoteMode(newMode)
+  }, [editor, footnoteMode, handleBlur])
 
   // ── Toolbar state ────────────────────────────────
 
@@ -722,11 +845,19 @@ export function TiptapEditorB({
   // ── Render ───────────────────────────────────────
 
   const toolbar = !readOnly ? (
-    <div className="inline-flex rounded-md border border-stone-200 bg-stone-50 p-0.5">
-      <SegmentBtn active={activeType === 'paragraph'} onClick={() => setType('paragraph')} label="Jae" />
-      <SegmentBtn active={activeType === 'sectionHeader'} onClick={() => setType('sectionHeader')} label="Väliotsikko" />
-      <SegmentBtn active={activeType === 'footnoteBlock'} onClick={() => setType('footnoteBlock')} label="Alaviite" />
-      <SegmentBtn active={activeType === 'annotationBlock'} onClick={() => setType('annotationBlock')} label="Merkintä" />
+    <div className="flex items-center gap-2">
+      <div className="inline-flex rounded-md border border-stone-200 bg-stone-50 p-0.5">
+        <SegmentBtn active={activeType === 'paragraph'} onClick={() => setType('paragraph')} label="Jae" />
+        <SegmentBtn active={activeType === 'sectionHeader'} onClick={() => setType('sectionHeader')} label="Väliotsikko" />
+        {footnoteMode === 'inline' && (
+          <SegmentBtn active={activeType === 'footnoteBlock'} onClick={() => setType('footnoteBlock')} label="Alaviite" />
+        )}
+        <SegmentBtn active={activeType === 'annotationBlock'} onClick={() => setType('annotationBlock')} label="Merkintä" />
+      </div>
+      <div className="inline-flex rounded-md border border-stone-200 bg-stone-50 p-0.5">
+        <SegmentBtn active={footnoteMode === 'endOfChapter'} onClick={() => handleModeSwitch('endOfChapter')} label="AV lopussa" />
+        <SegmentBtn active={footnoteMode === 'inline'} onClick={() => handleModeSwitch('inline')} label="AV rivissä" />
+      </div>
     </div>
   ) : null
 

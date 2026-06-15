@@ -45,8 +45,8 @@ function PanelContent({ verseNumber, textWorkId, focusCommentId, onFocusComment,
   const deleteMerkinta = useStore(s => s.deleteMerkinta)
   const updateMerkintaNote = useStore(s => s.updateMerkintaNote)
 
-  const verse = verses.find(v => v.number === verseNumber)!
-  const hasBeenRevised = verse.text !== verse.baseText
+  const verse = verses.find(v => v.number === verseNumber)
+  const hasBeenRevised = verse ? verse.text !== verse.baseText : false
 
   const isTekstiRyhma = currentUser.roles.includes('tekstiryhma')
   const isSeurantaryhma = currentUser.roles.includes('seurantaryhma')
@@ -78,6 +78,8 @@ function PanelContent({ verseNumber, textWorkId, focusCommentId, onFocusComment,
     setCommentText('')
   }, [verseNumber])
 
+  if (!verse) return null
+
   const focusedComment = focusCommentId ? allVisible.find(c => c.id === focusCommentId) : null
   const setFocusedId = onFocusComment ?? (() => {})
 
@@ -86,7 +88,7 @@ function PanelContent({ verseNumber, textWorkId, focusCommentId, onFocusComment,
     addComment({
       textWorkId,
       verseAnchor: { verseStart: verseNumber },
-      verseSnapshot: verse.text,
+      verseSnapshot: verse!.text,
       authorId: currentUser.id,
       text: commentText.trim(),
       thread: commentThread,

@@ -8,7 +8,7 @@ import { canEditVerses, getAvailableTransitions, getTransitionLabel } from '@/li
 import { getCurrentTextWork, getOpenCommentCount, getVerseComments } from '@/lib/selectors'
 import { useLayoutMode } from '@/hooks/useLayoutMode'
 import { VerseDetailPanel } from './VerseDetailPanel'
-import { TiptapEditorB } from './TiptapEditorB'
+import { TiptapEditorB, type FootnoteMode } from './TiptapEditorB'
 import { VoterSelectionModal } from './VoterSelectionModal'
 import { SnapshotList } from './SnapshotList'
 import { VersionHistory } from './VersionHistory'
@@ -32,14 +32,17 @@ export function ChapterView() {
   const [viewMode, setViewMode] = useState<ViewMode | null>(null)
   const toolbarRef = useRef<HTMLDivElement>(null)
   const [editorDirty, setEditorDirty] = useState(false)
+  const [editorFocused, setEditorFocused] = useState(false)
+  const [footnoteMode, setFootnoteMode] = useState<FootnoteMode>('endOfChapter')
 
-  const storeVerses = useStore(s => s.verses)
+  const [cursorChapter, setCursorChapter] = useState(1)
+  const allVerses = useStore(s => s.verses)
   const users = useStore(s => s.users)
-  const editVerse = useStore(s => s.editVerse)
+  const storeEditVerse = useStore(s => s.editVerse)
   const publishDraft = useStore(s => s.publishDraft)
-  const addFootnote = useStore(s => s.addFootnote)
-  const editFootnote = useStore(s => s.editFootnote)
-  const editSectionHeader = useStore(s => s.editSectionHeader)
+  const storeAddFootnote = useStore(s => s.addFootnote)
+  const storeEditFootnote = useStore(s => s.editFootnote)
+  const storeEditSectionHeader = useStore(s => s.editSectionHeader)
   const addComment = useStore(s => s.addComment)
   const currentUserId = useStore(s => s.currentUserId)
   const currentUser = useStore(s => s.users.find(u => u.id === s.currentUserId)) ?? { id: '', name: '', roles: ['tekstiryhma'] as const, roleLabel: '' }
@@ -56,8 +59,7 @@ export function ChapterView() {
   const currentTw = getCurrentTextWork(textWorks)
   const isTekstiryhma = hasRole(currentUser, 'tekstiryhma')
 
-  const baseVerses = storeVerses.map(v => ({ ...v, text: v.baseText }))
-  const changedVerseCount = storeVerses.filter(v => v.text !== v.baseText).length
+  const changedVerseCount = allVerses.filter(v => v.text !== v.baseText).length
 
   const effectiveViewMode = viewMode ?? (isTekstiryhma ? 'draft' : 'base')
   const isDraft = effectiveViewMode === 'draft'
@@ -66,21 +68,21 @@ export function ChapterView() {
   useEffect(() => { setViewMode(null) }, [currentUserId])
 
   const verses = viewedSnapshot
-    ? storeVerses.map(v => {
-        const sv = viewedSnapshot.verseTexts.find(sv => sv.number === v.number)
+    ? allVerses.map(v => {
+        const sv = viewedSnapshot.verseTexts.find(sv => sv.chapter === v.chapter && sv.number === v.number)
         return sv ? { ...v, text: sv.text } : v
       })
-    : isDraft ? storeVerses : baseVerses
+    : isDraft ? allVerses : allVerses.map(v => ({ ...v, text: v.baseText }))
 
   const canEdit = canEditVerses(currentTw?.status ?? 'luonnos', currentUser.roles)
   const readOnly = !isDraft || !canEdit || !!viewedSnapshot
 
   const canComment = hasRole(currentUser, 'tekstiryhma') || hasRole(currentUser, 'seurantaryhma')
-  const handleComment = useCallback((verseNumber: number, selectedText: string, commentText: string) => {
+  const handleComment = useCallback((chapter: number, verseNumber: number, selectedText: string, commentText: string) => {
     if (!currentTw) return
     addComment({
       textWorkId: currentTw.id,
-      verseAnchor: { verseStart: verseNumber },
+      verseAnchor: { chapter, verseStart: verseNumber },
       verseSnapshot: selectedText,
       authorId: currentUserId,
       text: commentText,
@@ -103,7 +105,7 @@ export function ChapterView() {
     const v = searchParams.get('verse')
     if (v) {
       const num = Number(v)
-      if (num >= 1 && num <= 20) {
+      if (num >= 1) {
         setCursorVerse(num)
         setSidebarVerse(num)
       }
@@ -122,7 +124,8 @@ export function ChapterView() {
     setSidebarVerse(num)
   }, [])
 
-  const handleCursorVerseChange = useCallback((num: number) => {
+  const handleCursorVerseChange = useCallback((ch: number, num: number) => {
+    setCursorChapter(ch)
     setCursorVerse(num)
     setSidebarCommentId(null)
   }, [])
@@ -134,14 +137,15 @@ export function ChapterView() {
 
   // Margin comment bubbles — one per open comment
   const marginComments = currentTw
-    ? storeVerses.flatMap(v => {
-        const vc = getVerseComments(comments, currentTw.id, v.number)
+    ? allVerses.flatMap(v => {
+        const vc = getVerseComments(comments, currentTw.id, v.chapter, v.number)
         return vc
           .filter(c => c.status === 'avoin')
           .map(c => {
             const author = users.find(u => u.id === c.authorId)
             return {
               id: c.id,
+              chapter: v.chapter,
               verseNumber: v.number,
               authorName: author?.name?.split(' ')[0] ?? '',
               preview: c.text.length > 40 ? c.text.slice(0, 40) + '…' : c.text,
@@ -211,11 +215,6 @@ export function ChapterView() {
               </button>
             </div>
 
-            <div className={cn('w-px h-5', isDraft ? 'bg-amber-300/40' : 'bg-stone-200')} />
-
-            {/* Editor paragraph type controls — portal target */}
-            <div ref={toolbarRef} />
-
             <div className="flex-1" />
 
             {/* Publish button */}
@@ -271,6 +270,54 @@ export function ChapterView() {
           <VersionHistory textWorkId={currentTw.id} />
         )}
 
+        {/* Editor toolbar — formatting + footnote mode */}
+        {!isHistory && (
+          <div className={cn(
+            'flex-none border-b px-4 py-1.5 flex items-center gap-3 transition-colors duration-200',
+            isDraft ? 'border-amber-200/50 bg-amber-50/50' : 'border-stone-200 bg-stone-50'
+          )}>
+            <div ref={toolbarRef} />
+            <div className="flex-1" />
+            {isDraft && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-stone-500">Alaviitteet:</span>
+                <div className="inline-flex rounded-md border border-amber-300/50 bg-amber-100/40 p-0.5">
+                  <button
+                    onMouseDown={e => e.preventDefault()}
+                    onClick={() => setFootnoteMode('endOfChapter')}
+                    disabled={editorFocused}
+                    className={cn(
+                      'px-3 py-1 text-xs rounded transition-colors',
+                      editorFocused && footnoteMode !== 'endOfChapter'
+                        ? 'text-stone-300 cursor-not-allowed'
+                        : footnoteMode === 'endOfChapter'
+                          ? 'bg-white text-stone-800 font-medium shadow-sm'
+                          : 'text-stone-400 hover:text-stone-600'
+                    )}
+                  >
+                    Luvun lopussa
+                  </button>
+                  <button
+                    onMouseDown={e => e.preventDefault()}
+                    onClick={() => setFootnoteMode('inline')}
+                    disabled={editorFocused}
+                    className={cn(
+                      'px-3 py-1 text-xs rounded transition-colors',
+                      editorFocused && footnoteMode !== 'inline'
+                        ? 'text-stone-300 cursor-not-allowed'
+                        : footnoteMode === 'inline'
+                          ? 'bg-white text-stone-800 font-medium shadow-sm'
+                          : 'text-stone-400 hover:text-stone-600'
+                    )}
+                  >
+                    Jakeen jälkeen
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Scrollable document area */}
         {!isHistory && <div className={cn(
           'flex-1 min-h-0 overflow-y-auto transition-colors duration-200',
@@ -294,23 +341,25 @@ export function ChapterView() {
                 {/* Document header */}
                 <h1 className="font-serif text-2xl font-semibold text-stone-800 leading-tight mb-4">Kirje filippiläisille</h1>
 
-                {/* Verses */}
+                {/* All chapters in one editor */}
                 <div className="font-serif text-base leading-7 text-stone-800">
                   <TiptapEditorB
                     verses={verses}
                     users={users}
                     currentUserId={currentUserId}
                     readOnly={readOnly}
+                    footnoteMode={footnoteMode}
                     toolbarRef={toolbarRef}
                     selectedVerse={cursorVerse}
                     onSelectVerse={handleSelectVerse}
                     onCursorVerseChange={handleCursorVerseChange}
-                    onEditVerse={editVerse}
-                    onAddFootnote={addFootnote}
-                    onEditFootnote={editFootnote}
-                    onEditSectionHeader={editSectionHeader}
+                    onEditVerse={storeEditVerse}
+                    onAddFootnote={storeAddFootnote}
+                    onEditFootnote={storeEditFootnote}
+                    onEditSectionHeader={storeEditSectionHeader}
                     onComment={canComment ? handleComment : undefined}
                     onDirtyChange={setEditorDirty}
+                    onFocusChange={setEditorFocused}
                     onOpenSidebar={handleOpenSidebar}
                   />
                 </div>
@@ -351,12 +400,14 @@ export function ChapterView() {
             </div>
           </div>
         </div>}
+
       </div>
 
       {/* Inline sidebar — medium and wide */}
       {displayedVerse !== null && layoutMode !== 'narrow' && (
         <div className="hidden editor-md:flex w-96 shrink-0 border-l border-stone-200 bg-white flex-col overflow-hidden">
           <VerseDetailPanel
+            chapter={cursorChapter}
             verseNumber={displayedVerse}
             textWorkId={currentTw?.id}
             focusCommentId={sidebarCommentId}
@@ -381,6 +432,7 @@ export function ChapterView() {
           <div className="fixed inset-0 bg-black/20 z-20" onClick={dismissOverlay} />
           <div className="fixed inset-y-0 right-0 w-96 max-w-[90vw] z-30 bg-white border-l border-stone-200 shadow-xl flex flex-col overflow-hidden">
             <VerseDetailPanel
+              chapter={cursorChapter}
               verseNumber={sidebarVerse}
               textWorkId={currentTw?.id}
               focusCommentId={sidebarCommentId}
@@ -410,6 +462,7 @@ export function ChapterView() {
     </div>
   )
 }
+
 
 function VotingButtons({ proposalId, onVote }: { proposalId: string; onVote: (id: string, d: 'approve' | 'reject', c?: string) => void }) {
   const [showReject, setShowReject] = useState(false)

@@ -26,11 +26,14 @@ import { parseVerseLines, parseVerseLinesEndOfChapter, parseDocxPaste } from '@/
 
 // ── Props ─────────────────────────────────────────────
 
+export type FootnoteMode = 'inline' | 'endOfChapter'
+
 interface Props {
   verses: Verse[]
   users: User[]
   currentUserId: string
   readOnly: boolean
+  footnoteMode: FootnoteMode
   toolbarRef?: RefObject<HTMLDivElement | null>
   selectedVerse: number | null
   onSelectVerse: (num: number) => void
@@ -41,6 +44,7 @@ interface Props {
   onCursorVerseChange?: (chapter: number, verseNumber: number) => void
   onComment?: (chapter: number, verseNumber: number, selectedText: string, commentText: string) => void
   onDirtyChange?: (dirty: boolean) => void
+  onFocusChange?: (focused: boolean) => void
   onOpenSidebar?: (verseNumber: number) => void
 }
 
@@ -271,18 +275,18 @@ function buildDecos(doc: any, verses: Verse[]): DecorationSet {
 
 // ── Build editor content from verse data ──────────────
 
-type FootnoteMode = 'inline' | 'endOfChapter'
-
 function buildContent(verses: Verse[], mode: FootnoteMode = 'inline') {
   const content: any[] = []
   let currentChapter = 0
   let collectedFootnotes: any[] = []
 
   function flushFootnotes() {
-    if (mode === 'endOfChapter' && collectedFootnotes.length > 0) {
+    if (mode === 'endOfChapter') {
       content.push({ type: 'footnoteSeparator' })
-      content.push(...collectedFootnotes)
-      collectedFootnotes = []
+      if (collectedFootnotes.length > 0) {
+        content.push(...collectedFootnotes)
+        collectedFootnotes = []
+      }
     }
   }
 
@@ -478,13 +482,12 @@ function verseAtCursor(editor: any): { chapter: number; verse: number } | null {
 
 export function TiptapEditorB({
   verses, users, currentUserId,
-  readOnly, toolbarRef,
+  readOnly, footnoteMode, toolbarRef,
   selectedVerse, onSelectVerse, onCursorVerseChange,
   onEditVerse,
   onAddFootnote, onEditFootnote, onEditSectionHeader,
-  onComment, onDirtyChange, onOpenSidebar,
+  onComment, onDirtyChange, onFocusChange, onOpenSidebar,
 }: Props) {
-  const [footnoteMode, setFootnoteMode] = useState<FootnoteMode>('endOfChapter')
   const footnoteModeRef = useRef<FootnoteMode>(footnoteMode)
   footnoteModeRef.current = footnoteMode
 
@@ -513,6 +516,13 @@ export function TiptapEditorB({
           new Plugin({
             filterTransaction(tr) {
               if (readOnlyRef.current && tr.docChanged) return false
+              if (!tr.docChanged) return true
+              // Block deletion of footnoteSeparator nodes
+              const oldDoc = tr.before
+              let separatorCount = 0, newSeparatorCount = 0
+              oldDoc.forEach(n => { if (n.type.name === 'footnoteSeparator') separatorCount++ })
+              tr.doc.forEach(n => { if (n.type.name === 'footnoteSeparator') newSeparatorCount++ })
+              if (newSeparatorCount < separatorCount) return false
               return true
             },
           }),
@@ -745,8 +755,12 @@ export function TiptapEditorB({
 
   // Signal dirty state only on user-initiated content changes
   useEffect(() => {
-    if (!editor || !onDirtyChange) return
-    const handler = () => { if (!suppressDirty.current) onDirtyChange(true) }
+    if (!editor) return
+    const handler = () => {
+      if (!suppressDirty.current) {
+        onDirtyChange?.(true)
+      }
+    }
     editor.on('update', handler)
     return () => { editor.off('update', handler) }
   }, [editor, onDirtyChange])
@@ -805,17 +819,6 @@ export function TiptapEditorB({
     justSavedRef.current = true
   }, [editor, verses, readOnly, footnoteMode, onEditVerse, onEditFootnote, onEditSectionHeader, onDirtyChange])
 
-  // ── Mode switch handler ─────────────────────────
-  const handleModeSwitch = useCallback((newMode: FootnoteMode) => {
-    if (!editor || newMode === footnoteMode) return
-    // Save current edits before switching
-    handleBlur()
-    // Force-rebuild content with new mode (the sync effect guards on !isFocused)
-    suppressDirty.current = true
-    editor.commands.setContent(buildContent(versesRef.current, newMode))
-    requestAnimationFrame(() => { suppressDirty.current = false })
-    setFootnoteMode(newMode)
-  }, [editor, footnoteMode, handleBlur])
 
   // ── Toolbar state ────────────────────────────────
 
@@ -1004,16 +1007,12 @@ export function TiptapEditorB({
         )}
         <SegmentBtn active={activeType === 'annotationBlock'} onClick={() => setType('annotationBlock')} label="Merkintä" />
       </div>
-      <div className="inline-flex rounded-md border border-stone-200 bg-stone-50 p-0.5">
-        <SegmentBtn active={footnoteMode === 'endOfChapter'} onClick={() => handleModeSwitch('endOfChapter')} label="AV lopussa" />
-        <SegmentBtn active={footnoteMode === 'inline'} onClick={() => handleModeSwitch('inline')} label="AV rivissä" />
-      </div>
     </div>
   ) : null
 
   return (
     <div ref={hoverZoneRef} className="relative" style={{ marginRight: '-2.5rem', paddingRight: '2.5rem' }}>
-    <div ref={editorRef} onBlur={handleBlur} className="relative">
+    <div ref={editorRef} onFocus={() => onFocusChange?.(true)} onBlur={() => { handleBlur(); onFocusChange?.(false) }} className="relative">
       {toolbar && toolbarRef?.current
         ? createPortal(toolbar, toolbarRef.current)
         : toolbar && <div className="flex items-center mb-3 pb-2 border-b border-stone-200">{toolbar}</div>
@@ -1072,16 +1071,19 @@ export function TiptapEditorB({
   )
 }
 
-function SegmentBtn({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+function SegmentBtn({ active, onClick, label, disabled }: { active: boolean; onClick: () => void; label: string; disabled?: boolean }) {
   return (
     <button
       type="button"
       onMouseDown={e => e.preventDefault()}
       onClick={onClick}
+      disabled={disabled}
       className={`px-3 py-1 text-xs rounded transition-colors ${
-        active
-          ? 'bg-white text-stone-800 font-medium shadow-sm'
-          : 'text-stone-400 hover:text-stone-600'
+        disabled
+          ? 'text-stone-300 cursor-not-allowed'
+          : active
+            ? 'bg-white text-stone-800 font-medium shadow-sm'
+            : 'text-stone-400 hover:text-stone-600'
       }`}
     >
       {label}

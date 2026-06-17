@@ -120,7 +120,7 @@ const AnnotationBlock = TiptapNode.create({
 const ChapterHeading = TiptapNode.create({
   name: 'chapterHeading',
   group: 'block',
-  atom: true,
+  content: 'text*',
 
   addAttributes() {
     return { chapter: { default: 1 } }
@@ -130,9 +130,8 @@ const ChapterHeading = TiptapNode.create({
   renderHTML({ node }) {
     return ['h2', {
       'data-chapter': node.attrs.chapter,
-      contenteditable: 'false',
-      style: 'font-weight: 600; font-size: 1.125rem; color: #57534e; margin-top: 4rem; margin-bottom: 0.75rem; pointer-events: none;',
-    }, `Luku ${node.attrs.chapter}`]
+      style: 'font-weight: 600; font-size: 1.125rem; color: #57534e; margin-top: 4rem; margin-bottom: 0.75rem;',
+    }, 0]
   },
 })
 
@@ -219,7 +218,8 @@ function buildDecos(doc: any, verses: Verse[]): DecorationSet {
 
   doc.descendants((node: any, pos: number) => {
     if (node.type.name === 'chapterHeading') {
-      currentChapter = node.attrs.chapter
+      const chMatch = node.textContent.match(/(\d+)/)
+      currentChapter = chMatch ? parseInt(chMatch[1], 10) : node.attrs.chapter
       return false
     }
 
@@ -290,7 +290,7 @@ function buildContent(verses: Verse[], mode: FootnoteMode = 'inline') {
     if (verse.chapter !== currentChapter) {
       flushFootnotes()
       currentChapter = verse.chapter
-      content.push({ type: 'chapterHeading', attrs: { chapter: currentChapter } })
+      content.push({ type: 'chapterHeading', attrs: { chapter: currentChapter }, content: [{ type: 'text', text: `Luku ${currentChapter}` }] })
     }
 
     // Section header
@@ -371,7 +371,8 @@ function extractData(doc: any, mode: FootnoteMode = 'inline'): ExtractedData {
 
   doc.descendants((node: any) => {
     if (node.type.name === 'chapterHeading') {
-      currentChapter = node.attrs.chapter
+      const chMatch = node.textContent.match(/(\d+)/)
+      currentChapter = chMatch ? parseInt(chMatch[1], 10) : node.attrs.chapter
       lastVerseNum = null
       return false
     }
@@ -432,7 +433,10 @@ function verseAtCursor(editor: any): { chapter: number; verse: number } | null {
     const doc = editor.state.doc
     for (let i = fromIdx; i >= 0; i--) {
       const node = doc.child(i)
-      if (node.type.name === 'chapterHeading') return node.attrs.chapter
+      if (node.type.name === 'chapterHeading') {
+        const chMatch = node.textContent.match(/(\d+)/)
+        return chMatch ? parseInt(chMatch[1], 10) : node.attrs.chapter
+      }
     }
     return 1
   }
@@ -583,7 +587,7 @@ export function TiptapEditorB({
             if (n.type === 'chapterHeading') {
               if (currentCh > 0) flushChapterFootnotes()
               currentCh = n.chapter!
-              nodes.push(schema.nodes.chapterHeading.create({ chapter: currentCh }))
+              nodes.push(schema.nodes.chapterHeading.create({ chapter: currentCh }, [schema.text(`Luku ${currentCh}`)]))
               continue
             }
 

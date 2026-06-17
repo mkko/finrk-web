@@ -120,7 +120,8 @@ const AnnotationBlock = TiptapNode.create({
 const ChapterHeading = TiptapNode.create({
   name: 'chapterHeading',
   group: 'block',
-  content: 'text*',
+  content: 'inline*',
+  defining: true,
 
   addAttributes() {
     return { chapter: { default: 1 } }
@@ -520,6 +521,50 @@ export function TiptapEditorB({
     })
   }, [])
 
+  const HeadingAutoSwap = useMemo(() => {
+    const LUKU_RE = /^Luku\s+(\d+)$/
+    return Extension.create({
+      name: 'headingAutoSwap',
+      addProseMirrorPlugins() {
+        return [
+          new Plugin({
+            appendTransaction(_trs, _oldState, newState) {
+              const { doc, schema, tr } = newState
+              let changed = false
+              doc.forEach((node, pos) => {
+                const text = node.textContent.trim()
+                if (node.type.name === 'sectionHeader') {
+                  const m = text.match(LUKU_RE)
+                  if (m) {
+                    const chapter = parseInt(m[1], 10)
+                    tr.setNodeMarkup(pos, schema.nodes.chapterHeading, { chapter })
+                    changed = true
+                  }
+                } else if (node.type.name === 'chapterHeading') {
+                  if (!LUKU_RE.test(text)) {
+                    // Find the verse attr by looking at the next verse paragraph
+                    let verse = 0
+                    const nextPos = pos + node.nodeSize
+                    if (nextPos < doc.content.size) {
+                      const next = doc.nodeAt(nextPos)
+                      if (next?.type.name === 'paragraph') {
+                        const { verseNum } = parseVersePrefix(next.textContent)
+                        if (verseNum !== null) verse = verseNum
+                      }
+                    }
+                    tr.setNodeMarkup(pos, schema.nodes.sectionHeader, { verse })
+                    changed = true
+                  }
+                }
+              })
+              return changed ? tr : null
+            },
+          }),
+        ]
+      },
+    })
+  }, [])
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -533,6 +578,7 @@ export function TiptapEditorB({
       ChapterHeading,
       AnnotationBlock,
       ReadOnlyGuard,
+      HeadingAutoSwap,
       DecoExt,
     ],
     content: buildContent(verses, footnoteMode),

@@ -121,7 +121,23 @@ export function parseDocxPaste(text: string): ParsedDocxNode[] | null {
       continue
     }
 
-    result.push({ type: 'sectionHeader', verse: lastVerseNum > 0 ? lastVerseNum : undefined, text: line })
+    // Section header vs continuation: a section header appears when:
+    // 1. Previous verse ends with sentence-ending punctuation (.!?)
+    // 2. The line itself has no ending punctuation (it's a title)
+    // 3. The next non-empty line starts with a verse number
+    const lastNode = result.length > 0 ? result[result.length - 1] : null
+    const prevEndsWithSentence = lastNode && /[.!?]$/.test(lastNode.text.trim())
+    const lineHasNoPunctuation = !/[.!?,;:]$/.test(line.trim())
+    const nextLine = lines.slice(i + 1).find(l => l.trim())
+    const nextStartsWithNumber = nextLine && VERSE_RE_LINE.test(nextLine.trim())
+    const isSectionHeader = !lastNode
+      || lastNode.type === 'chapterHeading' || lastNode.type === 'sectionHeader'
+      || (prevEndsWithSentence && lineHasNoPunctuation && nextStartsWithNumber)
+    if (isSectionHeader) {
+      result.push({ type: 'sectionHeader', verse: lastVerseNum > 0 ? lastVerseNum : undefined, text: line })
+    } else {
+      lastNode.text += '\n' + line
+    }
   }
 
   return seenChapters.size > 0 ? result : null

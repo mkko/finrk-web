@@ -93,14 +93,26 @@ Alkutervehdys
 
   it('parses section headers between verses', () => {
     const input = `Luku 1
-1 First verse
-2 Second verse
+1 First verse.
+2 Second verse.
 Elämä on minulle Kristus
-3 Third verse`
+3 Third verse.`
 
     const result = parseDocxPaste(input)!
     const sectionHeader = result.find(n => n.type === 'sectionHeader')
     expect(sectionHeader).toEqual({ type: 'sectionHeader', verse: 2, text: 'Elämä on minulle Kristus' })
+  })
+
+  it('appends continuation lines to previous verse (poetry-style)', () => {
+    const input = `Luku 1
+6 Hänellä oli Jumalan muoto,
+mutta hän ei katsonut saaliikseen olla Jumalan kaltainen
+7 vaan tyhjensi itsensä`
+
+    const result = parseDocxPaste(input)!
+    const v6 = result.find(n => n.type === 'verse' && n.verse === 6)!
+    expect(v6.text).toBe('Hänellä oli Jumalan muoto,\nmutta hän ei katsonut saaliikseen olla Jumalan kaltainen')
+    expect(result.find(n => n.type === 'verse' && n.verse === 7)!.text).toBe('vaan tyhjensi itsensä')
   })
 
   it('detects duplicate verse numbers: first becomes base, second becomes verse', () => {

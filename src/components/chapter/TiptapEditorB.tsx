@@ -516,14 +516,23 @@ export function TiptapEditorB({
           new Plugin({
             filterTransaction(tr) {
               if (readOnlyRef.current && tr.docChanged) return false
-              if (!tr.docChanged) return true
-              // Block deletion of footnoteSeparator nodes
-              const oldDoc = tr.before
-              let separatorCount = 0, newSeparatorCount = 0
-              oldDoc.forEach(n => { if (n.type.name === 'footnoteSeparator') separatorCount++ })
-              tr.doc.forEach(n => { if (n.type.name === 'footnoteSeparator') newSeparatorCount++ })
-              if (newSeparatorCount < separatorCount) return false
               return true
+            },
+            appendTransaction(_trs, oldState, newState) {
+              // Restore footnoteSeparators if any were deleted
+              if (footnoteModeRef.current !== 'endOfChapter') return null
+              let oldCount = 0, newCount = 0
+              oldState.doc.forEach(n => { if (n.type.name === 'footnoteSeparator') oldCount++ })
+              newState.doc.forEach(n => { if (n.type.name === 'footnoteSeparator') newCount++ })
+              if (newCount >= oldCount) return null
+              // Re-insert missing separators before each chapter's footnote section
+              // Simple approach: append one at the end of the doc
+              const { tr, schema } = newState
+              const missing = oldCount - newCount
+              for (let i = 0; i < missing; i++) {
+                tr.insert(tr.doc.content.size, schema.nodes.footnoteSeparator.create())
+              }
+              return tr
             },
           }),
         ]

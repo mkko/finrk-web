@@ -22,6 +22,7 @@ import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import { Slice, Fragment } from '@tiptap/pm/model'
 import { Verse, User } from '@/lib/types'
+import { parseVerseLines, parseVerseLinesEndOfChapter, parseDocxPaste } from '@/lib/paste-parsers'
 
 // ── Props ─────────────────────────────────────────────
 
@@ -33,12 +34,12 @@ interface Props {
   toolbarRef?: RefObject<HTMLDivElement | null>
   selectedVerse: number | null
   onSelectVerse: (num: number) => void
-  onEditVerse: (verseNumber: number, newText: string) => void
-  onAddFootnote: (verseNumber: number, text: string) => void
-  onEditFootnote: (verseNumber: number, marker: string, newText: string) => void
-  onEditSectionHeader: (verseNumber: number, newText: string) => void
-  onCursorVerseChange?: (verseNumber: number) => void
-  onComment?: (verseNumber: number, selectedText: string, commentText: string) => void
+  onEditVerse: (chapter: number, verseNumber: number, newText: string) => void
+  onAddFootnote: (chapter: number, verseNumber: number, text: string) => void
+  onEditFootnote: (chapter: number, verseNumber: number, marker: string, newText: string) => void
+  onEditSectionHeader: (chapter: number, verseNumber: number, newText: string) => void
+  onCursorVerseChange?: (chapter: number, verseNumber: number) => void
+  onComment?: (chapter: number, verseNumber: number, selectedText: string, commentText: string) => void
   onDirtyChange?: (dirty: boolean) => void
   onOpenSidebar?: (verseNumber: number) => void
 }
@@ -116,6 +117,25 @@ const AnnotationBlock = TiptapNode.create({
   },
 })
 
+const ChapterHeading = TiptapNode.create({
+  name: 'chapterHeading',
+  group: 'block',
+  atom: true,
+
+  addAttributes() {
+    return { chapter: { default: 1 } }
+  },
+
+  parseHTML() { return [{ tag: 'h2[data-chapter]' }] },
+  renderHTML({ node }) {
+    return ['h2', {
+      'data-chapter': node.attrs.chapter,
+      contenteditable: 'false',
+      style: 'font-weight: 600; font-size: 1.125rem; color: #57534e; margin-top: 4rem; margin-bottom: 0.75rem; pointer-events: none;',
+    }, `Luku ${node.attrs.chapter}`]
+  },
+})
+
 const FootnoteSeparator = TiptapNode.create({
   name: 'footnoteSeparator',
   group: 'block',
@@ -134,12 +154,10 @@ const FootnoteSeparator = TiptapNode.create({
 // ── Decorations ───────────────────────────────────────
 // Verse number superscript styling + collapsible original-text widget.
 
-function createOriginalWidget(verseNum: number, text: string, modified: boolean): HTMLElement {
+function createOriginalWidget(verseNum: number, text: string): HTMLElement {
   const details = document.createElement('details')
   details.contentEditable = 'false'
-  details.className = modified
-    ? 'select-none mb-0.5'
-    : 'select-none opacity-0 pointer-events-none mb-0.5'
+  details.className = 'select-none mb-0.5'
 
   const summary = document.createElement('summary')
   summary.className = 'list-none relative cursor-pointer outline-none'
@@ -195,10 +213,16 @@ function makeDecoPlugin(versesRef: React.RefObject<Verse[]>) {
 
 function buildDecos(doc: any, verses: Verse[]): DecorationSet {
   const decorations: Decoration[] = []
-  const knownVerses = new Set(verses.map(v => v.number))
-  const seen = new Set<number>()
+  let currentChapter = 1
+  const knownKeys = new Set(verses.map(v => `${v.chapter}:${v.number}`))
+  const seen = new Set<string>()
 
   doc.descendants((node: any, pos: number) => {
+    if (node.type.name === 'chapterHeading') {
+      currentChapter = node.attrs.chapter
+      return false
+    }
+
     // Only decorate paragraphs (verse text), not headers or footnotes
     if (node.type.name !== 'paragraph') return node.type.name === 'doc' ? undefined : false
 
@@ -206,16 +230,17 @@ function buildDecos(doc: any, verses: Verse[]): DecorationSet {
     const { verseNum, body } = parseVersePrefix(text)
     if (verseNum === null) return false
 
+    const key = `${currentChapter}:${verseNum}`
+
     // Style the verse-number prefix
-    const numStr = `${verseNum}`
     const firstChild = node.firstChild
     if (firstChild?.isText) {
       const m = (firstChild.text as string).match(/^(\d+)\s/)
       if (m) {
         const from = pos + 1
         const to = from + m[0].length
-        const isDup = seen.has(verseNum)
-        const isUnk = !knownVerses.has(verseNum)
+        const isDup = seen.has(key)
+        const isUnk = !knownKeys.has(key)
         const cls = `text-xs font-sans ${isDup ? 'text-orange-500' : isUnk ? 'text-red-400' : 'text-stone-400'}`
         decorations.push(Decoration.inline(from, to, {
           class: cls,
@@ -224,16 +249,15 @@ function buildDecos(doc: any, verses: Verse[]): DecorationSet {
       }
     }
 
-    seen.add(verseNum)
+    seen.add(key)
 
-    // Original-text widget
-    const verse = verses.find(v => v.number === verseNum)
-    if (verse) {
-      const modified = body.trim() !== verse.baseText
+    // Original-text widget — only when verse text differs from base
+    const verse = verses.find(v => v.chapter === currentChapter && v.number === verseNum)
+    if (verse && body.trim() !== verse.baseText) {
       decorations.push(
-        Decoration.widget(pos, () => createOriginalWidget(verseNum, verse.baseText, modified), {
+        Decoration.widget(pos, () => createOriginalWidget(verseNum, verse.baseText), {
           side: -1,
-          key: `orig-${verseNum}-${modified ? 'm' : 'u'}`,
+          key: `orig-${key}`,
         })
       )
     }
@@ -250,9 +274,25 @@ type FootnoteMode = 'inline' | 'endOfChapter'
 
 function buildContent(verses: Verse[], mode: FootnoteMode = 'inline') {
   const content: any[] = []
-  const collectedFootnotes: any[] = []
+  let currentChapter = 0
+  let collectedFootnotes: any[] = []
+
+  function flushFootnotes() {
+    if (mode === 'endOfChapter' && collectedFootnotes.length > 0) {
+      content.push({ type: 'footnoteSeparator' })
+      content.push(...collectedFootnotes)
+      collectedFootnotes = []
+    }
+  }
 
   for (const verse of verses) {
+    // Chapter heading
+    if (verse.chapter !== currentChapter) {
+      flushFootnotes()
+      currentChapter = verse.chapter
+      content.push({ type: 'chapterHeading', attrs: { chapter: currentChapter } })
+    }
+
     // Section header
     if (verse.sectionHeader) {
       content.push({
@@ -298,11 +338,8 @@ function buildContent(verses: Verse[], mode: FootnoteMode = 'inline') {
     }
   }
 
-  // End-of-chapter mode: append separator + all footnotes at the end
-  if (mode === 'endOfChapter' && collectedFootnotes.length > 0) {
-    content.push({ type: 'footnoteSeparator' })
-    content.push(...collectedFootnotes)
-  }
+  // Flush remaining footnotes for the last chapter
+  flushFootnotes()
 
   if (content.length === 0) {
     content.push({ type: 'paragraph', content: [{ type: 'text', text: ' ' }] })
@@ -313,43 +350,54 @@ function buildContent(verses: Verse[], mode: FootnoteMode = 'inline') {
 
 // ── Extract data from editor document ─────────────────
 
+interface ExtractedVerse {
+  chapter: number
+  number: number
+  text: string
+}
+
 interface ExtractedData {
-  verses: Map<number, string>
-  footnotes: { verse: number; marker: string; text: string }[]
-  sectionHeaders: Map<number, string>
+  verses: ExtractedVerse[]
+  footnotes: { chapter: number; verse: number; marker: string; text: string }[]
+  sectionHeaders: { chapter: number; verse: number; text: string }[]
 }
 
 function extractData(doc: any, mode: FootnoteMode = 'inline'): ExtractedData {
-  const verses = new Map<number, string>()
-  const footnotes: { verse: number; marker: string; text: string }[] = []
-  const sectionHeaders = new Map<number, string>()
+  const verses: ExtractedVerse[] = []
+  const footnotes: { chapter: number; verse: number; marker: string; text: string }[] = []
+  const sectionHeaders: { chapter: number; verse: number; text: string }[] = []
+  let currentChapter = 1
   let lastVerseNum: number | null = null
 
   doc.descendants((node: any) => {
+    if (node.type.name === 'chapterHeading') {
+      currentChapter = node.attrs.chapter
+      lastVerseNum = null
+      return false
+    }
+
     if (node.type.name === 'footnoteSeparator') return false
 
     if (node.type.name === 'sectionHeader') {
       const v = node.attrs.verse
-      if (v > 0) sectionHeaders.set(v, node.textContent.trim())
+      if (v > 0) sectionHeaders.push({ chapter: currentChapter, verse: v, text: node.textContent.trim() })
       return false
     }
 
     if (node.type.name === 'footnoteBlock') {
-      // In endOfChapter mode, require explicit verse attr (no fallback to lastVerseNum)
       const v = mode === 'endOfChapter' ? node.attrs.verse : (node.attrs.verse || lastVerseNum)
       if (v && v > 0) {
         const raw = node.textContent.trim()
         const m = raw.match(/^(\S+)\s+(.*)/)
         if (m) {
-          footnotes.push({ verse: v, marker: m[1], text: m[2] })
+          footnotes.push({ chapter: currentChapter, verse: v, marker: m[1], text: m[2] })
         } else if (raw) {
-          footnotes.push({ verse: v, marker: `${v}`, text: raw })
+          footnotes.push({ chapter: currentChapter, verse: v, marker: `${v}`, text: raw })
         }
       }
       return false
     }
 
-    // Annotations are internal-only, not part of published content
     if (node.type.name === 'annotationBlock') return false
 
     if (node.type.name !== 'paragraph') return
@@ -358,12 +406,12 @@ function extractData(doc: any, mode: FootnoteMode = 'inline'): ExtractedData {
     const { verseNum, body } = parseVersePrefix(text)
 
     if (verseNum !== null) {
-      verses.set(verseNum, body.trim())
+      verses.push({ chapter: currentChapter, number: verseNum, text: body.trim() })
       lastVerseNum = verseNum
     } else if (lastVerseNum !== null) {
-      // Continuation paragraph — preserve empty lines
-      const existing = verses.get(lastVerseNum) ?? ''
-      verses.set(lastVerseNum, existing + '\n' + text.trim())
+      // Continuation paragraph — append to last verse
+      const last = verses[verses.length - 1]
+      if (last) last.text += '\n' + text.trim()
     }
 
     return false
@@ -374,95 +422,52 @@ function extractData(doc: any, mode: FootnoteMode = 'inline'): ExtractedData {
 
 // ── Find verse number at cursor ───────────────────────
 
-function verseAtCursor(editor: any): number | null {
+function verseAtCursor(editor: any): { chapter: number; verse: number } | null {
   if (!editor) return null
   const { $from } = editor.state.selection
   const parent = $from.parent
 
+  // Find chapter by walking backwards to nearest chapterHeading
+  function findChapter(fromIdx: number): number {
+    const doc = editor.state.doc
+    for (let i = fromIdx; i >= 0; i--) {
+      const node = doc.child(i)
+      if (node.type.name === 'chapterHeading') return node.attrs.chapter
+    }
+    return 1
+  }
+
+  const idx = $from.index(0)
+
   // SectionHeader, FootnoteBlock, AnnotationBlock carry a verse attr
   if (parent.type.name === 'sectionHeader' || parent.type.name === 'footnoteBlock' || parent.type.name === 'annotationBlock') {
-    return parent.attrs.verse || null
+    const v = parent.attrs.verse
+    return v ? { chapter: findChapter(idx), verse: v } : null
   }
 
   // Paragraph: check text prefix
   if (parent.type.name === 'paragraph') {
     const { verseNum } = parseVersePrefix(parent.textContent)
-    if (verseNum !== null) return verseNum
+    if (verseNum !== null) return { chapter: findChapter(idx), verse: verseNum }
   }
 
   // Walk backwards for continuation paragraphs
-  const idx = $from.index(0)
   const doc = editor.state.doc
   for (let i = idx - 1; i >= 0; i--) {
     const node = doc.child(i)
     if (node.type.name === 'paragraph') {
       const { verseNum } = parseVersePrefix(node.textContent)
-      if (verseNum !== null) return verseNum
+      if (verseNum !== null) return { chapter: findChapter(i), verse: verseNum }
     }
     if (node.type.name === 'footnoteBlock' && node.attrs.verse > 0) {
-      return node.attrs.verse
+      return { chapter: findChapter(i), verse: node.attrs.verse }
     }
+    if (node.type.name === 'chapterHeading') break
   }
 
   return null
 }
 
-// ── Parse pasted verse lines ──────────────────────────
-
-function parseVerseLines(text: string): { number: number; text: string }[] | null {
-  const lines = text.split('\n').filter(l => l.trim())
-  const parsed: { number: number; text: string }[] = []
-  for (const line of lines) {
-    const m = line.match(/^(\d+)\s+(.+)/)
-    if (m) {
-      parsed.push({ number: parseInt(m[1], 10), text: m[2].trim() })
-    } else if (parsed.length > 0) {
-      parsed[parsed.length - 1].text += '\n' + line.trim()
-    }
-  }
-  return parsed.length > 0 ? parsed : null
-}
-
-// ── Parse pasted verse lines (end-of-chapter mode) ───
-
-function parseVerseLinesEndOfChapter(text: string): { number: number; text: string; footnotes: { marker: string; text: string }[] }[] | null {
-  const lines = text.split('\n').filter(l => l.trim())
-  const result: { number: number; text: string; footnotes: { marker: string; text: string }[] }[] = []
-  let expectedNext: number | null = null
-
-  for (const line of lines) {
-    const m = line.match(/^(\d+)\s+(.+)/)
-    if (m) {
-      const num = parseInt(m[1], 10)
-      if (expectedNext === null || num === expectedNext) {
-        // Sequential verse
-        result.push({ number: num, text: m[2].trim(), footnotes: [] })
-        expectedNext = num + 1
-      } else if (result.length > 0) {
-        // Non-sequential number → footnote for previous verse
-        const prev = result[result.length - 1]
-        prev.footnotes.push({ marker: m[1], text: m[2].trim() })
-      }
-    } else if (result.length > 0) {
-      const trimmed = line.trim()
-      // Cross-reference patterns or footnote-like content
-      if (/^[a-z]\)/.test(trimmed) || /^[\u2020\u2021*†‡§]/.test(trimmed) || /^\(/.test(trimmed)) {
-        const prev = result[result.length - 1]
-        const markerMatch = trimmed.match(/^(\S+)\s+(.*)/)
-        if (markerMatch) {
-          prev.footnotes.push({ marker: markerMatch[1], text: markerMatch[2] })
-        } else {
-          prev.footnotes.push({ marker: `${prev.number}`, text: trimmed })
-        }
-      } else {
-        // Continuation text
-        result[result.length - 1].text += '\n' + trimmed
-      }
-    }
-  }
-
-  return result.length > 0 ? result : null
-}
 
 // ── Component ─────────────────────────────────────────
 
@@ -480,6 +485,7 @@ export function TiptapEditorB({
 
   const versesRef = useRef(verses)
   versesRef.current = verses
+  const justSavedRef = useRef(false)
 
   const DecoExt = useMemo(() => {
     return Extension.create({
@@ -520,6 +526,7 @@ export function TiptapEditorB({
       SectionHeader,
       FootnoteBlock,
       FootnoteSeparator,
+      ChapterHeading,
       AnnotationBlock,
       ReadOnlyGuard,
       DecoExt,
@@ -536,6 +543,78 @@ export function TiptapEditorB({
 
         const { schema } = view.state
 
+        // Try full DOCX document paste first
+        const docx = parseDocxPaste(text)
+        if (docx) {
+          const nodes: any[] = []
+          const crossRefsByChapter = new Map<number, Map<number, string>>()
+
+          // First pass: collect cross-refs
+          for (const n of docx) {
+            if (n.type === 'crossRef' && n.chapter && n.verse) {
+              if (!crossRefsByChapter.has(n.chapter)) crossRefsByChapter.set(n.chapter, new Map())
+              crossRefsByChapter.get(n.chapter)!.set(n.verse, n.text)
+            }
+          }
+
+          // Second pass: build nodes per chapter
+          let currentCh = 0
+          const chapterFootnotes: any[] = []
+
+          function flushChapterFootnotes() {
+            // Append cross-refs for completed chapter, then all footnotes
+            const refs = crossRefsByChapter.get(currentCh)
+            if (refs) {
+              for (const [v, refText] of refs) {
+                chapterFootnotes.push(schema.nodes.footnoteBlock.create({ verse: v }, [schema.text(`${v} ${refText}`)]))
+              }
+            }
+            if (chapterFootnotes.length > 0) {
+              nodes.push(schema.nodes.footnoteSeparator.create())
+              nodes.push(...chapterFootnotes.splice(0))
+            }
+          }
+
+          for (const n of docx) {
+            if (n.type === 'crossRef') continue // handled above
+
+            if (n.type === 'chapterHeading') {
+              if (currentCh > 0) flushChapterFootnotes()
+              currentCh = n.chapter!
+              nodes.push(schema.nodes.chapterHeading.create({ chapter: currentCh }))
+              continue
+            }
+
+            if (n.type === 'sectionHeader') {
+              nodes.push(schema.nodes.sectionHeader.create({ verse: n.verse ?? 0 }, [schema.text(n.text)]))
+              continue
+            }
+
+            if (n.type === 'verse') {
+              nodes.push(schema.nodes.paragraph.create(null, [schema.text(`${n.verse} ${n.text}`)]))
+              continue
+            }
+
+            if (n.type === 'variant') {
+              nodes.push(schema.nodes.annotationBlock.create({ verse: n.verse ?? 0 }, [schema.text(n.text)]))
+              continue
+            }
+
+            if (n.type === 'footnote') {
+              chapterFootnotes.push(schema.nodes.footnoteBlock.create({ verse: n.verse ?? 0 }, [schema.text(n.text)]))
+              continue
+            }
+          }
+          flushChapterFootnotes()
+
+          // Full document paste — replace entire editor content
+          const tr = view.state.tr
+          tr.replaceWith(0, tr.doc.content.size, nodes)
+          view.dispatch(tr)
+          return true
+        }
+
+        // Fallback: simple verse line parsing
         if (footnoteModeRef.current === 'endOfChapter') {
           const parsed = parseVerseLinesEndOfChapter(text)
           if (!parsed) return false
@@ -583,8 +662,8 @@ export function TiptapEditorB({
         return true
       },
       handleClick(view) {
-        const verse = verseAtCursor({ state: view.state })
-        if (verse !== null) onSelectVerse(verse)
+        const loc = verseAtCursor({ state: view.state })
+        if (loc !== null) onSelectVerse(loc.verse)
         return false
       },
     },
@@ -592,6 +671,10 @@ export function TiptapEditorB({
   const suppressDirty = useRef(false)
   useEffect(() => {
     if (editor && !editor.isFocused) {
+      if (justSavedRef.current) {
+        justSavedRef.current = false
+        return // skip — editor is already the source of truth
+      }
       suppressDirty.current = true
       editor.commands.setContent(buildContent(verses, footnoteMode))
       onDirtyChange?.(false)
@@ -610,12 +693,15 @@ export function TiptapEditorB({
   // ── Cursor-following verse detection ────────────
   useEffect(() => {
     if (!editor || !onCursorVerseChange) return
-    let lastVerse: number | null = null
+    let lastKey: string | null = null
     const handler = () => {
-      const v = verseAtCursor(editor)
-      if (v !== null && v !== lastVerse) {
-        lastVerse = v
-        onCursorVerseChange(v)
+      const loc = verseAtCursor(editor)
+      if (loc !== null) {
+        const key = `${loc.chapter}:${loc.verse}`
+        if (key !== lastKey) {
+          lastKey = key
+          onCursorVerseChange(loc.chapter, loc.verse)
+        }
       }
     }
     editor.on('selectionUpdate', handler)
@@ -628,31 +714,34 @@ export function TiptapEditorB({
     if (!editor || readOnly) return
     const data = extractData(editor.state.doc, footnoteMode)
 
-    for (const verse of verses) {
-      const newText = data.verses.get(verse.number)
-      if (newText !== undefined && newText !== verse.text) {
-        onEditVerse(verse.number, newText)
+    for (const ev of data.verses) {
+      const verse = verses.find(v => v.chapter === ev.chapter && v.number === ev.number)
+      if (verse && ev.text !== verse.text) {
+        onEditVerse(ev.chapter, ev.number, ev.text)
       }
     }
 
     for (const fn of data.footnotes) {
-      const verse = verses.find(v => v.number === fn.verse)
+      const verse = verses.find(v => v.chapter === fn.chapter && v.number === fn.verse)
       if (!verse?.footnotes) continue
       const orig = verse.footnotes.find(f => f.marker === fn.marker)
       if (orig && fn.text !== orig.text) {
-        onEditFootnote(fn.verse, fn.marker, fn.text)
+        onEditFootnote(fn.chapter, fn.verse, fn.marker, fn.text)
       }
     }
 
-    for (const verse of verses) {
-      const newH = data.sectionHeaders.get(verse.number)
-      const oldH = verse.sectionHeader ?? ''
-      if (newH !== undefined && newH !== oldH) {
-        onEditSectionHeader(verse.number, newH)
+    for (const sh of data.sectionHeaders) {
+      const verse = verses.find(v => v.chapter === sh.chapter && v.number === sh.verse)
+      if (verse) {
+        const oldH = verse.sectionHeader ?? ''
+        if (sh.text !== oldH) {
+          onEditSectionHeader(sh.chapter, sh.verse, sh.text)
+        }
       }
     }
 
     onDirtyChange?.(false)
+    justSavedRef.current = true
   }, [editor, verses, readOnly, footnoteMode, onEditVerse, onEditFootnote, onEditSectionHeader, onDirtyChange])
 
   // ── Mode switch handler ─────────────────────────
@@ -686,13 +775,13 @@ export function TiptapEditorB({
     : editor?.isActive('annotationBlock') ? 'annotationBlock'
     : 'paragraph'
 
-  const cursorVerse = verseAtCursor(editor)
+  const cursorLoc = verseAtCursor(editor)
 
   const setType = useCallback((type: BlockType) => {
     if (!editor || type === activeType) return
-    const attrs = type !== 'paragraph' ? { verse: cursorVerse ?? 0 } : undefined
+    const attrs = type !== 'paragraph' ? { verse: cursorLoc?.verse ?? 0 } : undefined
     editor.chain().focus().setNode(type, attrs).run()
-  }, [editor, activeType, cursorVerse])
+  }, [editor, activeType, cursorLoc])
 
   // ── Info button positioning (narrow layout — follows mouse hover) ──
 
@@ -832,9 +921,9 @@ export function TiptapEditorB({
     if (!editor || !onComment || !bubbleComment.trim()) return
     const { from, to } = editor.state.selection
     const selectedText = editor.state.doc.textBetween(from, to, ' ')
-    const verse = verseAtCursor(editor)
-    if (verse !== null) {
-      onComment(verse, selectedText, bubbleComment.trim())
+    const loc = verseAtCursor(editor)
+    if (loc !== null) {
+      onComment(loc.chapter, loc.verse, selectedText, bubbleComment.trim())
       setBubbleComment('')
       setCommentPopup(null)
       setHighlightRange(null)

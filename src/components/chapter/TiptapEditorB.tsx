@@ -575,6 +575,8 @@ export function TiptapEditorB({
             }
           }
 
+          const storeVerses = versesRef.current ?? []
+
           for (const n of docx) {
             if (n.type === 'crossRef') continue // handled above
 
@@ -592,6 +594,15 @@ export function TiptapEditorB({
 
             if (n.type === 'verse') {
               nodes.push(schema.nodes.paragraph.create(null, [schema.text(`${n.verse} ${n.text}`)]))
+              continue
+            }
+
+            if (n.type === 'base') {
+              // Base text from DOCX (the first of a duplicate pair).
+              // Drop it if it matches the store's baseText; keep as annotation if it differs.
+              const sv = storeVerses.find(v => v.chapter === currentCh && v.number === n.verse)
+              if (!sv || sv.baseText.trim() === n.text.trim()) continue
+              nodes.push(schema.nodes.annotationBlock.create({ verse: n.verse ?? 0 }, [schema.text(n.text)]))
               continue
             }
 

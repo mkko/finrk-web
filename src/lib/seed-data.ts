@@ -1043,7 +1043,7 @@ export const SEED_ACTIVITY: ActivityEntry[] = [
     userId: 'kaikkonen-sointu',
     textWorkId: 'tw-4',
     action: 'Hyväksytty',
-    detail: '1. Tessalonikalaiskirje \u2014 hallitus hyväksyi yksimielisesti',
+    detail: 'Hallitus hyväksyi tekstin',
   },
   {
     id: 'act-3',
@@ -1051,7 +1051,7 @@ export const SEED_ACTIVITY: ActivityEntry[] = [
     userId: 'liukko-arto',
     textWorkId: 'tw-3',
     action: 'Äänestetty',
-    detail: 'Galatalaiskirje \u2014 ääni annettu',
+    detail: 'Ääni annettu',
   },
   {
     id: 'act-4',
@@ -1059,7 +1059,7 @@ export const SEED_ACTIVITY: ActivityEntry[] = [
     userId: 'leino-kimmo',
     textWorkId: 'tw-3',
     action: 'Lähetetty hallitukselle',
-    detail: 'Galatalaiskirje \u2014 lähetetty hallitukselle',
+    detail: 'Teksti lähetetty hallituksen äänestettäväksi',
   },
   {
     id: 'act-5',
@@ -1067,7 +1067,7 @@ export const SEED_ACTIVITY: ActivityEntry[] = [
     userId: 'seurantaryhma-a',
     textWorkId: 'tw-2',
     action: 'Uusi kommentti',
-    detail: 'Kolossalaiskirje \u2014 uusi kommentti',
+    detail: 'Kommentti lisätty',
   },
   {
     id: 'act-6',
@@ -1075,6 +1075,6 @@ export const SEED_ACTIVITY: ActivityEntry[] = [
     userId: 'leino-kimmo',
     textWorkId: 'tw-2',
     action: 'Julkaistu palautteelle',
-    detail: 'Kolossalaiskirje \u2014 julkaistu seurantaryhmälle',
+    detail: 'Teksti julkaistu seurantaryhmälle palautekierrokselle',
   },
 ]

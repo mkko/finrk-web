@@ -17,7 +17,7 @@ export function MobileNav() {
     ? 'Tekstit'
     : roles.includes('seurantaryhma')
       ? 'Julkaistut tekstit'
-      : 'Hyväksyttävät tekstit'
+      : 'Käsittelyssä'
 
   const items = [
     { href: '/', label: 'Luku' },

@@ -79,7 +79,7 @@ export interface Proposal {
 export interface Comment {
   id: string
   textWorkId: string
-  verseAnchor: { verseStart: number; verseEnd?: number }
+  verseAnchor: { chapter: number; verseStart: number; verseEnd?: number }
   verseSnapshot: string
   authorId: string
   text: string
@@ -92,7 +92,7 @@ export interface Comment {
 
 export interface Merkinta {
   id: string
-  verses: { verseNumber: number; text: string }[]
+  verses: { chapter: number; verseNumber: number; text: string }[]
   authorId: string
   note?: string
   createdAt: string
@@ -105,6 +105,7 @@ export interface Footnote {
 }
 
 export interface Verse {
+  chapter: number
   number: number
   text: string
   baseText: string
@@ -120,9 +121,16 @@ export interface Snapshot {
   name?: string
   createdAt: string
   createdBy: string
-  verseTexts: { number: number; text: string }[]
-  footnoteTexts: { verse: number; marker: string; text: string }[]
-  sectionHeaderTexts: { verse: number; text: string }[]
+  verseTexts: { chapter: number; number: number; text: string }[]
+  footnoteTexts: { chapter: number; verse: number; marker: string; text: string }[]
+  sectionHeaderTexts: { chapter: number; verse: number; text: string }[]
+}
+
+export function applySnapshot(verses: Verse[], snapshot: Snapshot): Verse[] {
+  return verses.map(v => {
+    const sv = snapshot.verseTexts.find(s => s.chapter === v.chapter && s.number === v.number)
+    return sv ? { ...v, text: sv.text } : v
+  })
 }
 
 export interface ActivityEntry {
@@ -164,7 +172,7 @@ export interface AppState {
   snapshots: Snapshot[]
   viewingSnapshotId: string | null
   setCurrentUser: (userId: string) => void
-  editVerse: (verseNumber: number, newText: string) => void
+  editVerse: (chapter: number, verseNumber: number, newText: string) => void
   publishDraft: () => void
   updateTextWorkStatus: (textWorkId: string, newStatus: TextWorkStatus) => void
   submitToHallitus: (textWorkId: string, selectedVoters: string[], rationale: string, selectedVerses?: number[]) => void
@@ -173,13 +181,13 @@ export interface AppState {
   updateSelectedVoters: (proposalId: string, voterIds: string[]) => void
   addComment: (comment: Omit<Comment, 'id' | 'createdAt' | 'status'>) => void
   resolveComment: (commentId: string) => void
-  addMerkinta: (verses: { verseNumber: number; text: string }[], note?: string) => void
+  addMerkinta: (verses: { chapter: number; verseNumber: number; text: string }[], note?: string) => void
   updateMerkintaNote: (id: string, note: string) => void
   deleteMerkinta: (id: string) => void
-  addFootnote: (verseNumber: number, text: string) => void
-  editSectionHeader: (verseNumber: number, newText: string) => void
-  editFootnote: (verseNumber: number, marker: string, newText: string) => void
-  deleteFootnote: (verseNumber: number, marker: string) => void
+  addFootnote: (chapter: number, verseNumber: number, text: string) => void
+  editSectionHeader: (chapter: number, verseNumber: number, newText: string) => void
+  editFootnote: (chapter: number, verseNumber: number, marker: string, newText: string) => void
+  deleteFootnote: (chapter: number, verseNumber: number, marker: string) => void
   createSnapshot: (textWorkId: string, name?: string, type?: 'submission' | 'internal' | 'publication') => void
   restoreSnapshot: (snapshotId: string) => void
   viewSnapshot: (snapshotId: string | null) => void

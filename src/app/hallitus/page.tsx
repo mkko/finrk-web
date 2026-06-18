@@ -137,10 +137,7 @@ export default function HallitusPage() {
 
   return (
     <div className="h-full overflow-y-auto"><div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
-      <h1 className="text-xl font-semibold text-stone-800 mb-2">Hallituksen hyväksyntä</h1>
-      <p className="text-sm text-stone-500 mb-6">
-        Hallitukselle lähetetyt ehdotukset.
-      </p>
+      <h1 className="text-xl font-semibold text-stone-800 mb-6">Ratifiointi</h1>
 
       {activeProposals.length === 0 ? (
         <div className="text-center py-12 text-stone-400">

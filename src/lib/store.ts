@@ -17,13 +17,13 @@ function initialState() {
     name: 'Pohjaversio (RK12)',
     createdAt: '2026-04-12T10:00:00Z',
     createdBy: 'leino-kimmo',
-    verseTexts: SEED_VERSES.map(v => ({ number: v.number, text: v.baseText })),
+    verseTexts: SEED_VERSES.map(v => ({ chapter: v.chapter, number: v.number, text: v.baseText })),
     footnoteTexts: SEED_VERSES.flatMap(v =>
-      (v.footnotes ?? []).map(fn => ({ verse: v.number, marker: fn.marker, text: fn.baseText }))
+      (v.footnotes ?? []).map(fn => ({ chapter: v.chapter, verse: v.number, marker: fn.marker, text: fn.baseText }))
     ),
     sectionHeaderTexts: SEED_VERSES
       .filter(v => v.sectionHeader)
-      .map(v => ({ verse: v.number, text: v.sectionHeader! })),
+      .map(v => ({ chapter: v.chapter, verse: v.number, text: v.sectionHeader! })),
   }
 
   return {
@@ -67,10 +67,10 @@ export const useStore = create<AppState>()(
 
       setCurrentUser: (userId: string) => set({ currentUserId: userId }),
 
-      editVerse: (verseNumber: number, newText: string) => {
+      editVerse: (chapter: number, verseNumber: number, newText: string) => {
         set(state => ({
           verses: state.verses.map(v =>
-            v.number === verseNumber ? { ...v, text: newText } : v
+            v.chapter === chapter && v.number === verseNumber ? { ...v, text: newText } : v
           ),
         }))
       },
@@ -86,13 +86,13 @@ export const useStore = create<AppState>()(
           name: `Julkaisu ${new Date(now).toLocaleDateString('fi-FI', { day: 'numeric', month: 'numeric', year: 'numeric' })}`,
           createdAt: now,
           createdBy: state.currentUserId,
-          verseTexts: state.verses.map(v => ({ number: v.number, text: v.text })),
+          verseTexts: state.verses.map(v => ({ chapter: v.chapter, number: v.number, text: v.text })),
           footnoteTexts: state.verses.flatMap(v =>
-            (v.footnotes ?? []).map(f => ({ verse: v.number, marker: f.marker, text: f.text }))
+            (v.footnotes ?? []).map(f => ({ chapter: v.chapter, verse: v.number, marker: f.marker, text: f.text }))
           ),
           sectionHeaderTexts: state.verses
             .filter(v => v.sectionHeader)
-            .map(v => ({ verse: v.number, text: v.sectionHeader! })),
+            .map(v => ({ chapter: v.chapter, verse: v.number, text: v.sectionHeader! })),
         }
         set(state => ({
           verses: state.verses.map(v => ({ ...v, baseText: v.text })),
@@ -128,13 +128,13 @@ export const useStore = create<AppState>()(
             type: 'publication',
             createdAt: now,
             createdBy: state.currentUserId,
-            verseTexts: state.verses.map(v => ({ number: v.number, text: v.text })),
+            verseTexts: state.verses.map(v => ({ chapter: v.chapter, number: v.number, text: v.text })),
             footnoteTexts: state.verses.flatMap(v =>
-              (v.footnotes ?? []).map(fn => ({ verse: v.number, marker: fn.marker, text: fn.text }))
+              (v.footnotes ?? []).map(fn => ({ chapter: v.chapter, verse: v.number, marker: fn.marker, text: fn.text }))
             ),
             sectionHeaderTexts: state.verses
               .filter(v => v.sectionHeader)
-              .map(v => ({ verse: v.number, text: v.sectionHeader! })),
+              .map(v => ({ chapter: v.chapter, verse: v.number, text: v.sectionHeader! })),
           })
         }
 
@@ -157,7 +157,11 @@ export const useStore = create<AppState>()(
               action: newStatus === 'julkaistu_palautteelle' ? 'Julkaistu palautteelle'
                 : newStatus === 'luonnos' ? 'Palautettu luonnokseksi'
                 : newStatus,
-              detail: `${textWorkLabel(tw)} — tila muutettu`,
+              detail: newStatus === 'julkaistu_palautteelle'
+                ? 'Teksti julkaistu seurantaryhmälle palautekierrokselle'
+                : newStatus === 'luonnos'
+                  ? 'Teksti vedettiin takaisin luonnokseksi'
+                  : `${textWorkLabel(tw)} — tila muutettu`,
             },
             ...state.activity,
           ],
@@ -181,13 +185,13 @@ export const useStore = create<AppState>()(
           type: 'submission',
           createdAt: now,
           createdBy: state.currentUserId,
-          verseTexts: versesToSnapshot.map(v => ({ number: v.number, text: v.text })),
+          verseTexts: versesToSnapshot.map(v => ({ chapter: v.chapter, number: v.number, text: v.text })),
           footnoteTexts: versesToSnapshot.flatMap(v =>
-            (v.footnotes ?? []).map(fn => ({ verse: v.number, marker: fn.marker, text: fn.text }))
+            (v.footnotes ?? []).map(fn => ({ chapter: v.chapter, verse: v.number, marker: fn.marker, text: fn.text }))
           ),
           sectionHeaderTexts: versesToSnapshot
             .filter(v => v.sectionHeader)
-            .map(v => ({ verse: v.number, text: v.sectionHeader! })),
+            .map(v => ({ chapter: v.chapter, verse: v.number, text: v.sectionHeader! })),
         }
 
         const proposalId = `proposal-${Date.now()}`
@@ -225,7 +229,7 @@ export const useStore = create<AppState>()(
               userId: state.currentUserId,
               textWorkId,
               action: 'Lähetetty hallitukselle',
-              detail: `${textWorkLabel(tw)} — lähetetty hallitukselle`,
+              detail: 'Teksti lähetetty hallituksen äänestettäväksi',
             },
             ...state.activity,
           ],
@@ -295,7 +299,7 @@ export const useStore = create<AppState>()(
               : state.textWorks,
             verses: snapshot
               ? state.verses.map(v => {
-                  const sv = snapshot.verseTexts.find(sv => sv.number === v.number)
+                  const sv = snapshot.verseTexts.find(sv => sv.chapter === v.chapter && sv.number === v.number)
                   return sv ? { ...v, approvedText: sv.text } : v
                 })
               : state.verses,
@@ -310,11 +314,9 @@ export const useStore = create<AppState>()(
                   : newTwStatus === 'hylatty'
                     ? 'Hylätty'
                     : 'Äänestetty',
-                detail: `${textWorkLabel(tw)} — ${
-                  newTwStatus === 'hyvaksytty' ? 'hallitus hyväksyi yksimielisesti'
-                  : newTwStatus === 'hylatty' ? 'hallitus hylkäsi'
-                  : 'ääni annettu'
-                }`,
+                detail: newTwStatus === 'hyvaksytty' ? 'Hallitus hyväksyi tekstin'
+                  : newTwStatus === 'hylatty' ? 'Hallitus hylkäsi tekstin'
+                  : 'Ääni annettu',
               },
               ...state.activity,
             ],
@@ -393,7 +395,7 @@ export const useStore = create<AppState>()(
               userId: state.currentUserId,
               textWorkId: comment.textWorkId,
               action: 'Uusi kommentti',
-              detail: `Jae ${comment.verseAnchor.verseStart} — uusi kommentti`,
+              detail: 'Kommentti lisätty',
             },
             ...state.activity,
           ],
@@ -402,16 +404,30 @@ export const useStore = create<AppState>()(
 
       resolveComment: (commentId: string) => {
         const now = new Date().toISOString()
-        set(state => ({
-          comments: state.comments.map(c =>
-            c.id === commentId
-              ? { ...c, status: 'kasitelty' as const, resolvedBy: state.currentUserId, resolvedAt: now }
-              : c
-          ),
-        }))
+        set(state => {
+          const comment = state.comments.find(c => c.id === commentId)
+          return {
+            comments: state.comments.map(c =>
+              c.id === commentId
+                ? { ...c, status: 'kasitelty' as const, resolvedBy: state.currentUserId, resolvedAt: now }
+                : c
+            ),
+            activity: [
+              {
+                id: `act-${Date.now()}`,
+                timestamp: now,
+                userId: state.currentUserId,
+                textWorkId: comment?.textWorkId ?? '',
+                action: 'Kommentti käsitelty',
+                detail: 'Kommentti merkitty käsitellyksi',
+              },
+              ...state.activity,
+            ],
+          }
+        })
       },
 
-      addMerkinta: (verses: { verseNumber: number; text: string }[], note?: string) => {
+      addMerkinta: (verses: { chapter: number; verseNumber: number; text: string }[], note?: string) => {
         set(state => ({
           merkinnat: [
             ...state.merkinnat,
@@ -440,10 +456,10 @@ export const useStore = create<AppState>()(
         }))
       },
 
-      addFootnote: (verseNumber: number, text: string) => {
+      addFootnote: (chapter: number, verseNumber: number, text: string) => {
         set(state => ({
           verses: state.verses.map(v => {
-            if (v.number !== verseNumber) return v
+            if (v.chapter !== chapter || v.number !== verseNumber) return v
             const existing = v.footnotes ?? []
             const marker = `${verseNumber}`
             return { ...v, footnotes: [...existing, { marker, text, baseText: text }] }
@@ -451,30 +467,30 @@ export const useStore = create<AppState>()(
         }))
       },
 
-      editSectionHeader: (verseNumber: number, newText: string) => {
+      editSectionHeader: (chapter: number, verseNumber: number, newText: string) => {
         set(state => ({
           verses: state.verses.map(v =>
-            v.number === verseNumber
+            v.chapter === chapter && v.number === verseNumber
               ? { ...v, sectionHeader: newText || undefined }
               : v
           ),
         }))
       },
 
-      editFootnote: (verseNumber: number, marker: string, newText: string) => {
+      editFootnote: (chapter: number, verseNumber: number, marker: string, newText: string) => {
         set(state => ({
           verses: state.verses.map(v =>
-            v.number === verseNumber
+            v.chapter === chapter && v.number === verseNumber
               ? { ...v, footnotes: v.footnotes?.map(fn => fn.marker === marker ? { ...fn, text: newText } : fn) }
               : v
           ),
         }))
       },
 
-      deleteFootnote: (verseNumber: number, marker: string) => {
+      deleteFootnote: (chapter: number, verseNumber: number, marker: string) => {
         set(state => ({
           verses: state.verses.map(v =>
-            v.number === verseNumber
+            v.chapter === chapter && v.number === verseNumber
               ? { ...v, footnotes: v.footnotes?.filter(fn => fn.marker !== marker) }
               : v
           ),
@@ -491,13 +507,13 @@ export const useStore = create<AppState>()(
           name,
           createdAt: now,
           createdBy: state.currentUserId,
-          verseTexts: state.verses.map(v => ({ number: v.number, text: v.text })),
+          verseTexts: state.verses.map(v => ({ chapter: v.chapter, number: v.number, text: v.text })),
           footnoteTexts: state.verses.flatMap(v =>
-            (v.footnotes ?? []).map(fn => ({ verse: v.number, marker: fn.marker, text: fn.text }))
+            (v.footnotes ?? []).map(fn => ({ chapter: v.chapter, verse: v.number, marker: fn.marker, text: fn.text }))
           ),
           sectionHeaderTexts: state.verses
             .filter(v => v.sectionHeader)
-            .map(v => ({ verse: v.number, text: v.sectionHeader! })),
+            .map(v => ({ chapter: v.chapter, verse: v.number, text: v.sectionHeader! })),
         }
         set(state => ({
           snapshots: [...state.snapshots, snapshot],
@@ -522,9 +538,9 @@ export const useStore = create<AppState>()(
 
         set(state => ({
           verses: state.verses.map(v => {
-            const sv = snapshot.verseTexts.find(sv => sv.number === v.number)
-            const sfn = snapshot.footnoteTexts.filter(f => f.verse === v.number)
-            const sh = snapshot.sectionHeaderTexts.find(s => s.verse === v.number)
+            const sv = snapshot.verseTexts.find(sv => sv.chapter === v.chapter && sv.number === v.number)
+            const sfn = snapshot.footnoteTexts.filter(f => f.chapter === v.chapter && f.verse === v.number)
+            const sh = snapshot.sectionHeaderTexts.find(s => s.chapter === v.chapter && s.verse === v.number)
             return {
               ...v,
               text: sv ? sv.text : v.text,
@@ -562,7 +578,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'raamattu-kaannostyo',
-      version: 26,
+      version: 28,
       migrate: () => initialState(),
     }
   )

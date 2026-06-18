@@ -17,7 +17,7 @@ export function Header() {
     ? 'Tekstit'
     : roles.includes('seurantaryhma')
       ? 'Julkaistut tekstit'
-      : 'Hyväksyttävät tekstit'
+      : 'Käsittelyssä'
 
   const navItems = currentUser ? [
     { href: '/', label: 'Luku' },

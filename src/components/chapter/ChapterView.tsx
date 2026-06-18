@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useStore } from '@/lib/store'
-import { STATUS_LABELS, STATUS_COLORS, hasRole } from '@/lib/types'
+import { STATUS_LABELS, STATUS_COLORS, hasRole, applySnapshot } from '@/lib/types'
 import { canEditVerses, getAvailableTransitions, getTransitionLabel } from '@/lib/state-machine'
 import { getCurrentTextWork, getOpenCommentCount, getVerseComments } from '@/lib/selectors'
 import { useLayoutMode } from '@/hooks/useLayoutMode'
@@ -58,6 +58,18 @@ export function ChapterView() {
 
   const currentTw = getCurrentTextWork(textWorks)
   const isTekstiryhma = hasRole(currentUser, 'tekstiryhma')
+  const isHallitus = hasRole(currentUser, 'hallitus')
+  const canSeeHistory = isTekstiryhma || isHallitus
+
+  // Hallitus: luonnos visibility toggle (shared with ehdotukset page via localStorage)
+  const [hallitusShowLuonnos, setHallitusShowLuonnos] = useState(false)
+  useEffect(() => {
+    if (isHallitus && typeof window !== 'undefined') {
+      const stored = localStorage.getItem('hallitus-show-luonnokset')
+      if (stored === 'true') setHallitusShowLuonnos(true)
+    }
+  }, [isHallitus])
+  const canSeeLuonnos = isTekstiryhma || (isHallitus && hallitusShowLuonnos)
 
   const changedVerseCount = allVerses.filter(v => v.text !== v.baseText).length
 
@@ -68,10 +80,7 @@ export function ChapterView() {
   useEffect(() => { setViewMode(null) }, [currentUserId])
 
   const verses = viewedSnapshot
-    ? allVerses.map(v => {
-        const sv = viewedSnapshot.verseTexts.find(sv => sv.chapter === v.chapter && sv.number === v.number)
-        return sv ? { ...v, text: sv.text } : v
-      })
+    ? applySnapshot(allVerses, viewedSnapshot)
     : isDraft ? allVerses : allVerses.map(v => ({ ...v, text: v.baseText }))
 
   const canEdit = canEditVerses(currentTw?.status ?? 'luonnos', currentUser.roles)
@@ -181,7 +190,7 @@ export function ChapterView() {
               >
                 Julkaistu
               </button>
-              {isTekstiryhma && (
+              {canSeeHistory && (
                 <button
                   onClick={() => setViewMode('history')}
                   className={cn(
@@ -194,25 +203,27 @@ export function ChapterView() {
                   Aiemmat versiot
                 </button>
               )}
-              <button
-                onClick={() => setViewMode('draft')}
-                className={cn(
-                  'px-3 py-1 text-xs rounded transition-colors',
-                  isDraft
-                    ? 'bg-amber-600 text-white font-medium shadow-sm'
-                    : 'text-stone-400 hover:text-stone-600'
-                )}
-              >
-                Luonnos
-                {changedVerseCount > 0 && (
-                  <span className={cn(
-                    'ml-1.5 text-xs tabular-nums',
-                    isDraft ? 'text-amber-200' : 'text-amber-600'
-                  )}>
-                    ({changedVerseCount})
-                  </span>
-                )}
-              </button>
+              {canSeeLuonnos && (
+                <button
+                  onClick={() => setViewMode('draft')}
+                  className={cn(
+                    'px-3 py-1 text-xs rounded transition-colors',
+                    isDraft
+                      ? 'bg-amber-600 text-white font-medium shadow-sm'
+                      : 'text-stone-400 hover:text-stone-600'
+                  )}
+                >
+                  Luonnos
+                  {changedVerseCount > 0 && (
+                    <span className={cn(
+                      'ml-1.5 text-xs tabular-nums',
+                      isDraft ? 'text-amber-200' : 'text-amber-600'
+                    )}>
+                      ({changedVerseCount})
+                    </span>
+                  )}
+                </button>
+              )}
             </div>
 
             <div className="flex-1" />

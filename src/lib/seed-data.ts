@@ -1,15 +1,15 @@
 import { User, Verse, TextWork, Proposal, Comment, ActivityEntry, Merkinta, Snapshot } from './types'
 
-// Filippiläiskirje — RK12 base text, all 4 chapters
+// Filippiläiskirje — parsed from RK26-03/50 Fil.docx
+// Base text = first occurrence, proposal text = second occurrence (where present)
 export const SEED_VERSES: Verse[] = [
-  // ── Chapter 1 ──────────────────────────────────────────────
   {
     chapter: 1,
     number: 1,
     baseText: 'Paavali ja Timoteus, Kristuksen Jeesuksen palvelijat, kaikille Filippissä oleville pyhille Kristuksessa Jeesuksessa sekä seurakunnan kaitsijoille ja seurakuntapalvelijoille.',
     approvedText: 'Paavali ja Timoteus, Kristuksen Jeesuksen palvelijat, kaikille Filippissä oleville pyhille Kristuksessa Jeesuksessa sekä seurakunnan kaitsijoille ja seurakuntapalvelijoille.',
     text: 'Paavali ja Timoteus, Kristuksen Jeesuksen palvelijat, kaikille Filippissä oleville pyhille Kristuksessa Jeesuksessa sekä seurakunnan kaitsijoille ja seurakuntapalvelijoille.',
-    footnotes: [{ marker: '1', text: 'Ap. t. 16:12; 1. Kor. 1:2', baseText: 'Ap. t. 16:12; 1. Kor. 1:2' }],
+    sectionHeader: 'Alkutervehdys',
   },
   {
     chapter: 1,
@@ -36,10 +36,10 @@ export const SEED_VERSES: Verse[] = [
   {
     chapter: 1,
     number: 5,
-    baseText: 'Kiitän siitä, että olette osallistuneet evankeliumin työhön ensi päivästä tähän asti,',
-    approvedText: 'Kiitän siitä, että olette osallistuneet evankeliumin työhön ensi päivästä tähän asti,',
+    baseText: 'Kiitän siitä, että olette osallistuneet evankeliumin työhön* ensi päivästä tähän asti,',
+    approvedText: 'Kiitän siitä, että olette osallistuneet evankeliumin työhön* ensi päivästä tähän asti,',
     text: 'Kiitän siitä, että olette osallistuneet evankeliumin työhön* ensi päivästä tähän asti,',
-    footnotes: [{ marker: '2', text: 'Tai "olette olleet osalliset evankeliumiin".', baseText: 'Tai "olette olleet osalliset evankeliumiin".' }],
+    footnotes: [{ marker: '1:5', text: '1:5 Tai ”olette olleet osalliset evankeliumiin”.', baseText: '1:5 Tai ”olette olleet osalliset evankeliumiin”.' }],
   },
   {
     chapter: 1,
@@ -47,14 +47,13 @@ export const SEED_VERSES: Verse[] = [
     baseText: 'ja luotan täysin siihen, että hän, joka on alkanut teissä hyvän työn, vie sen päätökseen Kristuksen Jeesuksen päivään mennessä.',
     approvedText: 'ja luotan täysin siihen, että hän, joka on alkanut teissä hyvän työn, vie sen päätökseen Kristuksen Jeesuksen päivään mennessä.',
     text: 'ja luotan täysin siihen, että hän, joka on alkanut teissä hyvän työn, vie sen päätökseen Kristuksen Jeesuksen päivään mennessä.',
-    footnotes: [{ marker: '3', text: '1. Kor. 1:8; Fil. 2:16', baseText: '1. Kor. 1:8; Fil. 2:16' }],
   },
   {
     chapter: 1,
     number: 7,
     baseText: 'Onkin oikein, että ajattelen näin teistä kaikista, koska te olette minun sydämessäni. Niin kahleissa ollessani kuin puolustaessani ja vahvistaessani evankeliumia te kaikki olette minun kanssani osallisia armosta.',
     approvedText: 'Onkin oikein, että ajattelen näin teistä kaikista, koska te olette minun sydämessäni. Niin kahleissa ollessani kuin puolustaessani ja vahvistaessani evankeliumia te kaikki olette minun kanssani osallisia armosta.',
-    text: 'Onkin oikein, että ajattelen näin teistä kaikista, koska te olette minun sydämessäni. Niin kahleissa ollessani kuin puolustaessani ja vahvistaessani evankeliumia te kaikki olette minun kanssani osallisia armosta.',
+    text: 'Onkin oikein, että ajattelen näin teistä kaikista, koska te olette minun sydämessäni, ja olenpa sitten kahleissa tai puolustamassa ja vahvistamassa evankeliumia, te kaikki olette minun kanssani osallisia armosta.',
   },
   {
     chapter: 1,
@@ -118,21 +117,21 @@ export const SEED_VERSES: Verse[] = [
     number: 16,
     baseText: 'He tekevät sen rakkaudesta, koska tietävät, että minut on pantu puolustamaan evankeliumia.',
     approvedText: 'He tekevät sen rakkaudesta, koska tietävät, että minut on pantu puolustamaan evankeliumia.',
-    text: 'He tekevät sen rakkaudesta, koska tietävät, että minut on pantu puolustamaan evankeliumia.',
+    text: 'Toiset tekevät sitä rakkaudesta, koska he tietävät, että minut on pantu puolustamaan evankeliumia,',
   },
   {
     chapter: 1,
     number: 17,
     baseText: 'Nuo toiset taas julistavat Kristusta itsekkyydestä, epäpuhtain mielin, ja luulevat tuottavansa minulle murhetta kahleissani.',
     approvedText: 'Nuo toiset taas julistavat Kristusta itsekkyydestä, epäpuhtain mielin, ja luulevat tuottavansa minulle murhetta kahleissani.',
-    text: 'Nuo toiset taas julistavat Kristusta itsekkyydestä, epäpuhtain mielin, ja luulevat tuottavansa minulle murhetta kahleissani.',
+    text: 'ja nuo toiset taas julistavat Kristusta itsekkyydestä, epäpuhtain mielin, ja luulevat tuottavansa minulle murhetta kahleissani.',
   },
   {
     chapter: 1,
     number: 18,
     baseText: 'Mitäpä tuosta, kunhan vain Kristusta tavalla tai toisella julistetaan, joko näön vuoksi tai totuudessa, ja siitä minä iloitsen. Vastedeskin saan iloita,',
     approvedText: 'Mitäpä tuosta, kunhan vain Kristusta tavalla tai toisella julistetaan, joko näön vuoksi tai totuudessa, ja siitä minä iloitsen. Vastedeskin saan iloita,',
-    text: 'Mitäpä tuosta, kunhan vain Kristusta tavalla tai toisella julistetaan, joko näön vuoksi tai totuudessa, ja siitä minä iloitsen. Vastedeskin saan iloita,',
+    text: 'Mitäpä tuosta, kunhan vain Kristusta tavalla tai toisella julistetaan, joko näön vuoksi tai totuudessa. Siitä minä iloitsen nyt ja vastedeskin,',
   },
   {
     chapter: 1,
@@ -188,28 +187,28 @@ export const SEED_VERSES: Verse[] = [
     number: 26,
     baseText: 'Näin teidän kerskaamisenne minusta olisi yhä runsaampaa Kristuksessa Jeesuksessa, kun taas tulen luoksenne.',
     approvedText: 'Näin teidän kerskaamisenne minusta olisi yhä runsaampaa Kristuksessa Jeesuksessa, kun taas tulen luoksenne.',
-    text: 'Näin teidän kerskaamisenne minusta olisi yhä runsaampaa Kristuksessa Jeesuksessa, kun taas tulen luoksenne.',
+    text: 'Silloin voitte iloita minusta ja ylistää Kristusta Jeesusta yhä enemmän, kun taas tulen luoksenne.',
   },
   {
     chapter: 1,
     number: 27,
     baseText: 'Käyttäytykää vain Kristuksen evankeliumin arvon mukaisesti. Silloin minä, tulenpa luoksenne ja näen teidät tai olen tulematta, saan kuulla teistä, että pysytte samassa hengessä ja yksimielisesti taistelette yhdessä evankeliumin uskon puolesta',
     approvedText: 'Käyttäytykää vain Kristuksen evankeliumin arvon mukaisesti. Silloin minä, tulenpa luoksenne ja näen teidät tai olen tulematta, saan kuulla teistä, että pysytte samassa hengessä ja yksimielisesti taistelette yhdessä evankeliumin uskon puolesta',
-    text: 'Käyttäytykää vain Kristuksen evankeliumin arvon mukaisesti. Silloin minä, tulenpa luoksenne ja näen teidät tai olen tulematta, saan kuulla teistä, että pysytte samassa hengessä ja yksimielisesti taistelette yhdessä evankeliumin uskon puolesta',
+    text: 'Käyttäytykää vain niin kuin Kristuksen evankeliumin arvo vaatii. Silloin minä, tulenpa luoksenne ja näen teidät tai olen tulematta, saan kuulla teistä, että pysytte samassa hengessä ja yksimielisesti taistelette yhdessä evankeliumin uskon puolesta',
   },
   {
     chapter: 1,
     number: 28,
     baseText: 'antamatta vastustajien millään tavoin säikyttää itseänne. Tämä on heille kadotuksen mutta teille pelastuksen merkki, ja se tulee Jumalalta.',
     approvedText: 'antamatta vastustajien millään tavoin säikyttää itseänne. Tämä on heille kadotuksen mutta teille pelastuksen merkki, ja se tulee Jumalalta.',
-    text: 'antamatta vastustajien millään tavoin säikyttää itseänne. Tämä on heille kadotuksen mutta teille pelastuksen merkki, ja se tulee Jumalalta.',
+    text: 'antamatta vastustajien millään tavoin säikyttää itseänne. Se on heille kadotuksen mutta teille pelastuksen merkki, merkki Jumalalta.',
   },
   {
     chapter: 1,
     number: 29,
     baseText: 'Kristuksen tähden teidän on suotu, ei ainoastaan uskoa häneen vaan myös kärsiä hänen tähtensä.',
     approvedText: 'Kristuksen tähden teidän on suotu, ei ainoastaan uskoa häneen vaan myös kärsiä hänen tähtensä.',
-    text: 'Kristuksen tähden teidän on suotu, ei ainoastaan uskoa häneen vaan myös kärsiä hänen tähtensä.',
+    text: 'Sillä Kristuksen tähden teidän on suotu, ei ainoastaan uskoa häneen vaan myös kärsiä hänen tähtensä.',
   },
   {
     chapter: 1,
@@ -218,16 +217,13 @@ export const SEED_VERSES: Verse[] = [
     approvedText: 'Teillä on sama taistelu, jota olette nähneet minun käyvän ja jota nyt kuulette minun yhä jatkavan.',
     text: 'Teillä on sama taistelu, jota olette nähneet minun käyvän ja jota nyt kuulette minun yhä jatkavan.',
   },
-
-  // ── Chapter 2 ──────────────────────────────────────────────
   {
     chapter: 2,
     number: 1,
     baseText: 'Jos siis on jotakin kehotusta Kristuksessa, jos jotakin rakkauden lohdutusta ja Hengen yhteyttä, jos jotakin sydämellisyyttä ja laupeutta,',
     approvedText: 'Jos siis on jotakin kehotusta Kristuksessa, jos jotakin rakkauden lohdutusta ja Hengen yhteyttä, jos jotakin sydämellisyyttä ja laupeutta,',
-    text: 'Jos siis on jotakin kehotusta Kristuksessa, jos jotakin rakkauden lohdutusta ja Hengen yhteyttä, jos jotakin sydämellisyyttä ja laupeutta,',
+    text: 'Jos siis on jotakin rohkaisua Kristuksessa, jos jotakin rakkaudellista lohdutusta ja Hengen yhteyttä, ja jos on sydämellisyyttä ja laupeutta,',
     sectionHeader: 'Kristuksen nöyryys ja korotus',
-    footnotes: [{ marker: '1', text: 'Room. 12:16; 1. Kor. 1:10', baseText: 'Room. 12:16; 1. Kor. 1:10' }],
   },
   {
     chapter: 2,
@@ -260,45 +256,44 @@ export const SEED_VERSES: Verse[] = [
   {
     chapter: 2,
     number: 6,
-    baseText: 'Hänellä oli Jumalan muoto, mutta hän ei katsonut saaliikseen olla Jumalan kaltainen',
-    approvedText: 'Hänellä oli Jumalan muoto, mutta hän ei katsonut saaliikseen olla Jumalan kaltainen',
-    text: 'Hänellä oli Jumalan muoto, mutta hän ei katsonut saaliikseen olla Jumalan kaltainen',
-    footnotes: [{ marker: '2', text: 'Joh. 1:1–2; 17:5; 2. Kor. 4:4; Kol. 1:15', baseText: 'Joh. 1:1–2; 17:5; 2. Kor. 4:4; Kol. 1:15' }],
+    baseText: 'Hänellä oli Jumalan muoto,\nmutta hän ei katsonut saaliikseen / pitänyt kiinni oikeudestaan olla Jumalan kaltainen',
+    approvedText: 'Hänellä oli Jumalan muoto,\nmutta hän ei katsonut saaliikseen / pitänyt kiinni oikeudestaan olla Jumalan kaltainen',
+    text: 'Hänellä oli Jumalan muoto,\nmutta hän ei katsonut saaliikseen / pitänyt kiinni oikeudestaan olla Jumalan kaltainen',
   },
   {
     chapter: 2,
     number: 7,
-    baseText: 'vaan tyhjensi itsensä ja otti orjan muodon. Hän tuli ihmisten kaltaiseksi, ja hänet havaittiin olemukseltaan sellaiseksi kuin ihminen.',
-    approvedText: 'vaan tyhjensi itsensä ja otti orjan muodon. Hän tuli ihmisten kaltaiseksi, ja hänet havaittiin olemukseltaan sellaiseksi kuin ihminen.',
-    text: 'vaan tyhjensi itsensä ja otti orjan muodon. Hän tuli ihmisten kaltaiseksi, ja hänet havaittiin olemukseltaan sellaiseksi kuin ihminen.',
+    baseText: 'vaan tyhjensi itsensä / luopui omastaan ja otti orjan muodon.\nHän tuli ihmisten kaltaiseksi,\nja hänet havaittiin olemukseltaan sellaiseksi kuin ihminen.',
+    approvedText: 'vaan tyhjensi itsensä / luopui omastaan ja otti orjan muodon.\nHän tuli ihmisten kaltaiseksi,\nja hänet havaittiin olemukseltaan sellaiseksi kuin ihminen.',
+    text: 'vaan tyhjensi itsensä / luopui omastaan ja otti orjan muodon.\nHän tuli ihmisten kaltaiseksi,\nja hänet havaittiin olemukseltaan sellaiseksi kuin ihminen.',
   },
   {
     chapter: 2,
     number: 8,
-    baseText: 'Hän nöyryytti itsensä ja oli kuuliainen kuolemaan asti, aina ristinkuolemaan asti.',
-    approvedText: 'Hän nöyryytti itsensä ja oli kuuliainen kuolemaan asti, aina ristinkuolemaan asti.',
-    text: 'Hän nöyryytti itsensä ja oli kuuliainen kuolemaan asti, aina ristinkuolemaan asti.',
+    baseText: 'Hän nöyryytti itsensä ja oli kuuliainen kuolemaan asti,\naina ristinkuolemaan asti.',
+    approvedText: 'Hän nöyryytti itsensä ja oli kuuliainen kuolemaan asti,\naina ristinkuolemaan asti.',
+    text: 'Hän nöyryytti itsensä ja oli kuuliainen kuolemaan asti,\naina ristinkuolemaan asti.',
   },
   {
     chapter: 2,
     number: 9,
-    baseText: 'Sen tähden Jumala onkin korottanut hänet korkealle ja antanut hänelle nimen, kaikkia muita nimiä korkeamman,',
-    approvedText: 'Sen tähden Jumala onkin korottanut hänet korkealle ja antanut hänelle nimen, kaikkia muita nimiä korkeamman,',
-    text: 'Sen tähden Jumala onkin korottanut hänet korkealle ja antanut hänelle nimen, kaikkia muita nimiä korkeamman,',
+    baseText: 'Sen tähden Jumala onkin korottanut hänet korkealle\nja antanut hänelle nimen,\nkaikkia muita nimiä korkeamman,',
+    approvedText: 'Sen tähden Jumala onkin korottanut hänet korkealle\nja antanut hänelle nimen,\nkaikkia muita nimiä korkeamman,',
+    text: 'Sen tähden Jumala onkin korottanut hänet korkealle\nja antanut hänelle nimen,\nkaikkia muita nimiä korkeamman,',
   },
   {
     chapter: 2,
     number: 10,
-    baseText: 'niin että jokaisen polven on notkistuttava Jeesuksen nimeen, niin taivaassa kuin maan päällä ja maan alla,',
-    approvedText: 'niin että jokaisen polven on notkistuttava Jeesuksen nimeen, niin taivaassa kuin maan päällä ja maan alla,',
-    text: 'niin että jokaisen polven on notkistuttava Jeesuksen nimeen, niin taivaassa kuin maan päällä ja maan alla,',
+    baseText: 'niin että jokaisen polven on notkistuttava Jeesuksen nimeen,\nniin taivaassa kuin maan päällä ja maan alla,',
+    approvedText: 'niin että jokaisen polven on notkistuttava Jeesuksen nimeen,\nniin taivaassa kuin maan päällä ja maan alla,',
+    text: 'niin että jokaisen polven on notkistuttava Jeesuksen nimeen,\nniin taivaassa kuin maan päällä ja maan alla,',
   },
   {
     chapter: 2,
     number: 11,
-    baseText: 'ja jokaisen kielen on tunnustettava Isän Jumalan kunniaksi, että Jeesus Kristus on Herra.',
-    approvedText: 'ja jokaisen kielen on tunnustettava Isän Jumalan kunniaksi, että Jeesus Kristus on Herra.',
-    text: 'ja jokaisen kielen on tunnustettava Isän Jumalan kunniaksi, että Jeesus Kristus on Herra.',
+    baseText: 'ja jokaisen kielen on tunnustettava Isän Jumalan kunniaksi,\nettä Jeesus Kristus on Herra.',
+    approvedText: 'ja jokaisen kielen on tunnustettava Isän Jumalan kunniaksi,\nettä Jeesus Kristus on Herra.',
+    text: 'ja jokaisen kielen on tunnustettava Isän Jumalan kunniaksi,\nettä Jeesus Kristus on Herra.',
   },
   {
     chapter: 2,
@@ -332,9 +327,10 @@ export const SEED_VERSES: Verse[] = [
   {
     chapter: 2,
     number: 16,
-    baseText: 'kun pidätte kiinni elämän sanasta, ja silloin minä voin Kristuksen päivänä kerskata siitä, etten ole turhaan juossut ja nähnyt vaivaa.',
-    approvedText: 'kun pidätte kiinni elämän sanasta, ja silloin minä voin Kristuksen päivänä kerskata siitä, etten ole turhaan juossut ja nähnyt vaivaa.',
-    text: 'kun pidätte kiinni elämän sanasta, ja silloin minä voin Kristuksen päivänä kerskata siitä, etten ole turhaan juossut ja nähnyt vaivaa.',
+    baseText: 'kun pidätte kiinni elämän sanasta*, ja silloin minä voin Kristuksen päivänä kerskata siitä, etten ole turhaan juossut ja nähnyt vaivaa.',
+    approvedText: 'kun pidätte kiinni elämän sanasta*, ja silloin minä voin Kristuksen päivänä kerskata siitä, etten ole turhaan juossut ja nähnyt vaivaa.',
+    text: 'kun pidätte kiinni elämän sanasta*, ja silloin minä voin Kristuksen päivänä iloita siitä, etten ole turhaan juossut ja nähnyt vaivaa.',
+    footnotes: [{ marker: '2:16', text: '2:16 Tai ”pidätte esillä elämän sanaa”.', baseText: '2:16 Tai ”pidätte esillä elämän sanaa”.' }, { marker: '2:16', text: '2:16 Tai ”pidätte esillä elämän sanaa”. (tarpeen?)', baseText: '2:16 Tai ”pidätte esillä elämän sanaa”. (tarpeen?)' }],
   },
   {
     chapter: 2,
@@ -377,7 +373,7 @@ export const SEED_VERSES: Verse[] = [
     number: 22,
     baseText: 'Mutta Timoteuksen koetellun mielen te tunnette: kuin poika isän rinnalla hän on tehnyt minun kanssani työtä evankeliumin hyväksi.',
     approvedText: 'Mutta Timoteuksen koetellun mielen te tunnette: kuin poika isän rinnalla hän on tehnyt minun kanssani työtä evankeliumin hyväksi.',
-    text: 'Mutta Timoteuksen koetellun mielen te tunnette: kuin poika isän rinnalla hän on tehnyt minun kanssani työtä evankeliumin hyväksi.',
+    text: 'Mutta Timoteuksen koetellun mielen te tunnette. Hän on tehnyt minun kanssani työtä evankeliumin hyväksi kuin poika isänsä rinnalla.',
   },
   {
     chapter: 2,
@@ -419,14 +415,14 @@ export const SEED_VERSES: Verse[] = [
     number: 28,
     baseText: 'Lähetän hänet sen vuoksi kiireesti, että iloitsisitte nähdessänne hänet jälleen ja minullakin olisi vähemmän murheita.',
     approvedText: 'Lähetän hänet sen vuoksi kiireesti, että iloitsisitte nähdessänne hänet jälleen ja minullakin olisi vähemmän murheita.',
-    text: 'Lähetän hänet sen vuoksi kiireesti, että iloitsisitte nähdessänne hänet jälleen ja minullakin olisi vähemmän murheita.',
+    text: 'Lähetän hänet sen vuoksi kiireesti, että saisitte iloita nähdessänne hänet jälleen ja minullakin olisi vähemmän murheita.',
   },
   {
     chapter: 2,
     number: 29,
     baseText: 'Ottakaa siis hänet Herrassa iloiten vastaan ja kunnioittakaa hänen kaltaisiaan.',
     approvedText: 'Ottakaa siis hänet Herrassa iloiten vastaan ja kunnioittakaa hänen kaltaisiaan.',
-    text: 'Ottakaa siis hänet Herrassa iloiten vastaan ja kunnioittakaa hänen kaltaisiaan.',
+    text: 'Ottakaa siis hänet iloiten vastaan Herran palvelijana ja kunnioittakaa hänen kaltaisiaan.',
   },
   {
     chapter: 2,
@@ -435,8 +431,6 @@ export const SEED_VERSES: Verse[] = [
     approvedText: 'Sillä Kristuksen työn tähden hän joutui kuoleman partaalle, kun pani henkensä alttiiksi tehdäkseen minulle sen palveluksen, jota te ette voineet tehdä.',
     text: 'Sillä Kristuksen työn tähden hän joutui kuoleman partaalle, kun pani henkensä alttiiksi tehdäkseen minulle sen palveluksen, jota te ette voineet tehdä.',
   },
-
-  // ── Chapter 3 ──────────────────────────────────────────────
   {
     chapter: 3,
     number: 1,
@@ -458,7 +452,6 @@ export const SEED_VERSES: Verse[] = [
     baseText: 'Todellisia ympärileikattuja olemme me, jotka Jumalan Hengessä palvelemme Jumalaa ja kerskaamme Kristuksessa Jeesuksessa emmekä luota lihaan,',
     approvedText: 'Todellisia ympärileikattuja olemme me, jotka Jumalan Hengessä palvelemme Jumalaa ja kerskaamme Kristuksessa Jeesuksessa emmekä luota lihaan,',
     text: 'Todellisia ympärileikattuja olemme me, jotka Jumalan Hengessä palvelemme Jumalaa ja kerskaamme Kristuksessa Jeesuksessa emmekä luota lihaan,',
-    footnotes: [{ marker: '1', text: 'Room. 2:29; Kol. 2:11', baseText: 'Room. 2:29; Kol. 2:11' }],
   },
   {
     chapter: 3,
@@ -501,7 +494,7 @@ export const SEED_VERSES: Verse[] = [
     baseText: 'ja minun havaittaisiin olevan hänessä ja omistavan, ei omaa vanhurskautta, joka tulee laista, vaan sen, joka tulee uskosta Kristukseen*, sen vanhurskauden, joka tulee Jumalasta uskon perusteella.',
     approvedText: 'ja minun havaittaisiin olevan hänessä ja omistavan, ei omaa vanhurskautta, joka tulee laista, vaan sen, joka tulee uskosta Kristukseen*, sen vanhurskauden, joka tulee Jumalasta uskon perusteella.',
     text: 'ja minun havaittaisiin olevan hänessä ja omistavan, ei omaa vanhurskautta, joka tulee laista, vaan sen, joka tulee uskosta Kristukseen*, sen vanhurskauden, joka tulee Jumalasta uskon perusteella.',
-    footnotes: [{ marker: '2', text: 'Tai "Kristuksen uskosta".', baseText: 'Tai "Kristuksen uskosta".' }],
+    footnotes: [{ marker: '3:9', text: '3:9 Tai ”Kristuksen uskosta”.', baseText: '3:9 Tai ”Kristuksen uskosta”.' }],
   },
   {
     chapter: 3,
@@ -513,17 +506,16 @@ export const SEED_VERSES: Verse[] = [
   {
     chapter: 3,
     number: 11,
-    baseText: 'kunhan vain pääsen ylösnousemukseen kuolleista.',
-    approvedText: 'kunhan vain pääsen ylösnousemukseen kuolleista.',
-    text: 'kunhan vain pääsen ylösnousemukseen kuolleista.',
+    baseText: 'kunhan vain pääsen ylösnousemukseen kuolleista.\nKohti päämäärää!',
+    approvedText: 'kunhan vain pääsen ylösnousemukseen kuolleista.\nKohti päämäärää!',
+    text: 'kunhan vain pääsen ylösnousemukseen kuolleista.\nKohti päämäärää!',
   },
   {
     chapter: 3,
     number: 12,
     baseText: 'Ei niin, että olisin jo saavuttanut sen tai tullut täydelliseksi, vaan minä riennän sitä kohti, että voittaisin sen omakseni, koskapa Kristus Jeesus on voittanut minut omakseen.',
     approvedText: 'Ei niin, että olisin jo saavuttanut sen tai tullut täydelliseksi, vaan minä riennän sitä kohti, että voittaisin sen omakseni, koskapa Kristus Jeesus on voittanut minut omakseen.',
-    text: 'Ei niin, että olisin jo saavuttanut sen tai tullut täydelliseksi, vaan minä riennän sitä kohti, että voittaisin sen omakseni, koskapa Kristus Jeesus on voittanut minut omakseen.',
-    sectionHeader: 'Kohti päämäärää!',
+    text: 'En tarkoita, että olisin jo saavuttanut päämääräni tai tullut täydelliseksi, vaan minä riennän sitä kohti, että voittaisin sen omakseni, koskapa Kristus Jeesus on voittanut minut omakseen.',
   },
   {
     chapter: 3,
@@ -549,9 +541,10 @@ export const SEED_VERSES: Verse[] = [
   {
     chapter: 3,
     number: 16,
-    baseText: 'Kunhan vain, mihin saakka olemme ehtineetkin, vaellamme samaa tietä!',
-    approvedText: 'Kunhan vain, mihin saakka olemme ehtineetkin, vaellamme samaa tietä!',
-    text: 'Kunhan vain, mihin saakka olemme ehtineetkin, vaellamme samaa tietä!',
+    baseText: 'Kunhan vain, mihin saakka olemme ehtineetkin, vaellamme samaa tietä*!',
+    approvedText: 'Kunhan vain, mihin saakka olemme ehtineetkin, vaellamme samaa tietä*!',
+    text: 'Kunhan vain, mihin saakka olemme ehtineetkin, vaellamme samaa tietä*!',
+    footnotes: [{ marker: '3:16', text: '3:16 Bysanttilaisessa tekstissä ”saman säännön mukaan”. (tarpeen?)', baseText: '3:16 Bysanttilaisessa tekstissä ”saman säännön mukaan”. (tarpeen?)' }],
   },
   {
     chapter: 3,
@@ -579,7 +572,7 @@ export const SEED_VERSES: Verse[] = [
     number: 20,
     baseText: 'Mutta meidän yhteiskuntamme on taivaissa, ja sieltä me myös odotamme Herraa Jeesusta Kristusta Vapahtajaksi.',
     approvedText: 'Mutta meidän yhteiskuntamme on taivaissa, ja sieltä me myös odotamme Herraa Jeesusta Kristusta Vapahtajaksi.',
-    text: 'Mutta meidän yhteiskuntamme on taivaissa, ja sieltä me myös odotamme Herraa Jeesusta Kristusta Vapahtajaksi.',
+    text: 'Mutta meidän yhteiskuntamme on taivaissa, ja sieltä me myös odotamme pelastajaksi Herraa Jeesusta Kristusta.',
   },
   {
     chapter: 3,
@@ -588,16 +581,13 @@ export const SEED_VERSES: Verse[] = [
     approvedText: 'Hän muuttaa meidän alennustilassa olevan ruumiimme kirkkautensa ruumiin kaltaiseksi sillä voimallaan, jolla hän myös kykenee alistamaan kaiken valtaansa.',
     text: 'Hän muuttaa meidän alennustilassa olevan ruumiimme kirkkautensa ruumiin kaltaiseksi sillä voimallaan, jolla hän myös kykenee alistamaan kaiken valtaansa.',
   },
-
-  // ── Chapter 4 ──────────────────────────────────────────────
   {
     chapter: 4,
     number: 1,
-    baseText: 'Rakkaat ja ikävöidyt veljeni, te minun iloni ja kruununi, seisokaa siis lujina Herrassa, rakkaat!',
-    approvedText: 'Rakkaat ja ikävöidyt veljeni, te minun iloni ja kruununi, seisokaa siis lujina Herrassa, rakkaat!',
-    text: 'Rakkaat ja ikävöidyt veljeni, te minun iloni ja kruununi, seisokaa siis lujina Herrassa, rakkaat!',
+    baseText: 'Rakkaat ja ikävöidyt veljeni, te minun iloni ja kruununi, seisokaa/seiskää siis lujina Herrassa, rakkaat!',
+    approvedText: 'Rakkaat ja ikävöidyt veljeni, te minun iloni ja kruununi, seisokaa/seiskää siis lujina Herrassa, rakkaat!',
+    text: 'Rakkaat ja ikävöidyt veljeni, te minun iloni ja kruununi, seisokaa/seiskää siis lujina Herrassa, rakkaat!',
     sectionHeader: 'Kehotuksia seurakunnalle',
-    footnotes: [{ marker: '1', text: '1. Tess. 2:19\u201320', baseText: '1. Tess. 2:19\u201320' }],
   },
   {
     chapter: 4,
@@ -605,18 +595,14 @@ export const SEED_VERSES: Verse[] = [
     baseText: 'Euodiaa ja Syntykeä kehotan olemaan yksimielisiä Herrassa.',
     approvedText: 'Euodiaa ja Syntykeä kehotan olemaan yksimielisiä Herrassa.',
     text: 'Euodiaa ja Syntykeä kehotan olemaan yksimielisiä Herrassa.',
-    footnotes: [{ marker: '2', text: 'Fil. 2:2', baseText: 'Fil. 2:2' }],
   },
   {
     chapter: 4,
     number: 3,
-    baseText: 'Pyydän myös sinua, sinä todellinen työtoveri, auttamaan näitä naisia, sillä he ovat taistelleet evankeliumin hyväksi yhdessä minun sekä Klemensin ja muiden työtoverieni kanssa, joiden nimet ovat elämän kirjassa.',
-    approvedText: 'Pyydän myös sinua, sinä todellinen työtoveri, auttamaan näitä naisia, sillä he ovat taistelleet evankeliumin hyväksi yhdessä minun sekä Klemensin ja muiden työtoverieni kanssa, joiden nimet ovat elämän kirjassa.',
-    text: 'Pyydän myös sinua, sinä todellinen työtoveri, auttamaan näitä naisia, sillä he ovat taistelleet evankeliumin hyväksi yhdessä minun sekä Klemensin ja muiden työtoverieni kanssa, joiden nimet ovat elämän kirjassa.',
-    footnotes: [
-      { marker: '3a', text: '2. Moos. 32:32; Ilm. 20:12,15, 21:27', baseText: '2. Moos. 32:32; Ilm. 20:12,15, 21:27' },
-      { marker: '3b', text: 'Kreik. syzygos merkitsee "aisapari"; voi olla myös erisnimi.', baseText: 'Kreik. syzygos merkitsee "aisapari"; voi olla myös erisnimi.' },
-    ],
+    baseText: 'Pyydän myös sinua, sinä todellinen työtoveri*, auttamaan näitä naisia, sillä he ovat taistelleet evankeliumin hyväksi yhdessä minun sekä Clemensin ja muiden työtoverieni kanssa, joiden nimet ovat elämän kirjassa.',
+    approvedText: 'Pyydän myös sinua, sinä todellinen työtoveri*, auttamaan näitä naisia, sillä he ovat taistelleet evankeliumin hyväksi yhdessä minun sekä Clemensin ja muiden työtoverieni kanssa, joiden nimet ovat elämän kirjassa.',
+    text: 'Pyydän myös sinua, sinä todellinen työtoveri*, auttamaan näitä naisia, sillä he ovat taistelleet evankeliumin hyväksi yhdessä minun sekä Clemensin ja muiden työtoverieni kanssa, joiden nimet ovat elämän kirjassa.',
+    footnotes: [{ marker: '4:3', text: '4:3 Kreik. syzygos merkitsee ’aisapari’; voi olla myös erisnimi.', baseText: '4:3 Kreik. syzygos merkitsee ’aisapari’; voi olla myös erisnimi.' }, { marker: '4:3', text: '4:3 Kreik. syzygos merkitsee ’aisapari’.', baseText: '4:3 Kreik. syzygos merkitsee ’aisapari’.' }, { marker: '4:3', text: '4:3 Kirjaimellisesti ”aisapari”.', baseText: '4:3 Kirjaimellisesti ”aisapari”.' }],
   },
   {
     chapter: 4,
@@ -624,7 +610,6 @@ export const SEED_VERSES: Verse[] = [
     baseText: 'Iloitkaa aina Herrassa! Vieläkin minä sanon: iloitkaa!',
     approvedText: 'Iloitkaa aina Herrassa! Vieläkin minä sanon: iloitkaa!',
     text: 'Iloitkaa aina Herrassa! Vieläkin minä sanon: iloitkaa!',
-    footnotes: [{ marker: '4', text: 'Ps. 32:11; Fil. 3:1; 1. Tess. 5:16', baseText: 'Ps. 32:11; Fil. 3:1; 1. Tess. 5:16' }],
   },
   {
     chapter: 4,
@@ -632,39 +617,34 @@ export const SEED_VERSES: Verse[] = [
     baseText: 'Tulkoon teidän lempeytenne kaikkien ihmisten tietoon. Herra on lähellä.',
     approvedText: 'Tulkoon teidän lempeytenne kaikkien ihmisten tietoon. Herra on lähellä.',
     text: 'Tulkoon teidän lempeytenne kaikkien ihmisten tietoon. Herra on lähellä.',
-    footnotes: [{ marker: '5', text: 'Jaak. 5:8\u20139', baseText: 'Jaak. 5:8\u20139' }],
   },
   {
     chapter: 4,
     number: 6,
     baseText: 'Älkää olko mistään huolissanne, vaan kaikessa saattakaa pyyntönne rukoillen ja anoen kiitoksen kanssa Jumalan tietoon,',
     approvedText: 'Älkää olko mistään huolissanne, vaan kaikessa saattakaa pyyntönne rukoillen ja anoen kiitoksen kanssa Jumalan tietoon,',
-    text: 'Älkää olko mistään huolissanne, vaan saattakaa kaikessa pyyntönne rukoillen ja anoen kiitoksen kera Jumalan tietoon,',
-    footnotes: [{ marker: '6', text: 'Ps. 55:23; Matt. 6:25; Kol. 4:2; 1. Tim. 2:1; 1. Piet. 5:7', baseText: 'Ps. 55:23; Matt. 6:25; Kol. 4:2; 1. Tim. 2:1; 1. Piet. 5:7' }],
+    text: 'Älkää olko mistään huolissanne, vaan kaikessa saattakaa pyyntönne rukoillen ja anoen kiitoksen kanssa Jumalan tietoon,',
   },
   {
     chapter: 4,
     number: 7,
     baseText: 'ja Jumalan rauha, joka on kaikkea ymmärrystä ylempi, varjelee teidän sydämenne ja ajatuksenne Kristuksessa Jeesuksessa.',
     approvedText: 'ja Jumalan rauha, joka on kaikkea ymmärrystä ylempi, varjelee teidän sydämenne ja ajatuksenne Kristuksessa Jeesuksessa.',
-    text: 'ja Jumalan rauha, joka ylittää kaiken ymmärryksen, varjelee teidän sydämenne ja ajatuksenne Kristuksessa Jeesuksessa.',
-    footnotes: [{ marker: '7', text: 'Joh. 14:27; Room. 5:1; Kol. 3:15', baseText: 'Joh. 14:27; Room. 5:1; Kol. 3:15' }],
+    text: 'ja Jumalan rauha, joka on kaikkea ymmärrystä ylempi, varjelee teidän sydämenne ja ajatuksenne Kristuksessa Jeesuksessa.',
   },
   {
     chapter: 4,
     number: 8,
     baseText: 'Sitten vielä, veljet, kaikki mikä on totta, mikä kunnioitettavaa ja oikeaa, mikä puhdasta, rakastettavaa ja hyvältä kuulostavaa, jos on jokin hyve ja jotakin kiitettävää, sitä ajatelkaa.',
     approvedText: 'Sitten vielä, veljet, kaikki mikä on totta, mikä kunnioitettavaa ja oikeaa, mikä puhdasta, rakastettavaa ja hyvältä kuulostavaa, jos on jokin hyve ja jotakin kiitettävää, sitä ajatelkaa.',
-    text: 'Lopuksi vielä, veljet: kaikki mikä on totta, kunnioitettavaa ja oikeaa, mikä puhdasta, rakastettavaa ja arvostettavaa, mikä on hyvettä ja kiitoksen arvoista, sitä ajatelkaa.',
-    footnotes: [{ marker: '8', text: 'Room. 12:17, 13:13', baseText: 'Room. 12:17, 13:13' }],
+    text: 'Sitten vielä, veljet, kaikki mikä on totta, mikä kunnioitettavaa ja oikeaa, mikä puhdasta, rakastettavaa ja hyvältä kuulostavaa, jos on jokin hyve ja jotakin kiitettävää, sitä ajatelkaa.',
   },
   {
     chapter: 4,
     number: 9,
     baseText: 'Mitä myös olette minulta oppineet ja saaneet, mitä minulta kuulleet ja minusta nähneet, sitä tehkää, niin rauhan Jumala on oleva teidän kanssanne.',
     approvedText: 'Mitä myös olette minulta oppineet ja saaneet, mitä minulta kuulleet ja minusta nähneet, sitä tehkää, niin rauhan Jumala on oleva teidän kanssanne.',
-    text: 'Mitä olette minulta oppineet ja saaneet, kuulleet ja nähneet, sitä tehkää, niin rauhan Jumala on teidän kanssanne.',
-    footnotes: [{ marker: '9', text: 'Room. 15:33; Fil. 3:16\u201317; 2. Tess. 3:16', baseText: 'Room. 15:33; Fil. 3:16\u201317; 2. Tess. 3:16' }],
+    text: 'Mitä myös olette minulta oppineet ja saaneet, mitä minulta kuulleet ja minusta nähneet, sitä tehkää, niin rauhan Jumala on oleva teidän kanssanne.',
   },
   {
     chapter: 4,
@@ -679,8 +659,7 @@ export const SEED_VERSES: Verse[] = [
     number: 11,
     baseText: 'En sano tätä puutteen vuoksi, sillä olen oppinut tyytymään oloihini.',
     approvedText: 'En sano tätä puutteen vuoksi, sillä olen oppinut tyytymään oloihini.',
-    text: 'En sano tätä puutteen vuoksi, sillä olen oppinut tulemaan toimeen kulloisessakin tilanteessani.',
-    footnotes: [{ marker: '11', text: '1. Tim. 6:6\u20138', baseText: '1. Tim. 6:6\u20138' }],
+    text: 'En sano tätä puutteen vuoksi, sillä olen oppinut tyytymään oloihini.',
   },
   {
     chapter: 4,
@@ -688,7 +667,6 @@ export const SEED_VERSES: Verse[] = [
     baseText: 'Osaan elää niukkuudessa, osaan myös elää runsaudessa. Olen tottunut kaikkeen ja kaikenlaisiin oloihin, olemaan kylläinen ja nälkäinen, elämään runsaudessa ja puutteessa.',
     approvedText: 'Osaan elää niukkuudessa, osaan myös elää runsaudessa. Olen tottunut kaikkeen ja kaikenlaisiin oloihin, olemaan kylläinen ja nälkäinen, elämään runsaudessa ja puutteessa.',
     text: 'Osaan elää niukkuudessa, osaan myös elää runsaudessa. Olen tottunut kaikkeen ja kaikenlaisiin oloihin, olemaan kylläinen ja nälkäinen, elämään runsaudessa ja puutteessa.',
-    footnotes: [{ marker: '12', text: '1. Kor. 4:11\u201312; 2. Kor. 11:27', baseText: '1. Kor. 4:11\u201312; 2. Kor. 11:27' }],
   },
   {
     chapter: 4,
@@ -696,7 +674,6 @@ export const SEED_VERSES: Verse[] = [
     baseText: 'Kaiken minä voin hänessä, joka minua vahvistaa.',
     approvedText: 'Kaiken minä voin hänessä, joka minua vahvistaa.',
     text: 'Kaiken minä voin hänessä, joka minua vahvistaa.',
-    footnotes: [{ marker: '13', text: 'Mark. 9:23', baseText: 'Mark. 9:23' }],
   },
   {
     chapter: 4,
@@ -711,7 +688,6 @@ export const SEED_VERSES: Verse[] = [
     baseText: 'Tiedättehän te filippiläiset itsekin, että evankeliumin alkuaikoina, kun lähdin Makedoniasta, ei mikään muu seurakunta kuin te yksin ryhtynyt kanssani tiliyhteyteen annetusta ja saadusta.',
     approvedText: 'Tiedättehän te filippiläiset itsekin, että evankeliumin alkuaikoina, kun lähdin Makedoniasta, ei mikään muu seurakunta kuin te yksin ryhtynyt kanssani tiliyhteyteen annetusta ja saadusta.',
     text: 'Tiedättehän te filippiläiset itsekin, että evankeliumin alkuaikoina, kun lähdin Makedoniasta, ei mikään muu seurakunta kuin te yksin ryhtynyt kanssani tiliyhteyteen annetusta ja saadusta.',
-    footnotes: [{ marker: '15', text: '2. Kor. 11:8\u20139', baseText: '2. Kor. 11:8\u20139' }],
   },
   {
     chapter: 4,
@@ -732,15 +708,14 @@ export const SEED_VERSES: Verse[] = [
     number: 18,
     baseText: 'Olen saanut kaikkea, jopa runsaasti. Minulla on kaikkea yllin kyllin saatuani Epafroditokselta teidän lähetyksenne, joka on suloinen tuoksu, kelvollinen, Jumalan mielen mukainen uhri.',
     approvedText: 'Olen saanut kaikkea, jopa runsaasti. Minulla on kaikkea yllin kyllin saatuani Epafroditokselta teidän lähetyksenne, joka on suloinen tuoksu, kelvollinen, Jumalan mielen mukainen uhri.',
-    text: 'Olen saanut kaikkea, jopa yltäkyllin. Minulla on kaikkea riittävästi saatuani Epafroditokselta teidän lähetyksenne, joka on suloinen tuoksu, otollinen, Jumalaa miellyttävä uhri.',
-    footnotes: [{ marker: '18', text: 'Room. 12:1; Ef. 5:2; Hepr. 13:16; 1. Piet. 2:5', baseText: 'Room. 12:1; Ef. 5:2; Hepr. 13:16; 1. Piet. 2:5' }],
+    text: 'Olen saanut kaikkea, jopa runsaasti. Minulla on kaikkea yllin kyllin saatuani Epafroditokselta teidän lähetyksenne, joka on suloinen tuoksu, kelvollinen, Jumalan mielen mukainen uhri.',
   },
   {
     chapter: 4,
     number: 19,
-    baseText: 'Minun Jumalani on täyttävä kaikki teidän tarpeenne kirkkaudessa olevan rikkautensa mukaan Kristuksessa Jeesuksessa.',
-    approvedText: 'Minun Jumalani on täyttävä kaikki teidän tarpeenne kirkkaudessa olevan rikkautensa mukaan Kristuksessa Jeesuksessa.',
-    text: 'Minun Jumalani täyttää kaikki teidän tarpeenne kirkkautensa rikkaudesta Kristuksessa Jeesuksessa.',
+    baseText: 'Minun Jumalani on täyttävä/täyttää kaikki teidän tarpeenne kirkkaudessa olevan rikkautensa mukaan Kristuksessa Jeesuksessa.',
+    approvedText: 'Minun Jumalani on täyttävä/täyttää kaikki teidän tarpeenne kirkkaudessa olevan rikkautensa mukaan Kristuksessa Jeesuksessa.',
+    text: 'Minun Jumalani on täyttävä/täyttää kaikki teidän tarpeenne kirkkaudessa olevan rikkautensa mukaan Kristuksessa Jeesuksessa.',
   },
   {
     chapter: 4,
@@ -748,26 +723,22 @@ export const SEED_VERSES: Verse[] = [
     baseText: 'Jumalalle ja meidän Isällemme kunnia, aina ja iankaikkisesti! Aamen.',
     approvedText: 'Jumalalle ja meidän Isällemme kunnia, aina ja iankaikkisesti! Aamen.',
     text: 'Jumalalle ja meidän Isällemme kunnia, aina ja iankaikkisesti! Aamen.',
-    footnotes: [{ marker: '20', text: '1. Piet. 4:11', baseText: '1. Piet. 4:11' }],
   },
   {
     chapter: 4,
     number: 21,
     baseText: 'Tervehtikää kaikkia pyhiä Kristuksessa Jeesuksessa. Luonani olevat veljet lähettävät teille terveisiä.',
     approvedText: 'Tervehtikää kaikkia pyhiä Kristuksessa Jeesuksessa. Luonani olevat veljet lähettävät teille terveisiä.',
-    text: 'Tervehtikää kaikkia pyhiä Kristuksessa Jeesuksessa. Veljet, jotka ovat luonani, lähettävät teille terveisiä.',
+    text: 'Tervehtikää kaikkia pyhiä Kristuksessa Jeesuksessa / (92) Jeesuksen Kristuksen pyhiä. Veljet, jotka ovat luonani, lähettävät teille terveisiä.',
     sectionHeader: 'Lopputervehdys',
   },
   {
     chapter: 4,
     number: 22,
-    baseText: 'Kaikki pyhät tervehtivät teitä, varsinkin ne, jotka ovat keisarin huonetta.',
-    approvedText: 'Kaikki pyhät tervehtivät teitä, varsinkin ne, jotka ovat keisarin huonetta.',
-    text: 'Kaikki pyhät tervehtivät teitä, varsinkin ne, jotka ovat keisarin huonetta.',
-    footnotes: [
-      { marker: '22a', text: '2. Kor. 13:12', baseText: '2. Kor. 13:12' },
-      { marker: '22b', text: 'Saattoivat olla keisarillisen suvun jäseniä tai keisarin palatsin palveluskuntaa.', baseText: 'Saattoivat olla keisarillisen suvun jäseniä tai keisarin palatsin palveluskuntaa.' },
-    ],
+    baseText: 'Kaikki pyhät tervehtivät teitä, varsinkin ne, jotka ovat keisarin huonetta*/palveluskuntaa.',
+    approvedText: 'Kaikki pyhät tervehtivät teitä, varsinkin ne, jotka ovat keisarin huonetta*/palveluskuntaa.',
+    text: 'Kaikki pyhät tervehtivät teitä, varsinkin ne, jotka ovat keisarin huonetta*/palveluskuntaa.',
+    footnotes: [{ marker: '4:22', text: '4:22 Saattoivat olla keisarillisen suvun jäseniä tai keisarin palatsin palveluskuntaa.', baseText: '4:22 Saattoivat olla keisarillisen suvun jäseniä tai keisarin palatsin palveluskuntaa.' }],
   },
   {
     chapter: 4,
@@ -775,9 +746,9 @@ export const SEED_VERSES: Verse[] = [
     baseText: 'Herran Jeesuksen Kristuksen armo olkoon teidän henkenne kanssa.',
     approvedText: 'Herran Jeesuksen Kristuksen armo olkoon teidän henkenne kanssa.',
     text: 'Herran Jeesuksen Kristuksen armo olkoon teidän henkenne kanssa.',
-    footnotes: [{ marker: '23', text: 'Gal. 6:18', baseText: 'Gal. 6:18' }],
   },
 ]
+
 
 export const SEED_USERS: User[] = [
   // Dual-role members (tekstiryhmä + hallitus)
@@ -1002,10 +973,20 @@ export const REFERENCE_TRANSLATIONS: ReferenceTranslation[] = [
   },
 ]
 
-const ch4Verses = SEED_VERSES.filter(v => v.chapter === 4)
+function snapshotFromVerses(verses: Verse[]) {
+  return {
+    verseTexts: verses.map(v => ({ chapter: v.chapter, number: v.number, text: v.baseText })),
+    footnoteTexts: verses.flatMap(v =>
+      (v.footnotes ?? []).map(fn => ({ chapter: v.chapter, verse: v.number, marker: fn.marker, text: fn.baseText }))
+    ),
+    sectionHeaderTexts: verses
+      .filter(v => v.sectionHeader)
+      .map(v => ({ chapter: v.chapter, verse: v.number, text: v.sectionHeader! })),
+  }
+}
 
 export const SEED_SNAPSHOTS: Snapshot[] = [
-  // Base version
+  // Base version — all Philippians
   {
     id: 'snapshot-tw1-publication',
     textWorkId: 'tw-1',
@@ -1013,15 +994,9 @@ export const SEED_SNAPSHOTS: Snapshot[] = [
     name: 'Pohjaversio (RK12)',
     createdAt: '2026-04-12T10:00:00Z',
     createdBy: 'leino-kimmo',
-    verseTexts: ch4Verses.map(v => ({ chapter: 4, number: v.number, text: v.baseText })),
-    footnoteTexts: ch4Verses.flatMap(v =>
-      (v.footnotes ?? []).map(fn => ({ chapter: 4, verse: v.number, marker: fn.marker, text: fn.baseText }))
-    ),
-    sectionHeaderTexts: ch4Verses
-      .filter(v => v.sectionHeader)
-      .map(v => ({ chapter: 4, verse: v.number, text: v.sectionHeader! })),
+    ...snapshotFromVerses(SEED_VERSES),
   },
-  // Internal snapshot
+  // Internal snapshot — first draft round
   {
     id: 'snapshot-tw1-internal',
     textWorkId: 'tw-1',
@@ -1029,13 +1004,7 @@ export const SEED_SNAPSHOTS: Snapshot[] = [
     name: 'Ensimmäinen luonnoskierros',
     createdAt: '2026-04-14T17:00:00Z',
     createdBy: 'leino-kimmo',
-    verseTexts: ch4Verses.map(v => ({ chapter: 4, number: v.number, text: v.baseText })),
-    footnoteTexts: ch4Verses.flatMap(v =>
-      (v.footnotes ?? []).map(fn => ({ chapter: 4, verse: v.number, marker: fn.marker, text: fn.baseText }))
-    ),
-    sectionHeaderTexts: ch4Verses
-      .filter(v => v.sectionHeader)
-      .map(v => ({ chapter: 4, verse: v.number, text: v.sectionHeader! })),
+    ...snapshotFromVerses(SEED_VERSES),
   },
   // Submission snapshot for tw-3
   {

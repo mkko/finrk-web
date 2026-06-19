@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { useStore } from '@/lib/store'
 import { STATUS_LABELS, STATUS_COLORS, textWorkLabel } from '@/lib/types'
@@ -29,6 +29,10 @@ export default function ReviewPage() {
   const [showReject, setShowReject] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [selectedVerse, setSelectedVerse] = useState<{ chapter: number; number: number } | null>(null)
+  const docRef = useRef<HTMLDivElement>(null)
+  const popupRef = useRef<HTMLDivElement>(null)
+  const [commentPopup, setCommentPopup] = useState<{ top: number; left: number; chapter: number; verse: number; selectedText: string } | null>(null)
+  const [bubbleComment, setBubbleComment] = useState('')
 
   if (!proposal || !tw) {
     return (
@@ -141,6 +145,73 @@ export default function ReviewPage() {
     cancelProposal(proposalId)
     setShowCancelConfirm(false)
   }
+
+  // ── Text selection → comment popup ─────────────
+  useEffect(() => {
+    if (!isHallitus || isCancelled) return
+
+    function onMouseUp() {
+      requestAnimationFrame(() => {
+        if (!docRef.current) return
+        const sel = window.getSelection()
+        if (!sel || sel.isCollapsed) return
+        const text = sel.toString().trim()
+        if (!text) return
+
+        // Find the verse element containing the selection
+        const anchor = sel.anchorNode
+        const verseEl = anchor instanceof HTMLElement
+          ? anchor.closest('[data-verse]')
+          : anchor?.parentElement?.closest('[data-verse]')
+        if (!verseEl) return
+
+        const chapter = parseInt(verseEl.getAttribute('data-chapter') ?? '0', 10)
+        const verse = parseInt(verseEl.getAttribute('data-verse') ?? '0', 10)
+        if (!chapter || !verse) return
+
+        const range = sel.getRangeAt(0)
+        const rect = range.getBoundingClientRect()
+        const containerRect = docRef.current.getBoundingClientRect()
+
+        setBubbleComment('')
+        setCommentPopup({
+          top: rect.bottom - containerRect.top + 4,
+          left: rect.left - containerRect.left + rect.width / 2,
+          chapter, verse, selectedText: text,
+        })
+      })
+    }
+
+    function onMouseDown(e: MouseEvent) {
+      if (popupRef.current?.contains(e.target as Node)) return
+      setCommentPopup(null)
+      setBubbleComment('')
+    }
+
+    document.addEventListener('mouseup', onMouseUp)
+    document.addEventListener('mousedown', onMouseDown)
+    return () => {
+      document.removeEventListener('mouseup', onMouseUp)
+      document.removeEventListener('mousedown', onMouseDown)
+    }
+  }, [isHallitus, isCancelled])
+
+  const handleSubmitComment = useCallback(() => {
+    if (!commentPopup || !bubbleComment.trim()) return
+    addComment({
+      textWorkId: proposal.textWorkId,
+      verseAnchor: { chapter: commentPopup.chapter, verseStart: commentPopup.verse },
+      verseSnapshot: commentPopup.selectedText,
+      authorId: currentUserId,
+      text: bubbleComment.trim(),
+      thread: 'hallitus',
+    })
+    setBubbleComment('')
+    setCommentPopup(null)
+    window.getSelection()?.removeAllRanges()
+    // Open sidebar on that verse
+    setSelectedVerse({ chapter: commentPopup.chapter, number: commentPopup.verse })
+  }, [commentPopup, bubbleComment, addComment, proposal.textWorkId, currentUserId])
 
   // Collect margin comment bubbles per verse
   const marginBubbles = displayItems
@@ -324,7 +395,8 @@ export default function ReviewPage() {
 
               {/* Document page */}
               <div
-                className="bg-white border border-stone-300 shadow-md font-serif text-base leading-7 text-stone-800"
+                ref={docRef}
+                className="bg-white border border-stone-300 shadow-md font-serif text-base leading-7 text-stone-800 relative"
                 style={{ padding: '40px 50px', minHeight: '600px' }}
               >
                 <h1 className="text-2xl font-semibold text-stone-800 leading-tight mb-4">{textWorkLabel(tw)}</h1>
@@ -337,6 +409,8 @@ export default function ReviewPage() {
                   return (
                     <p
                       key={`${item.chapter}:${item.number}`}
+                      data-chapter={item.chapter}
+                      data-verse={item.number}
                       className={cn(
                         'mb-1 cursor-pointer rounded-sm px-1 -mx-1 transition-colors',
                         !item.changed && 'text-stone-400',
@@ -361,6 +435,41 @@ export default function ReviewPage() {
                     </p>
                   )
                 })}
+
+                {/* Comment popup on text selection */}
+                {commentPopup && (
+                  <div
+                    ref={popupRef}
+                    className="absolute z-20"
+                    style={{ top: commentPopup.top, left: commentPopup.left, transform: 'translateX(-50%)' }}
+                  >
+                    <div className="bg-white rounded-lg shadow-lg border border-stone-200 p-3 w-72">
+                      <p className="text-xs text-stone-400 mb-1.5 truncate">
+                        &ldquo;{commentPopup.selectedText.length > 50 ? commentPopup.selectedText.slice(0, 50) + '…' : commentPopup.selectedText}&rdquo;
+                      </p>
+                      <textarea
+                        value={bubbleComment}
+                        onChange={e => setBubbleComment(e.target.value)}
+                        placeholder="Kirjoita kommentti..."
+                        className="w-full text-sm border border-stone-200 rounded px-2.5 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-violet-400 font-sans"
+                        rows={2}
+                        autoFocus
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmitComment()
+                          if (e.key === 'Escape') { setCommentPopup(null); setBubbleComment('') }
+                        }}
+                      />
+                      <button
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={handleSubmitComment}
+                        disabled={!bubbleComment.trim()}
+                        className="mt-2 w-full text-sm rounded-md bg-violet-700 text-white px-3 py-1.5 hover:bg-violet-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-sans"
+                      >
+                        Kommentoi
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Voting / status cards below the document */}

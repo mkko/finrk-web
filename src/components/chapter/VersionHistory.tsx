@@ -78,7 +78,7 @@ export function VersionHistory({ textWorkId }: Props) {
             </div>
             <div className="bg-white border border-stone-300 shadow-md font-serif text-base leading-7 text-stone-800" style={{ padding: '40px 50px' }}>
               {selected.verseTexts.map(sv => {
-                const prevText = previous?.verseTexts.find(p => p.number === sv.number)?.text
+                const prevText = previous?.verseTexts.find(p => p.chapter === sv.chapter && p.number === sv.number)?.text
                 const changed = prevText !== undefined && prevText !== sv.text
                 const isNew = prevText === undefined
 

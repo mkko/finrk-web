@@ -18,9 +18,9 @@ export function getCurrentTextWork(textWorks: TextWork[]): TextWork | undefined 
   return textWorks.find(tw => tw.scope.book === 'Phil')
 }
 
-export function getVerseComments(comments: Comment[], textWorkId: string, verseNumber: number): Comment[] {
+export function getVerseComments(comments: Comment[], textWorkId: string, chapter: number, verseNumber: number): Comment[] {
   return comments.filter(
-    c => c.textWorkId === textWorkId && c.verseAnchor.verseStart === verseNumber
+    c => c.textWorkId === textWorkId && c.verseAnchor.chapter === chapter && c.verseAnchor.verseStart === verseNumber
   )
 }
 
@@ -35,7 +35,7 @@ export function getPublishedSnapshot(snapshots: Snapshot[], textWorkId: string):
 export function hasDraft(verses: Verse[], publishedSnapshot: Snapshot | undefined): boolean {
   if (!publishedSnapshot) return false
   return verses.some(v => {
-    const sv = publishedSnapshot.verseTexts.find(sv => sv.number === v.number)
+    const sv = publishedSnapshot.verseTexts.find(sv => sv.chapter === v.chapter && sv.number === v.number)
     return sv ? sv.text !== v.text : false
   })
 }

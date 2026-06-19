@@ -55,8 +55,9 @@ export default function ReviewPage() {
   // Build diff data
   const diffVerses = snapshot
     ? snapshot.verseTexts.map(sv => {
-        const currentVerse = verses.find(v => v.number === sv.number)
+        const currentVerse = verses.find(v => v.chapter === sv.chapter && v.number === sv.number)
         return {
+          chapter: sv.chapter,
           number: sv.number,
           oldText: currentVerse?.approvedText ?? '',
           newText: sv.text,

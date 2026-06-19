@@ -13,6 +13,7 @@ import { renderWithHighlights } from '@/lib/highlight'
 import { cn } from '@/lib/utils'
 
 interface VerseDetailPanelProps {
+  chapter: number
   verseNumber: number
   textWorkId?: string
   focusCommentId?: string | null
@@ -21,7 +22,7 @@ interface VerseDetailPanelProps {
   overlay?: boolean
 }
 
-export function VerseDetailPanel({ verseNumber, textWorkId, focusCommentId, onFocusComment, onClose, overlay }: VerseDetailPanelProps) {
+export function VerseDetailPanel({ chapter, verseNumber, textWorkId, focusCommentId, onFocusComment, onClose, overlay }: VerseDetailPanelProps) {
   useEffect(() => {
     if (overlay) return // overlay backdrop handles dismiss
     function handleKeyDown(e: KeyboardEvent) {
@@ -31,10 +32,10 @@ export function VerseDetailPanel({ verseNumber, textWorkId, focusCommentId, onFo
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [onClose, overlay])
 
-  return <PanelContent verseNumber={verseNumber} textWorkId={textWorkId} focusCommentId={focusCommentId} onFocusComment={onFocusComment} onClose={onClose} />
+  return <PanelContent chapter={chapter} verseNumber={verseNumber} textWorkId={textWorkId} focusCommentId={focusCommentId} onFocusComment={onFocusComment} onClose={onClose} />
 }
 
-function PanelContent({ verseNumber, textWorkId, focusCommentId, onFocusComment, onClose }: { verseNumber: number; textWorkId?: string; focusCommentId?: string | null; onFocusComment?: (id: string | null) => void; onClose: () => void }) {
+function PanelContent({ chapter, verseNumber, textWorkId, focusCommentId, onFocusComment, onClose }: { chapter: number; verseNumber: number; textWorkId?: string; focusCommentId?: string | null; onFocusComment?: (id: string | null) => void; onClose: () => void }) {
   const verses = useStore(s => s.verses)
   const users = useStore(s => s.users)
   const currentUser = useStore(s => s.users.find(u => u.id === s.currentUserId)) ?? { id: '', name: '', roles: ['tekstiryhma'] as const, roleLabel: '' }
@@ -45,14 +46,14 @@ function PanelContent({ verseNumber, textWorkId, focusCommentId, onFocusComment,
   const deleteMerkinta = useStore(s => s.deleteMerkinta)
   const updateMerkintaNote = useStore(s => s.updateMerkintaNote)
 
-  const verse = verses.find(v => v.number === verseNumber)
+  const verse = verses.find(v => v.chapter === chapter && v.number === verseNumber)
   const hasBeenRevised = verse ? verse.text !== verse.baseText : false
 
   const isTekstiRyhma = currentUser.roles.includes('tekstiryhma')
   const isSeurantaryhma = currentUser.roles.includes('seurantaryhma')
 
   // Comments for this verse
-  const verseComments = textWorkId ? getVerseComments(allComments, textWorkId, verseNumber) : []
+  const verseComments = textWorkId ? getVerseComments(allComments, textWorkId, chapter, verseNumber) : []
   const commentThread = isSeurantaryhma ? 'seurantaryhma' : 'tekstiryhma'
   const allVisible = verseComments.filter(c => {
     if (isTekstiRyhma) return true // sees all threads
@@ -63,10 +64,10 @@ function PanelContent({ verseNumber, textWorkId, focusCommentId, onFocusComment,
 
   // Merkintä (highlights) - only for tekstiryhma
   const verseHighlights = isTekstiRyhma
-    ? merkinnat.filter(m => m.verses.some(v => v.verseNumber === verseNumber) && m.authorId === currentUser.id)
+    ? merkinnat.filter(m => m.verses.some(v => v.chapter === chapter && v.verseNumber === verseNumber) && m.authorId === currentUser.id)
     : []
   const highlightTexts = verseHighlights.flatMap(m =>
-    m.verses.filter(v => v.verseNumber === verseNumber).map(v => v.text)
+    m.verses.filter(v => v.chapter === chapter && v.verseNumber === verseNumber).map(v => v.text)
   )
 
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
@@ -87,7 +88,7 @@ function PanelContent({ verseNumber, textWorkId, focusCommentId, onFocusComment,
     if (!commentText.trim() || !textWorkId) return
     addComment({
       textWorkId,
-      verseAnchor: { verseStart: verseNumber },
+      verseAnchor: { chapter, verseStart: verseNumber },
       verseSnapshot: verse!.text,
       authorId: currentUser.id,
       text: commentText.trim(),

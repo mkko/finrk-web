@@ -315,6 +315,11 @@ function CommentCard({
               seurantaryhmä
             </Badge>
           )}
+          {comment.thread === 'hallitus' && (
+            <Badge variant="outline" className="text-[10px] ml-2 px-1 py-0 border-violet-200 text-violet-600">
+              hallitus
+            </Badge>
+          )}
         </div>
         {!resolved && onResolve && (
           <button

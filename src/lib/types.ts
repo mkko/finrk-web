@@ -83,7 +83,7 @@ export interface Comment {
   verseSnapshot: string
   authorId: string
   text: string
-  thread: 'tekstiryhma' | 'seurantaryhma'
+  thread: 'tekstiryhma' | 'seurantaryhma' | 'hallitus'
   status: 'avoin' | 'kasitelty'
   resolvedBy?: string
   resolvedAt?: string

@@ -1,22 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { useStore } from '@/lib/store'
 import { STATUS_LABELS, STATUS_COLORS, textWorkLabel } from '@/lib/types'
+import type { Comment as CommentType } from '@/lib/types'
 import { WordDiff } from '@/components/chapter/VersionHistory'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { Check, X, ArrowLeft, MessageSquare, UserPlus, UserMinus } from 'lucide-react'
+import { Check, X, ArrowLeft, MessageSquare, UserPlus, UserMinus, Send } from 'lucide-react'
 import Link from 'next/link'
 
 export default function ReviewPage() {
   const params = useParams()
   const proposalId = params.proposalId as string
 
-  const { proposals, textWorks, users, verses, snapshots, comments, currentUserId, castVote, cancelProposal, updateSelectedVoters } = useStore()
+  const { proposals, textWorks, users, verses, snapshots, comments, currentUserId, castVote, cancelProposal, updateSelectedVoters, addComment } = useStore()
   const currentUser = users.find(u => u.id === currentUserId)
   if (!currentUser) return null
 
@@ -52,28 +53,70 @@ export default function ReviewPage() {
   const isPending = !isResolved && !isCancelled && tw.status === 'lahetetty_hallitukselle'
   const canVote = isHallitus && isPending && !currentUserVote && proposal.selectedVoters.includes(currentUserId)
 
-  // Build diff data
-  const diffVerses = snapshot
-    ? snapshot.verseTexts.map(sv => {
-        const currentVerse = verses.find(v => v.chapter === sv.chapter && v.number === sv.number)
-        return {
-          chapter: sv.chapter,
-          number: sv.number,
-          oldText: currentVerse?.approvedText ?? '',
-          newText: sv.text,
-        }
-      })
-    : []
+  // Build diff data with context
+  const CONTEXT_LINES = 2
+  const snapshotVerses = snapshot?.verseTexts ?? []
+  const changedSet = new Set<string>()
+  const contextSet = new Set<string>()
 
-  // Discussion context: comments for the textWork filtered by proposal verse range
-  const proposalVerseNumbers = proposal.selectedVerses && proposal.selectedVerses.length > 0
-    ? new Set(proposal.selectedVerses)
-    : new Set(snapshot?.verseTexts.map(sv => sv.number) ?? [])
+  // Find changed verses
+  const diffMap = new Map<string, { oldText: string; newText: string }>()
+  for (const sv of snapshotVerses) {
+    const key = `${sv.chapter}:${sv.number}`
+    const currentVerse = verses.find(v => v.chapter === sv.chapter && v.number === sv.number)
+    const oldText = currentVerse?.approvedText ?? ''
+    if (oldText !== sv.text) {
+      changedSet.add(key)
+      diffMap.set(key, { oldText, newText: sv.text })
+    }
+  }
 
-  const relatedComments = comments.filter(c => {
-    if (c.textWorkId !== proposal.textWorkId) return false
-    return proposalVerseNumbers.has(c.verseAnchor.verseStart)
-  }).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+  // Expand context around changes
+  for (const sv of snapshotVerses) {
+    const key = `${sv.chapter}:${sv.number}`
+    if (changedSet.has(key)) {
+      const idx = snapshotVerses.indexOf(sv)
+      for (let j = Math.max(0, idx - CONTEXT_LINES); j <= Math.min(snapshotVerses.length - 1, idx + CONTEXT_LINES); j++) {
+        const ck = `${snapshotVerses[j].chapter}:${snapshotVerses[j].number}`
+        if (!changedSet.has(ck)) contextSet.add(ck)
+      }
+    }
+  }
+
+  // Build display list with separators for gaps
+  type DisplayVerse = { type: 'verse'; chapter: number; number: number; text: string; changed: boolean; diff?: { oldText: string; newText: string } }
+  type DisplaySep = { type: 'separator' }
+  const displayItems: (DisplayVerse | DisplaySep)[] = []
+  let lastIdx = -2
+
+  for (let i = 0; i < snapshotVerses.length; i++) {
+    const sv = snapshotVerses[i]
+    const key = `${sv.chapter}:${sv.number}`
+    const isChanged = changedSet.has(key)
+    const isContext = contextSet.has(key)
+    if (!isChanged && !isContext) continue
+
+    if (lastIdx >= 0 && i - lastIdx > 1) {
+      displayItems.push({ type: 'separator' })
+    }
+    displayItems.push({
+      type: 'verse',
+      chapter: sv.chapter,
+      number: sv.number,
+      text: sv.text,
+      changed: isChanged,
+      diff: diffMap.get(key),
+    })
+    lastIdx = i
+  }
+
+  // Discussion: all comments for the textWork, grouped by verse
+  const relatedComments = comments.filter(c => c.textWorkId === proposal.textWorkId)
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+
+  function verseComments(chapter: number, verseNumber: number): CommentType[] {
+    return relatedComments.filter(c => c.verseAnchor.chapter === chapter && c.verseAnchor.verseStart === verseNumber)
+  }
 
   // Status for display
   const displayStatus = isCancelled ? 'Peruutettu' : STATUS_LABELS[tw.status]
@@ -245,84 +288,71 @@ export default function ReviewPage() {
           </div>
         )}
 
-        {/* Diff section */}
+        {/* Diff section with context */}
         <div>
           <h2 className="text-sm font-medium text-stone-700 mb-3">Muutokset</h2>
           <div
             className="bg-white border border-stone-300 shadow-md font-serif text-base leading-7 text-stone-800 rounded-lg"
             style={{ padding: '40px 50px' }}
           >
-            {diffVerses.map(dv => (
-              <p key={dv.number} className="mb-1">
-                <span
-                  className="text-xs text-stone-400 font-sans"
-                  style={{ verticalAlign: 'super', fontSize: '0.65em', lineHeight: 0 }}
-                >
-                  {dv.number}
-                </span>{' '}
-                {dv.oldText !== dv.newText ? (
-                  <WordDiff oldText={dv.oldText} newText={dv.newText} />
-                ) : (
-                  <span>{dv.newText}</span>
-                )}
-              </p>
-            ))}
+            {displayItems.map((item, i) => {
+              if (item.type === 'separator') {
+                return <div key={`sep-${i}`} className="my-4 border-t border-dashed border-stone-200" />
+              }
+              const vc = verseComments(item.chapter, item.number)
+              return (
+                <div key={`${item.chapter}:${item.number}`} className="group">
+                  <p className={cn('mb-1', !item.changed && 'text-stone-400')}>
+                    <span
+                      className="text-xs font-sans"
+                      style={{ verticalAlign: 'super', fontSize: '0.65em', lineHeight: 0, color: item.changed ? '#a8a29e' : '#d6d3d1' }}
+                    >
+                      {item.number}
+                    </span>{' '}
+                    {item.changed && item.diff ? (
+                      <WordDiff oldText={item.diff.oldText} newText={item.diff.newText} />
+                    ) : (
+                      <span>{item.text}</span>
+                    )}
+                  </p>
+                  {/* Inline comments for this verse */}
+                  {vc.length > 0 && (
+                    <div className="ml-6 mb-2 space-y-1.5">
+                      {vc.map(c => {
+                        const author = users.find(u => u.id === c.authorId)
+                        const threadLabel = c.thread === 'hallitus' ? 'Hallitus' : c.thread === 'seurantaryhma' ? 'Seurantaryhmä' : 'Tekstiryhmä'
+                        return (
+                          <div key={c.id} className={cn(
+                            'rounded border px-3 py-2 text-sm',
+                            c.thread === 'hallitus'
+                              ? 'border-violet-200 bg-violet-50/50'
+                              : c.status === 'kasitelty'
+                                ? 'border-stone-200 bg-stone-50'
+                                : 'border-amber-200 bg-amber-50/50'
+                          )}>
+                            <span className="font-medium text-stone-700">{author?.name ?? 'Tuntematon'}</span>
+                            <span className="text-xs text-stone-400 ml-2">{threadLabel}</span>
+                            <p className="text-stone-600 mt-0.5">{c.text}</p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                  {/* Inline comment input for changed verses */}
+                  {item.changed && isHallitus && !isCancelled && (
+                    <InlineCommentInput
+                      textWorkId={proposal.textWorkId}
+                      chapter={item.chapter}
+                      verseNumber={item.number}
+                      verseText={item.text}
+                      onSubmit={addComment}
+                    />
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
-
-        {/* Discussion context */}
-        {relatedComments.length > 0 && (
-          <div>
-            <h2 className="text-sm font-medium text-stone-700 mb-3 flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Keskustelu
-            </h2>
-            <div className="space-y-3">
-              {relatedComments.map(comment => {
-                const author = users.find(u => u.id === comment.authorId)
-                const threadLabel = comment.thread === 'tekstiryhma' ? 'Tekstiryhmä' : 'Seurantaryhmä'
-                return (
-                  <div
-                    key={comment.id}
-                    className={cn(
-                      'rounded-lg border p-4',
-                      comment.status === 'kasitelty'
-                        ? 'border-stone-200 bg-stone-50'
-                        : 'border-amber-200 bg-amber-50/50'
-                    )}
-                  >
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="text-sm font-medium text-stone-700">
-                        {author?.name ?? 'Tuntematon'}
-                      </span>
-                      <span className="text-xs text-stone-400">
-                        {new Date(comment.createdAt).toLocaleDateString('fi-FI', {
-                          day: 'numeric', month: 'numeric', year: 'numeric',
-                        })}
-                      </span>
-                      <Badge variant="outline" className="text-xs">
-                        {threadLabel}
-                      </Badge>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          'text-xs',
-                          comment.status === 'avoin'
-                            ? 'bg-amber-50 text-amber-700 border-amber-300'
-                            : 'bg-stone-100 text-stone-500 border-stone-300'
-                        )}
-                      >
-                        {comment.status === 'avoin' ? 'Avoin' : 'Käsitelty'}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-stone-400 mb-1">Jae {comment.verseAnchor.verseStart}</p>
-                    <p className="text-sm text-stone-600">{comment.text}</p>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
 
         {/* Voting section — hallitus only, pending, selected voter */}
         {canVote && (
@@ -459,6 +489,78 @@ export default function ReviewPage() {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function InlineCommentInput({ textWorkId, chapter, verseNumber, verseText, onSubmit }: {
+  textWorkId: string
+  chapter: number
+  verseNumber: number
+  verseText: string
+  onSubmit: (comment: Omit<CommentType, 'id' | 'createdAt' | 'status'>) => void
+}) {
+  const [text, setText] = useState('')
+  const [open, setOpen] = useState(false)
+  const currentUserId = useStore(s => s.currentUserId)
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="ml-6 mb-2 text-xs text-stone-400 hover:text-violet-600 transition-colors opacity-0 group-hover:opacity-100 flex items-center gap-1"
+      >
+        <MessageSquare className="h-3 w-3" /> Kommentoi
+      </button>
+    )
+  }
+
+  return (
+    <div className="ml-6 mb-3 flex gap-2">
+      <input
+        type="text"
+        value={text}
+        onChange={e => setText(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === 'Enter' && text.trim()) {
+            onSubmit({
+              textWorkId,
+              verseAnchor: { chapter, verseStart: verseNumber },
+              verseSnapshot: verseText,
+              authorId: currentUserId,
+              text: text.trim(),
+              thread: 'hallitus',
+            })
+            setText('')
+            setOpen(false)
+          }
+          if (e.key === 'Escape') { setText(''); setOpen(false) }
+        }}
+        placeholder="Kirjoita kommentti..."
+        className="flex-1 text-sm border border-violet-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-violet-400"
+        autoFocus
+      />
+      <Button
+        size="sm"
+        variant="outline"
+        className="text-violet-700 h-7 px-2"
+        disabled={!text.trim()}
+        onClick={() => {
+          if (!text.trim()) return
+          onSubmit({
+            textWorkId,
+            verseAnchor: { chapter, verseStart: verseNumber },
+            verseSnapshot: verseText,
+            authorId: currentUserId,
+            text: text.trim(),
+            thread: 'hallitus',
+          })
+          setText('')
+          setOpen(false)
+        }}
+      >
+        <Send className="h-3.5 w-3.5" />
+      </Button>
     </div>
   )
 }

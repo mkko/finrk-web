@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import { useStore } from '@/lib/store'
 import { STATUS_LABELS, STATUS_COLORS, textWorkLabel } from '@/lib/types'
@@ -28,6 +28,7 @@ export default function ReviewPage() {
   const [rejectText, setRejectText] = useState('')
   const [showReject, setShowReject] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const [selectedVerse, setSelectedVerse] = useState<{ chapter: number; number: number } | null>(null)
 
   if (!proposal || !tw) {
     return (
@@ -141,46 +142,79 @@ export default function ReviewPage() {
     setShowCancelConfirm(false)
   }
 
-  return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 py-8 space-y-6">
-        {/* Back link */}
-        <Link
-          href={isHallitus ? '/hallitus' : '/lahetys'}
-          className="text-sm text-stone-500 hover:text-stone-700 inline-flex items-center gap-1"
-        >
-          <ArrowLeft className="h-4 w-4" /> Takaisin
-        </Link>
+  // Collect margin comment bubbles per verse
+  const marginBubbles = displayItems
+    .filter((item): item is DisplayVerse => item.type === 'verse')
+    .flatMap(item => {
+      const vc = verseComments(item.chapter, item.number)
+      if (vc.length === 0) return []
+      const first = vc[0]
+      const author = users.find(u => u.id === first.authorId)
+      return [{
+        chapter: item.chapter,
+        number: item.number,
+        count: vc.length,
+        preview: `${author?.name?.split(' ')[0] ?? ''}: "${first.text.length > 30 ? first.text.slice(0, 30) + '…' : first.text}"`,
+      }]
+    })
 
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-stone-800">
-              {textWorkLabel(tw)}
-              {proposal.selectedVerses && proposal.selectedVerses.length > 0 && (
-                <span className="text-stone-400 font-normal ml-2">
-                  (jakeet {proposal.selectedVerses.join(', ')})
-                </span>
-              )}
-            </h1>
-            <p className="text-sm text-stone-500 mt-1">
-              Lähetetty {new Date(proposal.createdAt).toLocaleDateString('fi-FI', {
-                day: 'numeric', month: 'long', year: 'numeric',
-              })}
-              {submitter && <> — {submitter.name}</>}
-            </p>
-          </div>
+  // Selected verse comments for sidebar
+  const sidebarComments = selectedVerse
+    ? verseComments(selectedVerse.chapter, selectedVerse.number)
+    : []
+  const selectedVerseData = selectedVerse
+    ? snapshotVerses.find(sv => sv.chapter === selectedVerse.chapter && sv.number === selectedVerse.number)
+    : null
+
+  return (
+    <div className="h-full flex">
+      {/* Main content column */}
+      <div className="flex-1 min-h-0 flex flex-col">
+        {/* Top bar */}
+        <div className="flex-none border-b border-stone-200 bg-white px-4 py-2 flex items-center gap-3">
+          <Link
+            href={isHallitus ? '/hallitus' : '/lahetys'}
+            className="text-sm text-stone-500 hover:text-stone-700 inline-flex items-center gap-1"
+          >
+            <ArrowLeft className="h-4 w-4" /> Takaisin
+          </Link>
+          <div className="flex-1" />
           <Badge variant="outline" className={cn('text-xs', displayStatusColor)}>
             {displayStatus}
           </Badge>
         </div>
 
-        {/* Rationale */}
-        {proposal.rationale && (
-          <div className="bg-stone-50 rounded-lg border border-stone-200 p-4">
-            <p className="text-sm text-stone-600">{proposal.rationale}</p>
-          </div>
-        )}
+        {/* Scrollable document area */}
+        <div className="flex-1 min-h-0 overflow-y-auto bg-stone-100">
+          <div className="py-8 px-4 flex justify-start lg:justify-center gap-4">
+            {/* A4 page */}
+            <div className="w-full max-w-3xl shrink-0">
+              {/* Meta cards above the document */}
+              <div className="space-y-3 mb-6">
+                <div>
+                  <h1 className="text-xl font-semibold text-stone-800">
+                    {textWorkLabel(tw)}
+                    {proposal.selectedVerses && proposal.selectedVerses.length > 0 && (
+                      <span className="text-stone-400 font-normal ml-2">
+                        (jakeet {proposal.selectedVerses.join(', ')})
+                      </span>
+                    )}
+                  </h1>
+                  <p className="text-sm text-stone-500 mt-1">
+                    Lähetetty {new Date(proposal.createdAt).toLocaleDateString('fi-FI', {
+                      day: 'numeric', month: 'long', year: 'numeric',
+                    })}
+                    {submitter && <> — {submitter.name}</>}
+                  </p>
+                </div>
+
+                {/* Rationale */}
+                {proposal.rationale && (
+                  <div className="bg-stone-50 rounded-lg border border-stone-200 p-4">
+                    <p className="text-sm text-stone-600">{proposal.rationale}</p>
+                  </div>
+                )}
+              </div>
 
         {/* Voter progress + management */}
         {isHallitus && !isCancelled && (() => {
@@ -288,212 +322,230 @@ export default function ReviewPage() {
           </div>
         )}
 
-        {/* Diff section with context */}
-        <div>
-          <h2 className="text-sm font-medium text-stone-700 mb-3">Muutokset</h2>
-          <div
-            className="bg-white border border-stone-300 shadow-md font-serif text-base leading-7 text-stone-800 rounded-lg"
-            style={{ padding: '40px 50px' }}
-          >
-            {displayItems.map((item, i) => {
-              if (item.type === 'separator') {
-                return <div key={`sep-${i}`} className="my-4 border-t border-dashed border-stone-200" />
-              }
-              const vc = verseComments(item.chapter, item.number)
-              return (
-                <div key={`${item.chapter}:${item.number}`} className="group">
-                  <p className={cn('mb-1', !item.changed && 'text-stone-400')}>
-                    <span
-                      className="text-xs font-sans"
-                      style={{ verticalAlign: 'super', fontSize: '0.65em', lineHeight: 0, color: item.changed ? '#a8a29e' : '#d6d3d1' }}
+              {/* Document page */}
+              <div
+                className="bg-white border border-stone-300 shadow-md font-serif text-base leading-7 text-stone-800"
+                style={{ padding: '40px 50px', minHeight: '600px' }}
+              >
+                <h1 className="text-2xl font-semibold text-stone-800 leading-tight mb-4">{textWorkLabel(tw)}</h1>
+                {displayItems.map((item, i) => {
+                  if (item.type === 'separator') {
+                    return <div key={`sep-${i}`} className="my-4 border-t border-dashed border-stone-200" />
+                  }
+                  const hasComments = verseComments(item.chapter, item.number).length > 0
+                  const isSelected = selectedVerse?.chapter === item.chapter && selectedVerse?.number === item.number
+                  return (
+                    <p
+                      key={`${item.chapter}:${item.number}`}
+                      className={cn(
+                        'mb-1 cursor-pointer rounded-sm px-1 -mx-1 transition-colors',
+                        !item.changed && 'text-stone-400',
+                        isSelected && 'bg-amber-50',
+                        hasComments && !isSelected && 'hover:bg-stone-50',
+                      )}
+                      onClick={() => setSelectedVerse(
+                        isSelected ? null : { chapter: item.chapter, number: item.number }
+                      )}
                     >
-                      {item.number}
-                    </span>{' '}
-                    {item.changed && item.diff ? (
-                      <WordDiff oldText={item.diff.oldText} newText={item.diff.newText} />
+                      <span
+                        className="text-xs font-sans"
+                        style={{ verticalAlign: 'super', fontSize: '0.65em', lineHeight: 0, color: item.changed ? '#a8a29e' : '#d6d3d1' }}
+                      >
+                        {item.number}
+                      </span>{' '}
+                      {item.changed && item.diff ? (
+                        <WordDiff oldText={item.diff.oldText} newText={item.diff.newText} />
+                      ) : (
+                        <span>{item.text}</span>
+                      )}
+                    </p>
+                  )
+                })}
+              </div>
+
+              {/* Voting / status cards below the document */}
+              <div className="mt-6 space-y-3">
+                {/* Voting section */}
+                {canVote && (
+                  <div className="rounded-lg border border-violet-200 bg-white p-4 space-y-3">
+                    <h2 className="text-sm font-medium text-stone-700">Äänestä</h2>
+                    {showReject ? (
+                      <div className="space-y-3">
+                        <Textarea
+                          placeholder="Perustele hylkäys..."
+                          value={rejectText}
+                          onChange={e => setRejectText(e.target.value)}
+                          className="min-h-[80px] text-sm resize-none"
+                          rows={3}
+                        />
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => setShowReject(false)}>
+                            Peruuta
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-red-700" onClick={handleReject} disabled={!rejectText.trim()}>
+                            Hylkää
+                          </Button>
+                        </div>
+                      </div>
                     ) : (
-                      <span>{item.text}</span>
+                      <div className="flex gap-3">
+                        <Button size="sm" variant="outline" className="text-red-700" onClick={() => setShowReject(true)}>
+                          <X className="h-4 w-4 mr-1" /> Hylkää
+                        </Button>
+                        <Button size="sm" onClick={handleApprove} className="bg-emerald-700 hover:bg-emerald-600">
+                          <Check className="h-4 w-4 mr-1" /> Hyväksy
+                        </Button>
+                      </div>
                     )}
-                  </p>
-                  {/* Inline comments for this verse */}
-                  {vc.length > 0 && (
-                    <div className="ml-6 mb-2 space-y-1.5">
-                      {vc.map(c => {
-                        const author = users.find(u => u.id === c.authorId)
-                        const threadLabel = c.thread === 'hallitus' ? 'Hallitus' : c.thread === 'seurantaryhma' ? 'Seurantaryhmä' : 'Tekstiryhmä'
-                        return (
-                          <div key={c.id} className={cn(
-                            'rounded border px-3 py-2 text-sm',
-                            c.thread === 'hallitus'
-                              ? 'border-violet-200 bg-violet-50/50'
-                              : c.status === 'kasitelty'
-                                ? 'border-stone-200 bg-stone-50'
-                                : 'border-amber-200 bg-amber-50/50'
-                          )}>
-                            <span className="font-medium text-stone-700">{author?.name ?? 'Tuntematon'}</span>
-                            <span className="text-xs text-stone-400 ml-2">{threadLabel}</span>
-                            <p className="text-stone-600 mt-0.5">{c.text}</p>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                  {/* Inline comment input for changed verses */}
-                  {item.changed && isHallitus && !isCancelled && (
-                    <InlineCommentInput
-                      textWorkId={proposal.textWorkId}
-                      chapter={item.chapter}
-                      verseNumber={item.number}
-                      verseText={item.text}
-                      onSubmit={addComment}
-                    />
-                  )}
+                  </div>
+                )}
+
+                {isHallitus && currentUserVote && (
+                  <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+                    <p className="text-sm text-violet-700 flex items-center gap-1.5">
+                      <Check className="h-4 w-4" /> Olet äänestänyt: {currentUserVote.decision === 'approve' ? 'Hyväksy' : 'Hylkää'}
+                    </p>
+                  </div>
+                )}
+
+                {isResolved && (
+                  <div className={cn('rounded-lg border p-4', isApproved ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50')}>
+                    <p className={cn('text-sm font-medium', isApproved ? 'text-emerald-800' : 'text-red-800')}>
+                      {isApproved ? 'Hyväksytty' : 'Hylätty'}
+                    </p>
+                    {proposal.votes.filter(v => v.decision === 'reject' && v.comment).map((v, i) => {
+                      const voter = users.find(u => u.id === v.userId)
+                      return <p key={i} className="mt-2 text-sm text-red-700"><span className="font-medium">{voter?.name}:</span> {v.comment}</p>
+                    })}
+                  </div>
+                )}
+
+                {isCancelled && (
+                  <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+                    <p className="text-sm text-stone-600">
+                      Äänestys peruutettu {new Date(proposal.cancelledAt!).toLocaleDateString('fi-FI', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </p>
+                  </div>
+                )}
+
+                {isTekstiryhma && isPending && (
+                  <div className="rounded-lg border border-stone-200 bg-white p-4">
+                    {showCancelConfirm ? (
+                      <div className="space-y-3">
+                        <p className="text-sm text-stone-600">Haluatko varmasti peruuttaa äänestyksen?</p>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => setShowCancelConfirm(false)}>Ei</Button>
+                          <Button size="sm" variant="outline" className="text-red-700" onClick={handleCancel}>Kyllä, peruuta</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button size="sm" variant="outline" className="text-red-700" onClick={() => setShowCancelConfirm(true)}>
+                        Peruuta äänestys
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right margin: comment bubbles */}
+            <div className="shrink-0 w-48 hidden lg:block">
+              {marginBubbles.length > 0 && (
+                <div className="sticky top-8 space-y-2">
+                  {marginBubbles.map(mb => {
+                    const isActive = selectedVerse?.chapter === mb.chapter && selectedVerse?.number === mb.number
+                    return (
+                      <button
+                        key={`${mb.chapter}:${mb.number}`}
+                        onClick={() => setSelectedVerse(isActive ? null : { chapter: mb.chapter, number: mb.number })}
+                        className={cn(
+                          'w-full text-left rounded-md border p-2 text-xs transition-colors',
+                          isActive
+                            ? 'border-amber-300 bg-amber-50 text-amber-700'
+                            : 'border-stone-200 bg-white text-stone-500 hover:border-stone-300 hover:shadow-sm'
+                        )}
+                      >
+                        <span className="text-stone-400">Jae {mb.number}</span>
+                        <br />
+                        <span className="text-stone-600">{mb.preview}</span>
+                      </button>
+                    )
+                  })}
                 </div>
-              )
-            })}
+              )}
+            </div>
           </div>
         </div>
-
-        {/* Voting section — hallitus only, pending, selected voter */}
-        {canVote && (
-          <div className="rounded-lg border border-violet-200 bg-white p-4 space-y-3">
-            <h2 className="text-sm font-medium text-stone-700">Äänestä</h2>
-            {showReject ? (
-              <div className="space-y-3">
-                <Textarea
-                  placeholder="Perustele hylkäys..."
-                  value={rejectText}
-                  onChange={e => setRejectText(e.target.value)}
-                  className="min-h-[80px] text-sm resize-none"
-                  rows={3}
-                />
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setShowReject(false)}>
-                    Peruuta
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-red-700"
-                    onClick={handleReject}
-                    disabled={!rejectText.trim()}
-                  >
-                    Hylkää
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex gap-3">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-red-700"
-                  onClick={() => setShowReject(true)}
-                >
-                  <X className="h-4 w-4 mr-1" />
-                  Hylkää
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleApprove}
-                  className="bg-emerald-700 hover:bg-emerald-600"
-                >
-                  <Check className="h-4 w-4 mr-1" />
-                  Hyväksy
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Already voted */}
-        {isHallitus && currentUserVote && (
-          <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
-            <p className="text-sm text-violet-700 flex items-center gap-1.5">
-              <Check className="h-4 w-4" />
-              Olet äänestänyt: {currentUserVote.decision === 'approve' ? 'Hyväksy' : 'Hylkää'}
-            </p>
-          </div>
-        )}
-
-        {/* Result section */}
-        {isResolved && (
-          <div className={cn(
-            'rounded-lg border p-4',
-            isApproved
-              ? 'border-emerald-200 bg-emerald-50'
-              : 'border-red-200 bg-red-50'
-          )}>
-            <p className={cn(
-              'text-sm font-medium',
-              isApproved ? 'text-emerald-800' : 'text-red-800'
-            )}>
-              {isApproved ? 'Hyväksytty' : 'Hylätty'}
-            </p>
-            {proposal.votes
-              .filter(v => v.decision === 'reject' && v.comment)
-              .map((v, i) => {
-                const voter = users.find(u => u.id === v.userId)
-                return (
-                  <p key={i} className="mt-2 text-sm text-red-700">
-                    <span className="font-medium">{voter?.name}:</span> {v.comment}
-                  </p>
-                )
-              })}
-          </div>
-        )}
-
-        {/* Cancelled notice */}
-        {isCancelled && (
-          <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
-            <p className="text-sm text-stone-600">
-              Äänestys peruutettu {new Date(proposal.cancelledAt!).toLocaleDateString('fi-FI', {
-                day: 'numeric', month: 'long', year: 'numeric',
-              })}
-            </p>
-          </div>
-        )}
-
-        {/* Cancel button — tekstiryhma only, pending */}
-        {isTekstiryhma && isPending && (
-          <div className="rounded-lg border border-stone-200 bg-white p-4">
-            {showCancelConfirm ? (
-              <div className="space-y-3">
-                <p className="text-sm text-stone-600">
-                  Haluatko varmasti peruuttaa äänestyksen? Teksti palautuu palautteelle-tilaan.
-                </p>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setShowCancelConfirm(false)}>
-                    Ei, älä peruuta
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-red-700"
-                    onClick={handleCancel}
-                  >
-                    Kyllä, peruuta äänestys
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-red-700"
-                onClick={() => setShowCancelConfirm(true)}
-              >
-                Peruuta äänestys
-              </Button>
-            )}
-          </div>
-        )}
       </div>
+
+      {/* Sidebar — verse detail + comments */}
+      {selectedVerse && (
+        <div className="w-96 shrink-0 border-l border-stone-200 bg-white flex flex-col overflow-hidden">
+          <div className="flex-none px-4 py-3 border-b border-stone-200 flex items-center justify-between">
+            <h2 className="font-medium text-stone-800">Jae {selectedVerse.number}</h2>
+            <button onClick={() => setSelectedVerse(null)} className="text-stone-400 hover:text-stone-600">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Current text */}
+            {selectedVerseData && (
+              <div>
+                <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-1">Nykyinen teksti</p>
+                <p className="text-sm text-stone-700 font-serif leading-relaxed">{selectedVerseData.text}</p>
+              </div>
+            )}
+
+            {/* Comments */}
+            <div>
+              <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-2">
+                Kaikki kommentit ({sidebarComments.length})
+              </p>
+              {sidebarComments.length === 0 ? (
+                <p className="text-sm text-stone-400">Ei kommentteja.</p>
+              ) : (
+                <div className="space-y-2">
+                  {sidebarComments.map(c => {
+                    const author = users.find(u => u.id === c.authorId)
+                    const threadLabel = c.thread === 'hallitus' ? 'Hallitus' : c.thread === 'seurantaryhma' ? 'Seurantaryhmä' : 'Tekstiryhmä'
+                    return (
+                      <div key={c.id} className={cn(
+                        'rounded-lg border p-3',
+                        c.thread === 'hallitus' ? 'border-violet-200 bg-violet-50/30' : 'border-stone-200'
+                      )}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-medium text-stone-700">{author?.name ?? 'Tuntematon'}</span>
+                          <span className="text-xs text-stone-400">
+                            {new Date(c.createdAt).toLocaleDateString('fi-FI', { day: 'numeric', month: 'numeric', year: 'numeric' })}
+                          </span>
+                          {c.status === 'kasitelty' && <span className="text-xs text-stone-400 flex items-center gap-0.5"><Check className="h-3 w-3" /> Käsitelty</span>}
+                        </div>
+                        <p className="text-sm text-stone-600">{c.text}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Add comment */}
+            {isHallitus && !isCancelled && (
+              <CommentInput
+                textWorkId={proposal.textWorkId}
+                chapter={selectedVerse.chapter}
+                verseNumber={selectedVerse.number}
+                verseText={selectedVerseData?.text ?? ''}
+                onSubmit={addComment}
+              />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-function InlineCommentInput({ textWorkId, chapter, verseNumber, verseText, onSubmit }: {
+function CommentInput({ textWorkId, chapter, verseNumber, verseText, onSubmit }: {
   textWorkId: string
   chapter: number
   verseNumber: number
@@ -501,65 +553,33 @@ function InlineCommentInput({ textWorkId, chapter, verseNumber, verseText, onSub
   onSubmit: (comment: Omit<CommentType, 'id' | 'createdAt' | 'status'>) => void
 }) {
   const [text, setText] = useState('')
-  const [open, setOpen] = useState(false)
   const currentUserId = useStore(s => s.currentUserId)
 
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="ml-6 mb-2 text-xs text-stone-400 hover:text-violet-600 transition-colors opacity-0 group-hover:opacity-100 flex items-center gap-1"
-      >
-        <MessageSquare className="h-3 w-3" /> Kommentoi
-      </button>
-    )
+  function submit() {
+    if (!text.trim()) return
+    onSubmit({
+      textWorkId,
+      verseAnchor: { chapter, verseStart: verseNumber },
+      verseSnapshot: verseText,
+      authorId: currentUserId,
+      text: text.trim(),
+      thread: 'hallitus',
+    })
+    setText('')
   }
 
   return (
-    <div className="ml-6 mb-3 flex gap-2">
-      <input
-        type="text"
+    <div className="space-y-2">
+      <Textarea
         value={text}
         onChange={e => setText(e.target.value)}
-        onKeyDown={e => {
-          if (e.key === 'Enter' && text.trim()) {
-            onSubmit({
-              textWorkId,
-              verseAnchor: { chapter, verseStart: verseNumber },
-              verseSnapshot: verseText,
-              authorId: currentUserId,
-              text: text.trim(),
-              thread: 'hallitus',
-            })
-            setText('')
-            setOpen(false)
-          }
-          if (e.key === 'Escape') { setText(''); setOpen(false) }
-        }}
+        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && text.trim()) { e.preventDefault(); submit() } }}
         placeholder="Kirjoita kommentti..."
-        className="flex-1 text-sm border border-violet-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-violet-400"
-        autoFocus
+        className="text-sm resize-none min-h-[60px]"
+        rows={2}
       />
-      <Button
-        size="sm"
-        variant="outline"
-        className="text-violet-700 h-7 px-2"
-        disabled={!text.trim()}
-        onClick={() => {
-          if (!text.trim()) return
-          onSubmit({
-            textWorkId,
-            verseAnchor: { chapter, verseStart: verseNumber },
-            verseSnapshot: verseText,
-            authorId: currentUserId,
-            text: text.trim(),
-            thread: 'hallitus',
-          })
-          setText('')
-          setOpen(false)
-        }}
-      >
-        <Send className="h-3.5 w-3.5" />
+      <Button size="sm" disabled={!text.trim()} onClick={submit} className="w-full">
+        <Send className="h-3.5 w-3.5 mr-1" /> Kommentoi
       </Button>
     </div>
   )

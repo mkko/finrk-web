@@ -834,25 +834,27 @@ export const SEED_TEXT_WORKS: TextWork[] = [
 const ALL_VOTERS = ['liukko-arto', 'kaikkonen-sointu', 'mantsinen-matti', 'valimaki-maria', 'ahvenainen-martti', 'kivinen-riku', 'leino-kimmo']
 
 export const SEED_PROPOSALS: Proposal[] = [
-  // tw-3: partial votes (Arto approved, others pending)
+  // tw-3 (Gal): partial votes — Arto approved, 6 pending
   {
     id: 'proposal-tw3',
     textWorkId: 'tw-3',
     snapshotId: 'snapshot-tw3-submission',
     selectedVoters: ALL_VOTERS,
-    rationale: 'Galatalaiskirje on valmis seurantaryhmän palautteen jälkeen. Pyydämme hallituksen hyväksyntää.',
+    selectedVerses: [1, 2, 3, 4, 5, 6, 7],
+    rationale: 'Galatalaiskirjeen luku 1 jakeet 1–7 on käännetty uudelleen. Keskeisimmät muutokset: jae 1 selvennetty apostoliuden alkuperää ja jae 4 "maailmanaika"-termi modernisoitu. Seurantaryhmä on antanut palautteen ja muutokset on käsitelty.',
     votes: [
       { userId: 'liukko-arto', decision: 'approve', createdAt: '2026-04-24T10:00:00Z' },
     ],
     createdAt: '2026-04-22T14:00:00Z',
   },
-  // tw-4: all approved
+  // tw-4 (1 Tess): all approved — resolved proposal
   {
     id: 'proposal-tw4',
     textWorkId: 'tw-4',
     snapshotId: 'snapshot-tw4-submission',
     selectedVoters: ALL_VOTERS,
-    rationale: '1. Tessalonikalaiskirje on valmis käsittelyyn.',
+    selectedVerses: [1, 2, 3, 4, 5],
+    rationale: '1. Tessalonikalaiskirjeen alkutervehdys (jakeet 1–5) on päivitetty. Muutokset koskevat lähinnä sanajärjestystä ja vanhahtavien ilmausten modernisointia. Seurantaryhmän palaute huomioitu ja kaikki avoimet kommentit käsitelty.',
     votes: [
       { userId: 'liukko-arto', decision: 'approve', createdAt: '2026-04-24T14:00:00Z' },
       { userId: 'kaikkonen-sointu', decision: 'approve', createdAt: '2026-04-24T15:00:00Z' },
@@ -1061,7 +1063,13 @@ export const SEED_SNAPSHOTS: Snapshot[] = [
     type: 'submission',
     createdAt: '2026-04-20T12:00:00Z',
     createdBy: 'peltola-kimmo',
-    verseTexts: [{ chapter: 1, number: 1, text: '1. Tessalonikalaiskirje jae 1 (tiivistelmä).' }],
+    verseTexts: [
+      { chapter: 1, number: 1, text: 'Paavali, Silvanus ja Timoteus Tessalonikan seurakunnalle, joka on Isässä Jumalassa ja Herrassa Jeesuksessa Kristuksessa. Armo teille ja rauha.' },
+      { chapter: 1, number: 2, text: 'Me kiitämme Jumalaa aina teidän kaikkien tähden ja muistamme teitä rukouksissamme lakkaamatta.' },
+      { chapter: 1, number: 3, text: 'Me muistamme Jumalamme ja Isämme edessä lakkaamatta teidän uskon työtänne, rakkautenne vaivannäköä ja toivonne kestävyyttä meidän Herrassamme Jeesuksessa Kristuksessa.' },
+      { chapter: 1, number: 4, text: 'Me tiedämme, Jumalan rakkamat veljet, että teidät on valittu,' },
+      { chapter: 1, number: 5, text: 'sillä meidän evankeliumimme ei tullut teidän luoksenne ainoastaan sanoin, vaan myös voimassa ja Pyhässä Hengessä ja täydessä varmuudessa — tiedättehän, millaisiksi me tulimme teidän keskuudessanne teidän tähtenne.' },
+    ],
     footnoteTexts: [],
     sectionHeaderTexts: [],
   },

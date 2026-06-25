@@ -78,6 +78,7 @@ export interface Proposal {
 
 export interface Comment {
   id: string
+  parentId?: string
   textWorkId: string
   verseAnchor: { chapter: number; verseStart: number; verseEnd?: number }
   verseSnapshot: string

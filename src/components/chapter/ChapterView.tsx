@@ -188,7 +188,7 @@ export function ChapterView() {
                     : 'text-stone-400 hover:text-stone-600'
                 )}
               >
-                Julkaistu
+                Nykyinen
               </button>
               {canSeeHistory && (
                 <button

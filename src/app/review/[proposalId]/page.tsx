@@ -64,12 +64,13 @@ export default function ReviewPage() {
   const changedSet = new Set<string>()
   const contextSet = new Set<string>()
 
-  // Find changed verses
+  // Find changed verses — compare against baseText for resolved proposals
+  // (approvedText gets updated on acceptance, making the diff empty)
   const diffMap = new Map<string, { oldText: string; newText: string }>()
   for (const sv of snapshotVerses) {
     const key = `${sv.chapter}:${sv.number}`
     const currentVerse = verses.find(v => v.chapter === sv.chapter && v.number === sv.number)
-    const oldText = currentVerse?.approvedText ?? ''
+    const oldText = isResolved ? (currentVerse?.baseText ?? '') : (currentVerse?.approvedText ?? '')
     if (oldText !== sv.text) {
       changedSet.add(key)
       diffMap.set(key, { oldText, newText: sv.text })
@@ -94,12 +95,15 @@ export default function ReviewPage() {
   const displayItems: (DisplayVerse | DisplaySep)[] = []
   let lastIdx = -2
 
+  // If no changes found (e.g. all text identical), show all snapshot verses
+  const showAll = changedSet.size === 0
+
   for (let i = 0; i < snapshotVerses.length; i++) {
     const sv = snapshotVerses[i]
     const key = `${sv.chapter}:${sv.number}`
     const isChanged = changedSet.has(key)
     const isContext = contextSet.has(key)
-    if (!isChanged && !isContext) continue
+    if (!showAll && !isChanged && !isContext) continue
 
     if (lastIdx >= 0 && i - lastIdx > 1) {
       displayItems.push({ type: 'separator' })

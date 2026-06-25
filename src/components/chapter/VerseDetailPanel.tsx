@@ -59,8 +59,9 @@ function PanelContent({ chapter, verseNumber, textWorkId, focusCommentId, onFocu
     if (isTekstiRyhma) return true // sees all threads
     return c.thread === commentThread
   })
-  const openComments = allVisible.filter(c => c.status === 'avoin')
-  const resolvedComments = allVisible.filter(c => c.status === 'kasitelty')
+  const rootComments = allVisible.filter(c => !c.parentId)
+  const openComments = rootComments.filter(c => c.status === 'avoin')
+  const resolvedComments = rootComments.filter(c => c.status === 'kasitelty')
 
   // Merkintä (highlights) - only for tekstiryhma
   const verseHighlights = isTekstiRyhma
@@ -198,7 +199,7 @@ function PanelContent({ chapter, verseNumber, textWorkId, focusCommentId, onFocu
 
         {(allVisible.length > 0 || canComment) && <Separator />}
 
-        {/* Focused single-comment view */}
+        {/* Focused single-comment view with replies */}
         {focusedComment ? (
           <div className="space-y-3">
             <button
@@ -214,6 +215,27 @@ function PanelContent({ chapter, verseNumber, textWorkId, focusCommentId, onFocu
               onResolve={focusedComment.status === 'avoin' ? () => resolveComment(focusedComment.id) : undefined}
               resolved={focusedComment.status === 'kasitelty'}
             />
+            {/* Replies */}
+            {allVisible
+              .filter(c => c.parentId === focusedComment.id)
+              .map(reply => (
+                <div key={reply.id} className="ml-4 border-l-2 border-stone-200 pl-3">
+                  <CommentCard comment={reply} users={users} resolved={reply.status === 'kasitelty'} />
+                </div>
+              ))
+            }
+            {/* Reply input */}
+            {canComment && textWorkId && (
+              <ReplyInput
+                textWorkId={textWorkId}
+                parentId={focusedComment.id}
+                verseAnchor={focusedComment.verseAnchor}
+                verseSnapshot={focusedComment.verseSnapshot}
+                authorId={currentUser.id}
+                thread={commentThread as 'tekstiryhma' | 'seurantaryhma' | 'hallitus'}
+                onSubmit={addComment}
+              />
+            )}
           </div>
         ) : (
           <>
@@ -221,7 +243,7 @@ function PanelContent({ chapter, verseNumber, textWorkId, focusCommentId, onFocu
             {allVisible.length > 0 && (
               <div className="space-y-3">
                 <h3 className="text-xs font-medium text-stone-500 uppercase tracking-wide">
-                  Kommentit ({allVisible.length})
+                  Kommentit ({rootComments.length})
                 </h3>
                 {openComments.map(comment => (
                   <CommentCard
@@ -340,6 +362,46 @@ function CommentCard({
           Käsitellyt: {resolver.name}, {formatDate(comment.resolvedAt)}
         </p>
       )}
+    </div>
+  )
+}
+
+function ReplyInput({ textWorkId, parentId, verseAnchor, verseSnapshot, authorId, thread, onSubmit }: {
+  textWorkId: string
+  parentId: string
+  verseAnchor: { chapter: number; verseStart: number }
+  verseSnapshot: string
+  authorId: string
+  thread: 'tekstiryhma' | 'seurantaryhma' | 'hallitus'
+  onSubmit: (comment: Omit<Comment, 'id' | 'createdAt' | 'status'>) => void
+}) {
+  const [text, setText] = useState('')
+  return (
+    <div className="ml-4 space-y-1.5">
+      <textarea
+        value={text}
+        onChange={e => setText(e.target.value)}
+        placeholder="Vastaa..."
+        className="w-full text-sm border border-stone-200 rounded-md px-2.5 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-stone-400"
+        rows={2}
+        onKeyDown={e => {
+          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && text.trim()) {
+            onSubmit({ parentId, textWorkId, verseAnchor, verseSnapshot, authorId, text: text.trim(), thread })
+            setText('')
+          }
+        }}
+      />
+      <button
+        onClick={() => {
+          if (!text.trim()) return
+          onSubmit({ parentId, textWorkId, verseAnchor, verseSnapshot, authorId, text: text.trim(), thread })
+          setText('')
+        }}
+        disabled={!text.trim()}
+        className="text-xs rounded-md bg-stone-800 text-white px-3 py-1 hover:bg-stone-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+      >
+        Vastaa
+      </button>
     </div>
   )
 }

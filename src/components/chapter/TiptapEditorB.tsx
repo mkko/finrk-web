@@ -256,9 +256,16 @@ function buildDecos(doc: any, verses: Verse[]): DecorationSet {
 
     seen.add(key)
 
-    // Original-text widget — only when verse text differs from base
+    // Changed verse highlight + original-text widget
+    // Compare first line only since multiline verses are split across paragraphs
     const verse = verses.find(v => v.chapter === currentChapter && v.number === verseNum)
-    if (verse && body.trim() !== verse.baseText) {
+    const baseFirstLine = verse?.baseText.split('\n')[0] ?? ''
+    const isChanged = verse && body.trim() !== baseFirstLine.trim()
+    if (isChanged) {
+      // Green background highlight for changed text
+      decorations.push(Decoration.node(pos, pos + node.nodeSize, {
+        style: 'background: rgba(187, 247, 208, 0.3); border-radius: 2px;',
+      }))
       decorations.push(
         Decoration.widget(pos, () => createOriginalWidget(verseNum, verse.baseText), {
           side: -1,

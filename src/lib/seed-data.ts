@@ -771,159 +771,33 @@ export const SEED_TEXT_WORKS: TextWork[] = [
   {
     id: 'tw-1',
     scope: { book: 'Phil' },
-    status: 'luonnos',
-    statusChangedAt: '2026-04-16T09:00:00Z',
-    publishedForFeedbackAt: '2026-04-12T10:00:00Z',
-  },
-  {
-    id: 'tw-2',
-    scope: { book: 'Col' },
-    status: 'julkaistu_palautteelle',
-    statusChangedAt: '2026-04-18T10:00:00Z',
-    publishedForFeedbackAt: '2026-04-18T10:00:00Z',
-  },
-  {
-    id: 'tw-3',
-    scope: { book: 'Gal' },
     status: 'lahetetty_hallitukselle',
     statusChangedAt: '2026-04-22T14:00:00Z',
-    publishedForFeedbackAt: '2026-04-15T09:00:00Z',
+    publishedForFeedbackAt: '2026-04-12T10:00:00Z',
     submittedToHallitusAt: '2026-04-22T14:00:00Z',
-    submissionProposalId: 'proposal-tw3',
-  },
-  {
-    id: 'tw-4',
-    scope: { book: '1Thess' },
-    status: 'hyvaksytty',
-    statusChangedAt: '2026-04-25T16:00:00Z',
-    publishedForFeedbackAt: '2026-04-10T09:00:00Z',
-    submittedToHallitusAt: '2026-04-20T12:00:00Z',
-    submissionProposalId: 'proposal-tw4',
+    submissionProposalId: 'proposal-fil-ch1',
   },
 ]
 
 const ALL_VOTERS = ['liukko-arto', 'kaikkonen-sointu', 'mantsinen-matti', 'valimaki-maria', 'ahvenainen-martti', 'kivinen-riku', 'leino-kimmo']
 
 export const SEED_PROPOSALS: Proposal[] = [
-  // tw-3 (Gal): partial votes — Arto approved, 6 pending
+  // Fil ch 1 jakeet 1–7: pending, Arto has voted
   {
-    id: 'proposal-tw3',
-    textWorkId: 'tw-3',
-    snapshotId: 'snapshot-tw3-submission',
+    id: 'proposal-fil-ch1',
+    textWorkId: 'tw-1',
+    snapshotId: 'snapshot-fil-submission-ch1',
     selectedVoters: ALL_VOTERS,
     selectedVerses: [1, 2, 3, 4, 5, 6, 7],
-    rationale: 'Galatalaiskirjeen luku 1 jakeet 1–7 on käännetty uudelleen. Keskeisimmät muutokset: jae 1 selvennetty apostoliuden alkuperää ja jae 4 "maailmanaika"-termi modernisoitu. Seurantaryhmä on antanut palautteen ja muutokset on käsitelty.',
+    rationale: 'Filippiläiskirjeen alkutervehdys (jakeet 1–7) on käännetty uudelleen. Keskeisimmät muutokset: jae 1 selvennetty palvelijoiden roolia ja jae 6 "hyvän työn" ilmaisua tarkennettu. Seurantaryhmä on antanut palautteen ja muutokset on käsitelty.',
     votes: [
       { userId: 'liukko-arto', decision: 'approve', createdAt: '2026-04-24T10:00:00Z' },
     ],
     createdAt: '2026-04-22T14:00:00Z',
   },
-  // tw-4 (1 Tess): all approved — resolved proposal
-  {
-    id: 'proposal-tw4',
-    textWorkId: 'tw-4',
-    snapshotId: 'snapshot-tw4-submission',
-    selectedVoters: ALL_VOTERS,
-    selectedVerses: [1, 2, 3, 4, 5],
-    rationale: '1. Tessalonikalaiskirjeen alkutervehdys (jakeet 1–5) on päivitetty. Muutokset koskevat lähinnä sanajärjestystä ja vanhahtavien ilmausten modernisointia. Seurantaryhmän palaute huomioitu ja kaikki avoimet kommentit käsitelty.',
-    votes: [
-      { userId: 'liukko-arto', decision: 'approve', createdAt: '2026-04-24T14:00:00Z' },
-      { userId: 'kaikkonen-sointu', decision: 'approve', createdAt: '2026-04-24T15:00:00Z' },
-      { userId: 'mantsinen-matti', decision: 'approve', createdAt: '2026-04-24T16:00:00Z' },
-      { userId: 'valimaki-maria', decision: 'approve', createdAt: '2026-04-25T09:00:00Z' },
-      { userId: 'ahvenainen-martti', decision: 'approve', createdAt: '2026-04-25T10:00:00Z' },
-      { userId: 'kivinen-riku', decision: 'approve', createdAt: '2026-04-25T14:00:00Z' },
-      { userId: 'leino-kimmo', decision: 'approve', createdAt: '2026-04-25T16:00:00Z' },
-    ],
-    createdAt: '2026-04-20T12:00:00Z',
-    resolvedAt: '2026-04-25T16:00:00Z',
-  },
 ]
 
-export const SEED_COMMENTS: Comment[] = [
-  // tw-2: seurantaryhmä comments on chapter 3
-  {
-    id: 'comment-s1',
-    textWorkId: 'tw-2',
-    verseAnchor: { chapter: 4, verseStart: 1 },
-    verseSnapshot: 'Fil. 3:1 teksti.',
-    authorId: 'seurantaryhma-a',
-    text: 'Aloituksen sanajärjestys voisi olla luontevampi.',
-    thread: 'seurantaryhma',
-    status: 'avoin',
-    createdAt: '2026-04-19T09:00:00Z',
-  },
-  {
-    id: 'comment-s2',
-    textWorkId: 'tw-2',
-    verseAnchor: { chapter: 4, verseStart: 3 },
-    verseSnapshot: 'Fil. 3:3 teksti.',
-    authorId: 'seurantaryhma-b',
-    text: 'Kreikan sanan vivahde ei välity tässä muotoilussa.',
-    thread: 'seurantaryhma',
-    status: 'avoin',
-    createdAt: '2026-04-19T14:00:00Z',
-  },
-  {
-    id: 'comment-s3',
-    textWorkId: 'tw-2',
-    verseAnchor: { chapter: 4, verseStart: 5 },
-    verseSnapshot: 'Fil. 3:5 teksti.',
-    authorId: 'seurantaryhma-a',
-    text: 'Hyvä muotoilu, ei huomautettavaa.',
-    thread: 'seurantaryhma',
-    status: 'kasitelty',
-    resolvedBy: 'leino-kimmo',
-    resolvedAt: '2026-04-20T08:00:00Z',
-    createdAt: '2026-04-19T15:00:00Z',
-  },
-  // tw-3 (Gal): comments for hallitus review demo
-  {
-    id: 'comment-g1',
-    textWorkId: 'tw-3',
-    verseAnchor: { chapter: 1, verseStart: 1 },
-    verseSnapshot: 'ei ihmisten valitsema eikä ihmisen lähettämä',
-    authorId: 'peltola-kimmo',
-    text: '"Ei ihmisten valitsema" — kreikassa painotus on negaatiossa, käännös voisi olla napakampi.',
-    thread: 'tekstiryhma',
-    status: 'avoin',
-    createdAt: '2026-04-21T10:00:00Z',
-  },
-  {
-    id: 'comment-g2',
-    textWorkId: 'tw-3',
-    verseAnchor: { chapter: 1, verseStart: 4 },
-    verseSnapshot: 'nykyisestä pahasta maailmanajasta',
-    authorId: 'seurantaryhma-a',
-    text: '"Maailmanaika" on epätavallinen sana — olisiko "aikakausi" selkeämpi lukijalle?',
-    thread: 'seurantaryhma',
-    status: 'avoin',
-    createdAt: '2026-04-21T14:00:00Z',
-  },
-  // tw-1: tekstiryhma comments on chapter 4
-  {
-    id: 'comment-t1',
-    textWorkId: 'tw-1',
-    verseAnchor: { chapter: 4, verseStart: 7 },
-    verseSnapshot: 'ja Jumalan rauha, joka ylittää kaiken ymmärryksen, varjelee teidän sydämenne ja ajatuksenne Kristuksessa Jeesuksessa.',
-    authorId: 'peltola-kimmo',
-    text: '"Ylittää kaiken ymmärryksen" \u2014 onko tämä parempi kuin "on kaikkea ymmärrystä ylempi"? Molemmat toimivat.',
-    thread: 'tekstiryhma',
-    status: 'avoin',
-    createdAt: '2026-04-17T11:00:00Z',
-  },
-  {
-    id: 'comment-t2',
-    textWorkId: 'tw-1',
-    verseAnchor: { chapter: 4, verseStart: 11 },
-    verseSnapshot: 'En sano tätä puutteen vuoksi, sillä olen oppinut tulemaan toimeen kulloisessakin tilanteessani.',
-    authorId: 'leino-kimmo',
-    text: '"Tulemaan toimeen kulloisessakin tilanteessani" on pitkä \u2014 "tyytymään oloihini" on tiiviimpi ja perinteisempi.',
-    thread: 'tekstiryhma',
-    status: 'avoin',
-    createdAt: '2026-04-19T09:15:00Z',
-  },
-]
+export const SEED_COMMENTS: Comment[] = []
 
 export const SEED_MERKINNAT: Merkinta[] = [
   {
@@ -1006,82 +880,55 @@ export const SEED_SNAPSHOTS: Snapshot[] = [
     createdBy: 'leino-kimmo',
     ...snapshotFromVerses(SEED_VERSES),
   },
-  // Submission snapshot for tw-3
+  // Submission snapshot — Fil ch 1 jakeet 1–7
   {
-    id: 'snapshot-tw3-submission',
-    textWorkId: 'tw-3',
+    id: 'snapshot-fil-submission-ch1',
+    textWorkId: 'tw-1',
     type: 'submission',
     createdAt: '2026-04-22T14:00:00Z',
     createdBy: 'leino-kimmo',
-    verseTexts: [
-      { chapter: 1, number: 1, text: 'Paavali, apostoli — ei ihmisten valitsema eikä ihmisen lähettämä, vaan Jeesuksen Kristuksen ja Isän Jumalan, joka herätti hänet kuolleista —' },
-      { chapter: 1, number: 2, text: 'ja kaikki kanssani olevat veljet, Galatian seurakunnille.' },
-      { chapter: 1, number: 3, text: 'Armo teille ja rauha Jumalalta, meidän Isältämme, ja Herralta Jeesukselta Kristukselta,' },
-      { chapter: 1, number: 4, text: 'joka antoi itsensä meidän syntiemme tähden, pelastaakseen meidät nykyisestä pahasta maailmanajasta meidän Jumalamme ja Isämme tahdon mukaan.' },
-      { chapter: 1, number: 5, text: 'Hänelle kunnia aina ja iankaikkisesti. Aamen.' },
-      { chapter: 1, number: 6, text: 'Minä ihmettelen, että te niin pian käännytte pois hänestä, joka on kutsunut teidät Kristuksen armosta, toisen evankeliumin puoleen,' },
-      { chapter: 1, number: 7, text: 'vaikka mitään toista evankeliumia ei ole. On vain muutamia, jotka hämmentävät teitä ja tahtovat vääristää Kristuksen evankeliumin.' },
-    ],
-    footnoteTexts: [],
-    sectionHeaderTexts: [],
-  },
-  // Submission snapshot for tw-4
-  {
-    id: 'snapshot-tw4-submission',
-    textWorkId: 'tw-4',
-    type: 'submission',
-    createdAt: '2026-04-20T12:00:00Z',
-    createdBy: 'peltola-kimmo',
-    verseTexts: [
-      { chapter: 1, number: 1, text: 'Paavali, Silvanus ja Timoteus Tessalonikan seurakunnalle, joka on Isässä Jumalassa ja Herrassa Jeesuksessa Kristuksessa. Armo teille ja rauha.' },
-      { chapter: 1, number: 2, text: 'Me kiitämme Jumalaa aina teidän kaikkien tähden ja muistamme teitä rukouksissamme lakkaamatta.' },
-      { chapter: 1, number: 3, text: 'Me muistamme Jumalamme ja Isämme edessä lakkaamatta teidän uskon työtänne, rakkautenne vaivannäköä ja toivonne kestävyyttä meidän Herrassamme Jeesuksessa Kristuksessa.' },
-      { chapter: 1, number: 4, text: 'Me tiedämme, Jumalan rakkamat veljet, että teidät on valittu,' },
-      { chapter: 1, number: 5, text: 'sillä meidän evankeliumimme ei tullut teidän luoksenne ainoastaan sanoin, vaan myös voimassa ja Pyhässä Hengessä ja täydessä varmuudessa — tiedättehän, millaisiksi me tulimme teidän keskuudessanne teidän tähtenne.' },
-    ],
-    footnoteTexts: [],
-    sectionHeaderTexts: [],
+    verseTexts: SEED_VERSES.filter(v => v.chapter === 1 && v.number <= 7).map(v => ({
+      chapter: v.chapter, number: v.number, text: v.text,
+    })),
+    footnoteTexts: SEED_VERSES.filter(v => v.chapter === 1 && v.number <= 7).flatMap(v =>
+      (v.footnotes ?? []).map(fn => ({ chapter: v.chapter, verse: v.number, marker: fn.marker, text: fn.text }))
+    ),
+    sectionHeaderTexts: SEED_VERSES.filter(v => v.chapter === 1 && v.number <= 7 && v.sectionHeader).map(v => ({
+      chapter: v.chapter, verse: v.number, text: v.sectionHeader!,
+    })),
   },
 ]
 
 export const SEED_ACTIVITY: ActivityEntry[] = [
   {
+    id: 'act-1',
+    timestamp: '2026-04-24T10:00:00Z',
+    userId: 'liukko-arto',
+    textWorkId: 'tw-1',
+    action: 'Äänestetty',
+    detail: 'Äänesti hyväksymisen puolesta',
+  },
+  {
     id: 'act-2',
-    timestamp: '2026-04-25T16:00:00Z',
-    userId: 'kaikkonen-sointu',
-    textWorkId: 'tw-4',
-    action: 'Hyväksytty',
-    detail: 'Hallitus hyväksyi tekstin',
+    timestamp: '2026-04-22T14:00:00Z',
+    userId: 'leino-kimmo',
+    textWorkId: 'tw-1',
+    action: 'Lähetetty hallitukselle',
+    detail: 'Teksti lähetetty hallituksen käsiteltäväksi',
   },
   {
     id: 'act-3',
-    timestamp: '2026-04-24T10:00:00Z',
-    userId: 'liukko-arto',
-    textWorkId: 'tw-3',
-    action: 'Äänestetty',
-    detail: 'Ääni annettu',
+    timestamp: '2026-04-14T17:00:00Z',
+    userId: 'leino-kimmo',
+    textWorkId: 'tw-1',
+    action: 'Tilannekuva',
+    detail: 'Ensimmäinen luonnoskierros tallennettu',
   },
   {
     id: 'act-4',
-    timestamp: '2026-04-22T14:00:00Z',
+    timestamp: '2026-04-12T10:00:00Z',
     userId: 'leino-kimmo',
-    textWorkId: 'tw-3',
-    action: 'Lähetetty hallitukselle',
-    detail: 'Teksti lähetetty hallituksen äänestettäväksi',
-  },
-  {
-    id: 'act-5',
-    timestamp: '2026-04-19T09:00:00Z',
-    userId: 'seurantaryhma-a',
-    textWorkId: 'tw-2',
-    action: 'Uusi kommentti',
-    detail: 'Kommentti lisätty',
-  },
-  {
-    id: 'act-6',
-    timestamp: '2026-04-18T10:00:00Z',
-    userId: 'leino-kimmo',
-    textWorkId: 'tw-2',
+    textWorkId: 'tw-1',
     action: 'Julkaistu palautteelle',
     detail: 'Teksti julkaistu seurantaryhmälle palautekierrokselle',
   },

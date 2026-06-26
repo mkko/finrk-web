@@ -48,12 +48,12 @@ export function UserSelectionModal({ open, onClose, dismissable = true }: UserSe
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v && dismissable) onClose() }}>
-      <DialogContent className="sm:max-w-lg" showCloseButton={dismissable}>
-        <DialogHeader>
+      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col" showCloseButton={dismissable}>
+        <DialogHeader className="shrink-0">
           <DialogTitle>Valitse käyttäjä</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 py-2">
+        <div className="space-y-5 py-2 overflow-y-auto min-h-0">
           {ROLE_ORDER.map(role => {
             const roleUsers = users.filter(u => u.roles.includes(role))
             if (roleUsers.length === 0) return null
@@ -86,7 +86,7 @@ export function UserSelectionModal({ open, onClose, dismissable = true }: UserSe
           })}
         </div>
 
-        <div className="flex items-center gap-2 pt-2 border-t border-stone-200">
+        <div className="shrink-0 flex items-center gap-2 pt-2 border-t border-stone-200">
           <Button
             variant="outline"
             size="sm"

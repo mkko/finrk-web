@@ -245,10 +245,9 @@ export const useStore = create<AppState>()(
           const tw = state.textWorks.find(t => t.id === proposal.textWorkId)
           if (!tw || tw.status !== 'lahetetty_hallitukselle') return state
 
-          // Must be a selected voter
+          // Must be a board member
           const voter = state.users.find(u => u.id === state.currentUserId)
           if (!voter || !voter.roles.includes('hallitus')) return state
-          if (!proposal.selectedVoters.includes(state.currentUserId)) return state
 
           // No duplicate votes
           if (proposal.votes.some(v => v.userId === state.currentUserId)) return state
@@ -261,42 +260,51 @@ export const useStore = create<AppState>()(
           }
           const updatedVotes = [...proposal.votes, newVote]
 
-          // Single rejection resolves immediately
-          let newTwStatus: TextWorkStatus | null = null
-          if (decision === 'reject') {
-            newTwStatus = 'hylatty'
-          } else {
-            const allSelectedVoted = proposal.selectedVoters.every(
-              voterId => updatedVotes.some(v => v.userId === voterId)
-            )
-            if (allSelectedVoted) {
-              const allApproved = updatedVotes.every(v => v.decision === 'approve')
-              newTwStatus = allApproved ? 'hyvaksytty' : 'hylatty'
-            }
-          }
-
-          // When approved, update approvedText for verses in the proposal's snapshot
-          const snapshot = newTwStatus === 'hyvaksytty'
-            ? state.snapshots.find(s => s.id === proposal.snapshotId)
-            : null
-
+          // Votes are advisory — resolution happens via approveProposal
           return {
             proposals: state.proposals.map(p =>
               p.id === proposalId
-                ? {
-                    ...p,
-                    votes: updatedVotes,
-                    ...(newTwStatus ? { resolvedAt: now } : {}),
-                  }
+                ? { ...p, votes: updatedVotes }
                 : p
             ),
-            textWorks: newTwStatus
-              ? state.textWorks.map(t =>
-                  t.id === proposal.textWorkId
-                    ? { ...t, status: newTwStatus!, statusChangedAt: now }
-                    : t
-                )
-              : state.textWorks,
+            activity: [
+              {
+                id: `act-${Date.now()}`,
+                timestamp: now,
+                userId: state.currentUserId,
+                textWorkId: proposal.textWorkId,
+                action: 'Äänestetty',
+                detail: decision === 'approve' ? 'Kannattaa ehdotusta' : 'Vastustaa ehdotusta',
+              },
+              ...state.activity,
+            ],
+          }
+        })
+      },
+
+      approveProposal: (proposalId: string) => {
+        const now = new Date().toISOString()
+        set(state => {
+          const proposal = state.proposals.find(p => p.id === proposalId)
+          if (!proposal || proposal.resolvedAt || proposal.cancelledAt) return state
+
+          const tw = state.textWorks.find(t => t.id === proposal.textWorkId)
+          if (!tw || tw.status !== 'lahetetty_hallitukselle') return state
+
+          const voter = state.users.find(u => u.id === state.currentUserId)
+          if (!voter || !voter.roles.includes('hallitus')) return state
+
+          const snapshot = state.snapshots.find(s => s.id === proposal.snapshotId)
+
+          return {
+            proposals: state.proposals.map(p =>
+              p.id === proposalId ? { ...p, resolvedAt: now } : p
+            ),
+            textWorks: state.textWorks.map(t =>
+              t.id === proposal.textWorkId
+                ? { ...t, status: 'hyvaksytty' as TextWorkStatus, statusChangedAt: now }
+                : t
+            ),
             verses: snapshot
               ? state.verses.map(v => {
                   const sv = snapshot.verseTexts.find(sv => sv.chapter === v.chapter && sv.number === v.number)
@@ -309,14 +317,55 @@ export const useStore = create<AppState>()(
                 timestamp: now,
                 userId: state.currentUserId,
                 textWorkId: proposal.textWorkId,
-                action: newTwStatus === 'hyvaksytty'
-                  ? 'Hyväksytty'
-                  : newTwStatus === 'hylatty'
-                    ? 'Hylätty'
-                    : 'Äänestetty',
-                detail: newTwStatus === 'hyvaksytty' ? 'Hallitus hyväksyi tekstin'
-                  : newTwStatus === 'hylatty' ? 'Hallitus hylkäsi tekstin'
-                  : 'Ääni annettu',
+                action: 'Hyväksytty',
+                detail: `${voter.name} hyväksyi ehdotuksen hallituksen puolesta`,
+              },
+              ...state.activity,
+            ],
+          }
+        })
+      },
+
+      rejectProposal: (proposalId: string, reason: string) => {
+        const now = new Date().toISOString()
+        set(state => {
+          const proposal = state.proposals.find(p => p.id === proposalId)
+          if (!proposal || proposal.resolvedAt || proposal.cancelledAt) return state
+
+          const tw = state.textWorks.find(t => t.id === proposal.textWorkId)
+          if (!tw || tw.status !== 'lahetetty_hallitukselle') return state
+
+          const voter = state.users.find(u => u.id === state.currentUserId)
+          if (!voter || !voter.roles.includes('hallitus')) return state
+
+          // Add a reject vote with the reason, then resolve
+          const rejectVote = {
+            userId: state.currentUserId,
+            decision: 'reject' as const,
+            comment: reason,
+            createdAt: now,
+          }
+          const existingVotes = proposal.votes.filter(v => v.userId !== state.currentUserId)
+
+          return {
+            proposals: state.proposals.map(p =>
+              p.id === proposalId
+                ? { ...p, votes: [...existingVotes, rejectVote], resolvedAt: now }
+                : p
+            ),
+            textWorks: state.textWorks.map(t =>
+              t.id === proposal.textWorkId
+                ? { ...t, status: 'hylatty' as TextWorkStatus, statusChangedAt: now }
+                : t
+            ),
+            activity: [
+              {
+                id: `act-${Date.now()}`,
+                timestamp: now,
+                userId: state.currentUserId,
+                textWorkId: proposal.textWorkId,
+                action: 'Hylätty',
+                detail: `${voter.name} hylkäsi ehdotuksen: ${reason}`,
               },
               ...state.activity,
             ],

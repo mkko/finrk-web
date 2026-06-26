@@ -57,8 +57,8 @@ export default function HallitusPage() {
     if (!tw) return null
 
     const isResolved = !!proposal.resolvedAt
-    const isApproved = isResolved && proposal.votes.every(v => v.decision === 'approve')
-    const isRejected = isResolved && !isApproved
+    const isApproved = isResolved && tw.status === 'hyvaksytty'
+    const isRejected = isResolved && tw.status === 'hylatty'
     const myVote = proposal.votes.find(v => v.userId === currentUserId)
 
     const verseLabel = proposal.selectedVerses && proposal.selectedVerses.length > 0
@@ -127,7 +127,7 @@ export default function HallitusPage() {
           {!isResolved && myVote && (
             <p className="text-xs text-violet-600 flex items-center gap-1">
               <Check className="h-3 w-3" />
-              Olet äänestänyt: {myVote.decision === 'approve' ? 'Hyväksy' : 'Hylkää'}
+              Olet äänestänyt: {myVote.decision === 'approve' ? 'Kannatan' : 'Vastustan'}
             </p>
           )}
         </div>

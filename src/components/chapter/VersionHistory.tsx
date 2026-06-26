@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
-import type { Snapshot, Proposal } from '@/lib/types'
+import type { Snapshot, Proposal, TextWork } from '@/lib/types'
 
 interface Props {
   textWorkId: string
@@ -16,6 +16,7 @@ type TimelineEntry =
 function getMilestoneInfo(
   snapshot: Snapshot,
   proposals: Proposal[],
+  textWorks: TextWork[],
 ): { label: string; color: 'green' | 'violet' | 'red' } | null {
   if (snapshot.type === 'publication') {
     return { label: snapshot.name ?? 'Pohjaversio', color: 'green' }
@@ -27,8 +28,8 @@ function getMilestoneInfo(
 
     if (proposal.cancelledAt) return null // cancelled submissions hidden
     if (proposal.resolvedAt) {
-      const allApproved = proposal.votes.every(v => v.decision === 'approve')
-      return allApproved
+      const tw = textWorks.find(t => t.id === proposal.textWorkId)
+      return tw?.status === 'hyvaksytty'
         ? { label: 'Hyväksytty', color: 'green' }
         : { label: 'Hylätty', color: 'red' }
     }
@@ -41,6 +42,7 @@ function getMilestoneInfo(
 export function VersionHistory({ textWorkId }: Props) {
   const snapshots = useStore(s => s.snapshots)
   const proposals = useStore(s => s.proposals)
+  const textWorks = useStore(s => s.textWorks)
   const users = useStore(s => s.users)
 
   const timeline = useMemo(() => {
@@ -50,7 +52,7 @@ export function VersionHistory({ textWorkId }: Props) {
     const entries: TimelineEntry[] = []
 
     for (const snap of workSnapshots) {
-      const milestoneInfo = getMilestoneInfo(snap, workProposals)
+      const milestoneInfo = getMilestoneInfo(snap, workProposals, textWorks)
       if (milestoneInfo) {
         entries.push({ kind: 'milestone', snapshot: snap, ...milestoneInfo })
       } else if (snap.type === 'internal') {
@@ -65,7 +67,7 @@ export function VersionHistory({ textWorkId }: Props) {
     )
 
     return entries
-  }, [snapshots, proposals, textWorkId])
+  }, [snapshots, proposals, textWorks, textWorkId])
 
   // Find the nearest preceding milestone for diff base
   function findDiffBase(entryIndex: number): Snapshot | null {

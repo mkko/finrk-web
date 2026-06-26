@@ -178,6 +178,8 @@ export interface AppState {
   updateTextWorkStatus: (textWorkId: string, newStatus: TextWorkStatus) => void
   submitToHallitus: (textWorkId: string, selectedVoters: string[], rationale: string, selectedVerses?: number[]) => void
   castVote: (proposalId: string, decision: 'approve' | 'reject', comment?: string) => void
+  approveProposal: (proposalId: string) => void
+  rejectProposal: (proposalId: string, reason: string) => void
   cancelProposal: (proposalId: string) => void
   updateSelectedVoters: (proposalId: string, voterIds: string[]) => void
   addComment: (comment: Omit<Comment, 'id' | 'createdAt' | 'status'>) => void

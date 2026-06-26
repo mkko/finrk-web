@@ -17,7 +17,7 @@ export default function ReviewPage() {
   const params = useParams()
   const proposalId = params.proposalId as string
 
-  const { proposals, textWorks, users, verses, snapshots, comments, currentUserId, castVote, cancelProposal, updateSelectedVoters, addComment } = useStore()
+  const { proposals, textWorks, users, verses, snapshots, comments, currentUserId, castVote, approveProposal, rejectProposal, cancelProposal, updateSelectedVoters, addComment } = useStore()
   const currentUser = users.find(u => u.id === currentUserId)
   if (!currentUser) return null
 
@@ -53,10 +53,10 @@ export default function ReviewPage() {
   const currentUserVote = proposal.votes.find(v => v.userId === currentUserId)
   const isResolved = !!proposal.resolvedAt
   const isCancelled = !!proposal.cancelledAt
-  const isApproved = isResolved && proposal.votes.every(v => v.decision === 'approve')
-  const isRejected = isResolved && !isApproved
+  const isApproved = isResolved && tw.status === 'hyvaksytty'
+  const isRejected = isResolved && tw.status === 'hylatty'
   const isPending = !isResolved && !isCancelled && tw.status === 'lahetetty_hallitukselle'
-  const canVote = isHallitus && isPending && !currentUserVote && proposal.selectedVoters.includes(currentUserId)
+  const canVote = isHallitus && isPending && !currentUserVote
 
   // Build diff data with context
   const CONTEXT_LINES = 2
@@ -139,7 +139,7 @@ export default function ReviewPage() {
 
   function handleReject() {
     if (rejectText.trim()) {
-      castVote(proposalId, 'reject', rejectText.trim())
+      rejectProposal(proposalId, rejectText.trim())
       setRejectText('')
       setShowReject(false)
     }
@@ -380,7 +380,7 @@ export default function ReviewPage() {
                     vote.decision === 'approve' ? 'text-emerald-700' : 'text-red-700'
                   )}>
                     {vote.decision === 'approve' ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
-                    {vote.decision === 'approve' ? 'Hyväksy' : 'Hylkää'}
+                    {vote.decision === 'approve' ? 'Kannattaa' : 'Vastustaa'}
                   </span>
                   <span className="text-stone-600">{voter?.name ?? 'Tuntematon'}</span>
                   <span className="text-stone-400">
@@ -478,10 +478,10 @@ export default function ReviewPage() {
 
               {/* Voting / status cards below the document */}
               <div className="mt-6 space-y-3">
-                {/* Voting section */}
-                {canVote && (
-                  <div className="rounded-lg border border-violet-200 bg-white p-4 space-y-3">
-                    <h2 className="text-sm font-medium text-stone-700">Äänestä</h2>
+                {/* Approve / reject proposal — any board member can resolve */}
+                {isHallitus && isPending && (
+                  <div className="rounded-lg border border-emerald-200 bg-white p-4 space-y-3">
+                    <h2 className="text-sm font-medium text-stone-700">Päätös</h2>
                     {showReject ? (
                       <div className="space-y-3">
                         <Textarea
@@ -496,7 +496,7 @@ export default function ReviewPage() {
                             Peruuta
                           </Button>
                           <Button size="sm" variant="outline" className="text-red-700" onClick={handleReject} disabled={!rejectText.trim()}>
-                            Hylkää
+                            Hylkää ehdotus
                           </Button>
                         </div>
                       </div>
@@ -505,18 +505,33 @@ export default function ReviewPage() {
                         <Button size="sm" variant="outline" className="text-red-700" onClick={() => setShowReject(true)}>
                           <X className="h-4 w-4 mr-1" /> Hylkää
                         </Button>
-                        <Button size="sm" onClick={handleApprove} className="bg-emerald-700 hover:bg-emerald-600">
-                          <Check className="h-4 w-4 mr-1" /> Hyväksy
+                        <Button size="sm" onClick={() => approveProposal(proposalId)} className="bg-emerald-700 hover:bg-emerald-600">
+                          <Check className="h-4 w-4 mr-1" /> Hyväksy ehdotus
                         </Button>
                       </div>
                     )}
                   </div>
                 )}
 
-                {isHallitus && currentUserVote && (
+                {/* Advisory vote — optional, for the record */}
+                {canVote && (
+                  <div className="rounded-lg border border-stone-200 bg-white p-4 space-y-3">
+                    <h2 className="text-sm font-medium text-stone-700">Ääni (vapaaehtoinen)</h2>
+                    <div className="flex gap-3">
+                      <Button size="sm" variant="outline" className="text-red-700" onClick={() => castVote(proposalId, 'reject')}>
+                        <X className="h-4 w-4 mr-1" /> Vastustan
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={handleApprove}>
+                        <Check className="h-4 w-4 mr-1" /> Kannatan
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {isHallitus && currentUserVote && isPending && (
                   <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
                     <p className="text-sm text-violet-700 flex items-center gap-1.5">
-                      <Check className="h-4 w-4" /> Olet äänestänyt: {currentUserVote.decision === 'approve' ? 'Hyväksy' : 'Hylkää'}
+                      <Check className="h-4 w-4" /> Olet äänestänyt: {currentUserVote.decision === 'approve' ? 'Kannatan' : 'Vastustan'}
                     </p>
                   </div>
                 )}

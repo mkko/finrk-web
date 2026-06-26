@@ -203,8 +203,8 @@ export default function LahetysPage() {
               if (!tw) return null
               const isCancelled = !!proposal.cancelledAt
               const isResolved = !!proposal.resolvedAt
-              const isApproved = isResolved && proposal.votes.every(v => v.decision === 'approve')
-              const isRejected = isResolved && !isApproved
+              const isApproved = isResolved && tw.status === 'hyvaksytty'
+              const isRejected = isResolved && tw.status === 'hylatty'
 
               const statusLabel = isCancelled ? 'Peruutettu'
                 : isApproved ? 'Hyväksytty'

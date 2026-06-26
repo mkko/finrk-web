@@ -127,7 +127,7 @@ export default function HallitusPage() {
           {!isResolved && myVote && (
             <p className="text-xs text-violet-600 flex items-center gap-1">
               <Check className="h-3 w-3" />
-              Olet äänestänyt: {myVote.decision === 'approve' ? 'Kannatan' : 'Vastustan'}
+              Olet äänestänyt: {myVote.decision === 'approve' ? 'Hyväksy' : 'Hylkää'}
             </p>
           )}
         </div>

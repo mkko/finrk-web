@@ -274,7 +274,7 @@ export const useStore = create<AppState>()(
                 userId: state.currentUserId,
                 textWorkId: proposal.textWorkId,
                 action: 'Äänestetty',
-                detail: decision === 'approve' ? 'Kannattaa ehdotusta' : 'Vastustaa ehdotusta',
+                detail: decision === 'approve' ? 'Äänesti hyväksymisen puolesta' : 'Äänesti hylkäämisen puolesta',
               },
               ...state.activity,
             ],

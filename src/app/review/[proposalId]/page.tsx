@@ -380,7 +380,7 @@ export default function ReviewPage() {
                     vote.decision === 'approve' ? 'text-emerald-700' : 'text-red-700'
                   )}>
                     {vote.decision === 'approve' ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
-                    {vote.decision === 'approve' ? 'Kannattaa' : 'Vastustaa'}
+                    {vote.decision === 'approve' ? 'Hyväksy' : 'Hylkää'}
                   </span>
                   <span className="text-stone-600">{voter?.name ?? 'Tuntematon'}</span>
                   <span className="text-stone-400">
@@ -478,51 +478,16 @@ export default function ReviewPage() {
 
               {/* Voting / status cards below the document */}
               <div className="mt-6 space-y-3">
-                {/* Approve / reject proposal — any board member can resolve */}
-                {isHallitus && isPending && (
-                  <div className="rounded-lg border border-emerald-200 bg-white p-4 space-y-3">
-                    <h2 className="text-sm font-medium text-stone-700">Päätös</h2>
-                    {showReject ? (
-                      <div className="space-y-3">
-                        <Textarea
-                          placeholder="Perustele hylkäys..."
-                          value={rejectText}
-                          onChange={e => setRejectText(e.target.value)}
-                          className="min-h-[80px] text-sm resize-none"
-                          rows={3}
-                        />
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => setShowReject(false)}>
-                            Peruuta
-                          </Button>
-                          <Button size="sm" variant="outline" className="text-red-700" onClick={handleReject} disabled={!rejectText.trim()}>
-                            Hylkää ehdotus
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex gap-3">
-                        <Button size="sm" variant="outline" className="text-red-700" onClick={() => setShowReject(true)}>
-                          <X className="h-4 w-4 mr-1" /> Hylkää
-                        </Button>
-                        <Button size="sm" onClick={() => approveProposal(proposalId)} className="bg-emerald-700 hover:bg-emerald-600">
-                          <Check className="h-4 w-4 mr-1" /> Hyväksy ehdotus
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Advisory vote — optional, for the record */}
+                {/* Voting section */}
                 {canVote && (
-                  <div className="rounded-lg border border-stone-200 bg-white p-4 space-y-3">
-                    <h2 className="text-sm font-medium text-stone-700">Ääni (vapaaehtoinen)</h2>
+                  <div className="rounded-lg border border-violet-200 bg-white p-4 space-y-3">
+                    <h2 className="text-sm font-medium text-stone-700">Äänestä</h2>
                     <div className="flex gap-3">
                       <Button size="sm" variant="outline" className="text-red-700" onClick={() => castVote(proposalId, 'reject')}>
-                        <X className="h-4 w-4 mr-1" /> Vastustan
+                        <X className="h-4 w-4 mr-1" /> Hylkää
                       </Button>
-                      <Button size="sm" variant="outline" onClick={handleApprove}>
-                        <Check className="h-4 w-4 mr-1" /> Kannatan
+                      <Button size="sm" onClick={handleApprove} className="bg-emerald-700 hover:bg-emerald-600">
+                        <Check className="h-4 w-4 mr-1" /> Hyväksy
                       </Button>
                     </div>
                   </div>
@@ -531,7 +496,7 @@ export default function ReviewPage() {
                 {isHallitus && currentUserVote && isPending && (
                   <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
                     <p className="text-sm text-violet-700 flex items-center gap-1.5">
-                      <Check className="h-4 w-4" /> Olet äänestänyt: {currentUserVote.decision === 'approve' ? 'Kannatan' : 'Vastustan'}
+                      <Check className="h-4 w-4" /> Olet äänestänyt: {currentUserVote.decision === 'approve' ? 'Hyväksy' : 'Hylkää'}
                     </p>
                   </div>
                 )}
@@ -570,6 +535,41 @@ export default function ReviewPage() {
                       <Button size="sm" variant="outline" className="text-red-700" onClick={() => setShowCancelConfirm(true)}>
                         Peruuta äänestys
                       </Button>
+                    )}
+                  </div>
+                )}
+
+                {/* Close / resolve — any board member */}
+                {isHallitus && isPending && (
+                  <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 space-y-3">
+                    <h2 className="text-xs font-medium text-stone-500 uppercase tracking-wide">Sulje käsittely</h2>
+                    {showReject ? (
+                      <div className="space-y-3">
+                        <Textarea
+                          placeholder="Perustele hylkäys..."
+                          value={rejectText}
+                          onChange={e => setRejectText(e.target.value)}
+                          className="min-h-[80px] text-sm resize-none"
+                          rows={3}
+                        />
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => setShowReject(false)}>
+                            Peruuta
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-red-700" onClick={handleReject} disabled={!rejectText.trim()}>
+                            Sulje hylättynä
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" className="text-red-700" onClick={() => setShowReject(true)}>
+                          Sulje hylättynä
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-emerald-700" onClick={() => approveProposal(proposalId)}>
+                          Sulje hyväksyttynä
+                        </Button>
+                      </div>
                     )}
                   </div>
                 )}

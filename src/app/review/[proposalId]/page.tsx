@@ -288,109 +288,24 @@ export default function ReviewPage() {
                 )}
               </div>
 
-        {/* Voter progress + management */}
-        {isHallitus && !isCancelled && (() => {
-          const selectedMembers = proposal.selectedVoters.map(id => users.find(u => u.id === id)).filter(Boolean)
-          const allHallitus = users.filter(u => u.roles.includes('hallitus'))
-          const nonSelectedHallitus = allHallitus.filter(u => !proposal.selectedVoters.includes(u.id))
-          const votedIds = new Set(proposal.votes.map(v => v.userId))
-
-          function toggleVoter(userId: string) {
-            if (proposal!.selectedVoters.includes(userId)) {
-              if (votedIds.has(userId)) return // can't remove someone who already voted
-              updateSelectedVoters(proposalId, proposal!.selectedVoters.filter(id => id !== userId))
-            } else {
-              updateSelectedVoters(proposalId, [...proposal!.selectedVoters, userId])
-            }
-          }
-
-          return (
-            <div className={cn(
-              'rounded-lg border p-4 space-y-3',
-              isPending ? 'border-violet-200 bg-violet-50/50' : 'border-stone-200 bg-stone-50'
-            )}>
-              <p className="text-sm font-medium text-stone-700">
-                Äänestys: {proposal.votes.length}/{proposal.selectedVoters.length} äänestänyt
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {selectedMembers.map(member => {
-                  if (!member) return null
-                  const vote = proposal.votes.find(v => v.userId === member.id)
-                  const hasVoted = votedIds.has(member.id)
-                  return (
-                    <span
-                      key={member.id}
-                      className={cn(
-                        'inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full font-medium',
-                        vote
-                          ? vote.decision === 'approve'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-red-100 text-red-800'
-                          : 'bg-stone-100 text-stone-500'
-                      )}
-                    >
-                      {member.name}
-                      {vote && (
-                        vote.decision === 'approve'
-                          ? <Check className="h-3.5 w-3.5" />
-                          : <X className="h-3.5 w-3.5" />
-                      )}
-                      {isPending && !hasVoted && (
-                        <button
-                          onClick={() => toggleVoter(member.id)}
-                          className="ml-0.5 text-stone-400 hover:text-red-600 transition-colors"
-                          title="Poista äänestäjä"
-                        >
-                          <UserMinus className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </span>
-                  )
-                })}
-                {/* Add voter buttons for non-selected hallitus members */}
-                {isPending && nonSelectedHallitus.map(member => (
-                  <button
-                    key={member.id}
-                    onClick={() => toggleVoter(member.id)}
-                    className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full font-medium border border-dashed border-stone-300 text-stone-400 hover:border-violet-400 hover:text-violet-600 transition-colors"
-                    title="Lisää äänestäjä"
-                  >
-                    {member.name}
-                    <UserPlus className="h-3.5 w-3.5" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )
-        })()}
-
-        {/* Vote audit trail — hallitus only */}
-        {isHallitus && proposal.votes.length > 0 && (
-          <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 space-y-2">
-            <h2 className="text-sm font-medium text-stone-700 mb-2">Äänestysloki</h2>
-            {proposal.votes.map((vote, i) => {
-              const voter = users.find(u => u.id === vote.userId)
-              return (
-                <div key={i} className="flex items-center gap-3 text-sm">
-                  <span className={cn(
-                    'inline-flex items-center gap-1 font-medium',
-                    vote.decision === 'approve' ? 'text-emerald-700' : 'text-red-700'
-                  )}>
-                    {vote.decision === 'approve' ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
-                    {vote.decision === 'approve' ? 'Hyväksy' : 'Hylkää'}
-                  </span>
-                  <span className="text-stone-600">{voter?.name ?? 'Tuntematon'}</span>
-                  <span className="text-stone-400">
-                    {new Date(vote.createdAt).toLocaleDateString('fi-FI', {
-                      day: 'numeric', month: 'numeric', year: 'numeric',
-                    })}
-                  </span>
-                  {vote.comment && (
-                    <span className="text-stone-500 italic">&quot;{vote.comment}&quot;</span>
-                  )}
-                </div>
-              )
+        {/* Board status — resolved/cancelled shown at top */}
+        {isResolved && (
+          <div className={cn('rounded-lg border p-4', isApproved ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50')}>
+            <p className={cn('text-sm font-medium', isApproved ? 'text-emerald-800' : 'text-red-800')}>
+              {isApproved ? 'Hallitus vahvistanut käännöksen' : 'Hallitus palauttanut käännettäväksi'}
+            </p>
+            {proposal.votes.filter(v => v.decision === 'reject' && v.comment).map((v, i) => {
+              const voter = users.find(u => u.id === v.userId)
+              return <p key={i} className="mt-2 text-sm text-red-700"><span className="font-medium">{voter?.name}:</span> {v.comment}</p>
             })}
+          </div>
+        )}
+
+        {isCancelled && (
+          <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+            <p className="text-sm text-stone-600">
+              Käsittely peruutettu {new Date(proposal.cancelledAt!).toLocaleDateString('fi-FI', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
           </div>
         )}
 
@@ -508,25 +423,110 @@ export default function ReviewPage() {
                 )}
               </div>
 
-              {/* Status cards below the document */}
+              {/* Voting & management below the document */}
               <div className="mt-6 space-y-3">
-                {isResolved && (
-                  <div className={cn('rounded-lg border p-4', isApproved ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50')}>
-                    <p className={cn('text-sm font-medium', isApproved ? 'text-emerald-800' : 'text-red-800')}>
-                      {isApproved ? 'Hyväksytty' : 'Hylätty'}
-                    </p>
-                    {proposal.votes.filter(v => v.decision === 'reject' && v.comment).map((v, i) => {
-                      const voter = users.find(u => u.id === v.userId)
-                      return <p key={i} className="mt-2 text-sm text-red-700"><span className="font-medium">{voter?.name}:</span> {v.comment}</p>
-                    })}
-                  </div>
-                )}
+                {/* Voter progress + management */}
+                {isHallitus && !isCancelled && (() => {
+                  const selectedMembers = proposal.selectedVoters.map(id => users.find(u => u.id === id)).filter(Boolean)
+                  const allHallitus = users.filter(u => u.roles.includes('hallitus'))
+                  const nonSelectedHallitus = allHallitus.filter(u => !proposal.selectedVoters.includes(u.id))
+                  const votedIds = new Set(proposal.votes.map(v => v.userId))
 
-                {isCancelled && (
-                  <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
-                    <p className="text-sm text-stone-600">
-                      Äänestys peruutettu {new Date(proposal.cancelledAt!).toLocaleDateString('fi-FI', { day: 'numeric', month: 'long', year: 'numeric' })}
-                    </p>
+                  function toggleVoter(userId: string) {
+                    if (proposal!.selectedVoters.includes(userId)) {
+                      if (votedIds.has(userId)) return
+                      updateSelectedVoters(proposalId, proposal!.selectedVoters.filter(id => id !== userId))
+                    } else {
+                      updateSelectedVoters(proposalId, [...proposal!.selectedVoters, userId])
+                    }
+                  }
+
+                  return (
+                    <div className={cn(
+                      'rounded-lg border p-4 space-y-3',
+                      isPending ? 'border-violet-200 bg-violet-50/50' : 'border-stone-200 bg-stone-50'
+                    )}>
+                      <p className="text-sm font-medium text-stone-700">
+                        Jäsenten kannanotot: {proposal.votes.length}/{proposal.selectedVoters.length}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedMembers.map(member => {
+                          if (!member) return null
+                          const vote = proposal.votes.find(v => v.userId === member.id)
+                          const hasVoted = votedIds.has(member.id)
+                          return (
+                            <span
+                              key={member.id}
+                              className={cn(
+                                'inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full font-medium',
+                                vote
+                                  ? vote.decision === 'approve'
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : 'bg-red-100 text-red-800'
+                                  : 'bg-stone-100 text-stone-500'
+                              )}
+                            >
+                              {member.name}
+                              {vote && (
+                                vote.decision === 'approve'
+                                  ? <Check className="h-3.5 w-3.5" />
+                                  : <X className="h-3.5 w-3.5" />
+                              )}
+                              {isPending && !hasVoted && (
+                                <button
+                                  onClick={() => toggleVoter(member.id)}
+                                  className="ml-0.5 text-stone-400 hover:text-red-600 transition-colors"
+                                  title="Poista äänestäjä"
+                                >
+                                  <UserMinus className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </span>
+                          )
+                        })}
+                        {isPending && nonSelectedHallitus.map(member => (
+                          <button
+                            key={member.id}
+                            onClick={() => toggleVoter(member.id)}
+                            className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full font-medium border border-dashed border-stone-300 text-stone-400 hover:border-violet-400 hover:text-violet-600 transition-colors"
+                            title="Lisää äänestäjä"
+                          >
+                            {member.name}
+                            <UserPlus className="h-3.5 w-3.5" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {/* Vote audit trail */}
+                {isHallitus && proposal.votes.length > 0 && (
+                  <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 space-y-2">
+                    <h2 className="text-sm font-medium text-stone-700 mb-2">Kannanotot</h2>
+                    {proposal.votes.map((vote, i) => {
+                      const voter = users.find(u => u.id === vote.userId)
+                      return (
+                        <div key={i} className="flex items-center gap-3 text-sm">
+                          <span className={cn(
+                            'inline-flex items-center gap-1 font-medium',
+                            vote.decision === 'approve' ? 'text-emerald-700' : 'text-red-700'
+                          )}>
+                            {vote.decision === 'approve' ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
+                            {vote.decision === 'approve' ? 'Hyväksy' : 'Hylkää'}
+                          </span>
+                          <span className="text-stone-600">{voter?.name ?? 'Tuntematon'}</span>
+                          <span className="text-stone-400">
+                            {new Date(vote.createdAt).toLocaleDateString('fi-FI', {
+                              day: 'numeric', month: 'numeric', year: 'numeric',
+                            })}
+                          </span>
+                          {vote.comment && (
+                            <span className="text-stone-500 italic">&quot;{vote.comment}&quot;</span>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
 
@@ -547,7 +547,6 @@ export default function ReviewPage() {
                     )}
                   </div>
                 )}
-
               </div>
             </div>
 

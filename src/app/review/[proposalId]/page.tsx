@@ -19,7 +19,6 @@ export default function ReviewPage() {
 
   const { proposals, textWorks, users, verses, snapshots, comments, currentUserId, castVote, approveProposal, rejectProposal, cancelProposal, updateSelectedVoters, addComment } = useStore()
   const currentUser = users.find(u => u.id === currentUserId)
-  if (!currentUser) return null
 
   const proposal = proposals.find(p => p.id === proposalId)
   const tw = proposal ? textWorks.find(t => t.id === proposal.textWorkId) : null
@@ -34,28 +33,15 @@ export default function ReviewPage() {
   const [commentPopup, setCommentPopup] = useState<{ top: number; left: number; chapter: number; verse: number; selectedText: string } | null>(null)
   const [bubbleComment, setBubbleComment] = useState('')
 
-  if (!proposal || !tw) {
-    return (
-      <div className="h-full overflow-y-auto">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 py-8">
-          <p className="text-stone-500">Ehdotusta ei löytynyt.</p>
-          <Link href="/hallitus" className="text-sm text-stone-600 hover:text-stone-800 mt-4 inline-flex items-center gap-1">
-            <ArrowLeft className="h-4 w-4" /> Takaisin
-          </Link>
-        </div>
-      </div>
-    )
-  }
-
   const submitter = users.find(u => u.id === snapshot?.createdBy)
-  const isHallitus = currentUser.roles.includes('hallitus')
-  const isTekstiryhma = currentUser.roles.includes('tekstiryhma')
-  const currentUserVote = proposal.votes.find(v => v.userId === currentUserId)
-  const isResolved = !!proposal.resolvedAt
-  const isCancelled = !!proposal.cancelledAt
-  const isApproved = isResolved && tw.status === 'hyvaksytty'
-  const isRejected = isResolved && tw.status === 'hylatty'
-  const isPending = !isResolved && !isCancelled && tw.status === 'lahetetty_hallitukselle'
+  const isHallitus = currentUser?.roles.includes('hallitus') ?? false
+  const isTekstiryhma = currentUser?.roles.includes('tekstiryhma') ?? false
+  const currentUserVote = proposal?.votes.find(v => v.userId === currentUserId)
+  const isResolved = !!proposal?.resolvedAt
+  const isCancelled = !!proposal?.cancelledAt
+  const isApproved = isResolved && tw?.status === 'hyvaksytty'
+  const isRejected = isResolved && tw?.status === 'hylatty'
+  const isPending = !isResolved && !isCancelled && tw?.status === 'lahetetty_hallitukselle'
   const canVote = isHallitus && isPending && !currentUserVote
 
   // Build diff data with context
@@ -119,38 +105,8 @@ export default function ReviewPage() {
     lastIdx = i
   }
 
-  // Discussion: all comments for the textWork, grouped by verse
-  const relatedComments = comments.filter(c => c.textWorkId === proposal.textWorkId)
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-
-  function verseComments(chapter: number, verseNumber: number): CommentType[] {
-    return relatedComments.filter(c => c.verseAnchor.chapter === chapter && c.verseAnchor.verseStart === verseNumber)
-  }
-
-  // Status for display
-  const displayStatus = isCancelled ? 'Peruutettu' : STATUS_LABELS[tw.status]
-  const displayStatusColor = isCancelled
-    ? 'bg-stone-100 text-stone-600 border-stone-300'
-    : STATUS_COLORS[tw.status]
-
-  function handleApprove() {
-    castVote(proposalId, 'approve')
-  }
-
-  function handleReject() {
-    if (rejectText.trim()) {
-      rejectProposal(proposalId, rejectText.trim())
-      setRejectText('')
-      setShowReject(false)
-    }
-  }
-
-  function handleCancel() {
-    cancelProposal(proposalId)
-    setShowCancelConfirm(false)
-  }
-
   // ── Text selection → comment popup ─────────────
+  const textWorkId = proposal?.textWorkId
   useEffect(() => {
     if (!isHallitus || isCancelled) return
 
@@ -201,9 +157,9 @@ export default function ReviewPage() {
   }, [isHallitus, isCancelled])
 
   const handleSubmitComment = useCallback(() => {
-    if (!commentPopup || !bubbleComment.trim()) return
+    if (!commentPopup || !bubbleComment.trim() || !textWorkId) return
     addComment({
-      textWorkId: proposal.textWorkId,
+      textWorkId,
       verseAnchor: { chapter: commentPopup.chapter, verseStart: commentPopup.verse },
       verseSnapshot: commentPopup.selectedText,
       authorId: currentUserId,
@@ -215,7 +171,54 @@ export default function ReviewPage() {
     window.getSelection()?.removeAllRanges()
     // Open sidebar on that verse
     setSelectedVerse({ chapter: commentPopup.chapter, number: commentPopup.verse })
-  }, [commentPopup, bubbleComment, addComment, proposal.textWorkId, currentUserId])
+  }, [commentPopup, bubbleComment, addComment, textWorkId, currentUserId])
+
+  // ── Early returns (after all hooks) ─────────────
+  if (!currentUser) return null
+
+  if (!proposal || !tw) {
+    return (
+      <div className="h-full overflow-y-auto">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 py-8">
+          <p className="text-stone-500">Ehdotusta ei löytynyt.</p>
+          <Link href="/hallitus" className="text-sm text-stone-600 hover:text-stone-800 mt-4 inline-flex items-center gap-1">
+            <ArrowLeft className="h-4 w-4" /> Takaisin
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  // Discussion: all comments for the textWork, grouped by verse
+  const relatedComments = comments.filter(c => c.textWorkId === proposal.textWorkId)
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+
+  function verseComments(chapter: number, verseNumber: number): CommentType[] {
+    return relatedComments.filter(c => c.verseAnchor.chapter === chapter && c.verseAnchor.verseStart === verseNumber)
+  }
+
+  // Status for display
+  const displayStatus = isCancelled ? 'Peruutettu' : STATUS_LABELS[tw.status]
+  const displayStatusColor = isCancelled
+    ? 'bg-stone-100 text-stone-600 border-stone-300'
+    : STATUS_COLORS[tw.status]
+
+  function handleApprove() {
+    castVote(proposalId, 'approve')
+  }
+
+  function handleReject() {
+    if (rejectText.trim()) {
+      rejectProposal(proposalId, rejectText.trim())
+      setRejectText('')
+      setShowReject(false)
+    }
+  }
+
+  function handleCancel() {
+    cancelProposal(proposalId)
+    setShowCancelConfirm(false)
+  }
 
   // Collect margin comment bubbles per verse
   const marginBubbles = displayItems

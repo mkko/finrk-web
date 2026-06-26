@@ -493,6 +493,41 @@ export default function ReviewPage() {
                   </div>
                 )}
 
+                {/* Board decision — any board member can resolve */}
+                {isHallitus && isPending && (
+                  <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 space-y-3">
+                    <h2 className="text-xs font-medium text-stone-500 uppercase tracking-wide">Hallituksen päätös</h2>
+                    {showReject ? (
+                      <div className="space-y-3">
+                        <Textarea
+                          placeholder="Perustele palautus..."
+                          value={rejectText}
+                          onChange={e => setRejectText(e.target.value)}
+                          className="min-h-[80px] text-sm resize-none"
+                          rows={3}
+                        />
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => setShowReject(false)}>
+                            Peruuta
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-red-700" onClick={handleReject} disabled={!rejectText.trim()}>
+                            Palauta käännettäväksi
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" className="text-red-700" onClick={() => setShowReject(true)}>
+                          Palauta käännettäväksi
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-emerald-700" onClick={() => approveProposal(proposalId)}>
+                          Vahvista käännös
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {isHallitus && currentUserVote && isPending && (
                   <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
                     <p className="text-sm text-violet-700 flex items-center gap-1.5">
@@ -539,40 +574,6 @@ export default function ReviewPage() {
                   </div>
                 )}
 
-                {/* Close / resolve — any board member */}
-                {isHallitus && isPending && (
-                  <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 space-y-3">
-                    <h2 className="text-xs font-medium text-stone-500 uppercase tracking-wide">Sulje käsittely</h2>
-                    {showReject ? (
-                      <div className="space-y-3">
-                        <Textarea
-                          placeholder="Perustele hylkäys..."
-                          value={rejectText}
-                          onChange={e => setRejectText(e.target.value)}
-                          className="min-h-[80px] text-sm resize-none"
-                          rows={3}
-                        />
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => setShowReject(false)}>
-                            Peruuta
-                          </Button>
-                          <Button size="sm" variant="outline" className="text-red-700" onClick={handleReject} disabled={!rejectText.trim()}>
-                            Sulje hylättynä
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="text-red-700" onClick={() => setShowReject(true)}>
-                          Sulje hylättynä
-                        </Button>
-                        <Button size="sm" variant="outline" className="text-emerald-700" onClick={() => approveProposal(proposalId)}>
-                          Sulje hyväksyttynä
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
 

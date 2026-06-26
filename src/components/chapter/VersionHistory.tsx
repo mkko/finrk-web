@@ -1,28 +1,87 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
+import type { Snapshot, Proposal } from '@/lib/types'
 
 interface Props {
   textWorkId: string
 }
 
+type TimelineEntry =
+  | { kind: 'draft'; snapshot: Snapshot }
+  | { kind: 'milestone'; snapshot: Snapshot; label: string; color: 'green' | 'violet' | 'red' }
+
+function getMilestoneInfo(
+  snapshot: Snapshot,
+  proposals: Proposal[],
+): { label: string; color: 'green' | 'violet' | 'red' } | null {
+  if (snapshot.type === 'publication') {
+    return { label: snapshot.name ?? 'Pohjaversio', color: 'green' }
+  }
+
+  if (snapshot.type === 'submission') {
+    const proposal = proposals.find(p => p.snapshotId === snapshot.id)
+    if (!proposal) return { label: 'Lähetetty', color: 'violet' }
+
+    if (proposal.cancelledAt) return null // cancelled submissions hidden
+    if (proposal.resolvedAt) {
+      const allApproved = proposal.votes.every(v => v.decision === 'approve')
+      return allApproved
+        ? { label: 'Hyväksytty', color: 'green' }
+        : { label: 'Hylätty', color: 'red' }
+    }
+    return { label: 'Käsittelyssä', color: 'violet' }
+  }
+
+  return null
+}
+
 export function VersionHistory({ textWorkId }: Props) {
   const snapshots = useStore(s => s.snapshots)
+  const proposals = useStore(s => s.proposals)
   const users = useStore(s => s.users)
 
-  const versions = snapshots
-    .filter(s => s.textWorkId === textWorkId)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  const timeline = useMemo(() => {
+    const workSnapshots = snapshots.filter(s => s.textWorkId === textWorkId)
+    const workProposals = proposals.filter(p => p.textWorkId === textWorkId)
 
-  const [selectedId, setSelectedId] = useState<string | null>(versions[0]?.id ?? null)
+    const entries: TimelineEntry[] = []
 
-  const selectedIdx = versions.findIndex(v => v.id === selectedId)
-  const selected = selectedIdx >= 0 ? versions[selectedIdx] : null
-  const previous = selectedIdx >= 0 && selectedIdx < versions.length - 1 ? versions[selectedIdx + 1] : null
+    for (const snap of workSnapshots) {
+      const milestoneInfo = getMilestoneInfo(snap, workProposals)
+      if (milestoneInfo) {
+        entries.push({ kind: 'milestone', snapshot: snap, ...milestoneInfo })
+      } else if (snap.type === 'internal') {
+        entries.push({ kind: 'draft', snapshot: snap })
+      }
+      // cancelled submissions are skipped
+    }
 
-  if (versions.length === 0) {
+    // Sort newest first
+    entries.sort((a, b) =>
+      new Date(b.snapshot.createdAt).getTime() - new Date(a.snapshot.createdAt).getTime()
+    )
+
+    return entries
+  }, [snapshots, proposals, textWorkId])
+
+  // Find the nearest preceding milestone for diff base
+  function findDiffBase(entryIndex: number): Snapshot | null {
+    for (let i = entryIndex + 1; i < timeline.length; i++) {
+      if (timeline[i].kind === 'milestone') {
+        return timeline[i].snapshot
+      }
+    }
+    return null
+  }
+
+  const [selectedIdx, setSelectedIdx] = useState(0)
+  const selected = timeline[selectedIdx]?.snapshot ?? null
+  const diffBase = selectedIdx >= 0 ? findDiffBase(selectedIdx) : null
+
+  if (timeline.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
         <p className="text-sm text-stone-400">Ei aiempia versioita.</p>
@@ -30,33 +89,80 @@ export function VersionHistory({ textWorkId }: Props) {
     )
   }
 
+  const milestoneColorClasses = {
+    green: {
+      border: 'border-l-emerald-500',
+      bg: 'bg-emerald-50',
+      badge: 'bg-emerald-100 text-emerald-700',
+      selectedBorder: 'border-emerald-400',
+    },
+    violet: {
+      border: 'border-l-violet-500',
+      bg: 'bg-violet-50',
+      badge: 'bg-violet-100 text-violet-700',
+      selectedBorder: 'border-violet-400',
+    },
+    red: {
+      border: 'border-l-red-500',
+      bg: 'bg-red-50',
+      badge: 'bg-red-100 text-red-700',
+      selectedBorder: 'border-red-400',
+    },
+  }
+
   return (
     <div className="flex-1 min-h-0 flex">
       {/* Version list */}
       <div className="w-56 shrink-0 border-r border-stone-200 overflow-y-auto bg-stone-50">
         <div className="p-3 space-y-1">
-          {versions.map((v, i) => {
-            const author = users.find(u => u.id === v.createdBy)
+          {timeline.map((entry, i) => {
+            const isSelected = selectedIdx === i
+            const date = new Date(entry.snapshot.createdAt).toLocaleDateString('fi-FI', {
+              day: 'numeric', month: 'numeric', year: 'numeric',
+            })
+
+            if (entry.kind === 'milestone') {
+              const colors = milestoneColorClasses[entry.color]
+              return (
+                <button
+                  key={entry.snapshot.id}
+                  onClick={() => setSelectedIdx(i)}
+                  className={cn(
+                    'w-full text-left rounded-md px-3 py-2 text-xs transition-colors border-l-[3px]',
+                    colors.border,
+                    colors.bg,
+                    isSelected
+                      ? `border ${colors.selectedBorder} shadow-sm`
+                      : 'hover:brightness-95'
+                  )}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className={cn('inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded', colors.badge)}>
+                      {entry.label}
+                    </span>
+                  </div>
+                  <div className="text-stone-500 mt-1">{date}</div>
+                </button>
+              )
+            }
+
+            // Draft entry
+            const author = users.find(u => u.id === entry.snapshot.createdBy)
             return (
               <button
-                key={v.id}
-                onClick={() => setSelectedId(v.id)}
+                key={entry.snapshot.id}
+                onClick={() => setSelectedIdx(i)}
                 className={cn(
                   'w-full text-left rounded-md px-3 py-2 text-xs transition-colors',
-                  selectedId === v.id
+                  isSelected
                     ? 'bg-white border border-stone-300 shadow-sm'
                     : 'hover:bg-white/60'
                 )}
               >
                 <div className="font-medium text-stone-700 truncate">
-                  {v.name || `Versio ${versions.length - i}`}
+                  {entry.snapshot.name || 'Luonnos'}
                 </div>
-                <div className="text-stone-400 mt-0.5">
-                  {new Date(v.createdAt).toLocaleDateString('fi-FI', {
-                    day: 'numeric', month: 'numeric', year: 'numeric',
-                    hour: '2-digit', minute: '2-digit',
-                  })}
-                </div>
+                <div className="text-stone-400 mt-0.5">{date}</div>
                 {author && (
                   <div className="text-stone-400 mt-0.5">{author.name}</div>
                 )}
@@ -71,19 +177,19 @@ export function VersionHistory({ textWorkId }: Props) {
         {selected && (
           <div className="max-w-3xl mx-auto space-y-4">
             <div className="text-xs text-stone-400 mb-4">
-              {previous
-                ? <>Muutokset verrattuna edelliseen versioon ({previous.name || 'edellinen'})</>
+              {diffBase
+                ? <>Muutokset verrattuna edelliseen versioon ({diffBase.name || 'edellinen'})</>
                 : <>Ensimmäinen versio</>
               }
             </div>
             <div className="bg-white border border-stone-300 shadow-md font-serif text-base leading-7 text-stone-800" style={{ padding: '40px 50px' }}>
               {selected.verseTexts.map(sv => {
-                const prevText = previous?.verseTexts.find(p => p.chapter === sv.chapter && p.number === sv.number)?.text
+                const prevText = diffBase?.verseTexts.find(p => p.chapter === sv.chapter && p.number === sv.number)?.text
                 const changed = prevText !== undefined && prevText !== sv.text
                 const isNew = prevText === undefined
 
                 return (
-                  <p key={sv.number} className="mb-1">
+                  <p key={`${sv.chapter}-${sv.number}`} className="mb-1">
                     <span className="text-xs text-stone-400 font-sans" style={{ verticalAlign: 'super', fontSize: '0.65em', lineHeight: 0 }}>
                       {sv.number}
                     </span>

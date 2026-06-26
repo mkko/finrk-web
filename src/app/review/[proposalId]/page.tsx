@@ -17,7 +17,7 @@ export default function ReviewPage() {
   const params = useParams()
   const proposalId = params.proposalId as string
 
-  const { proposals, textWorks, users, verses, snapshots, comments, currentUserId, castVote, approveProposal, rejectProposal, cancelProposal, updateSelectedVoters, addComment } = useStore()
+  const { proposals, textWorks, users, verses, snapshots, comments, currentUserId, approveProposal, rejectProposal, cancelProposal, updateSelectedVoters, addComment } = useStore()
   const currentUser = users.find(u => u.id === currentUserId)
 
   const proposal = proposals.find(p => p.id === proposalId)
@@ -36,13 +36,11 @@ export default function ReviewPage() {
   const submitter = users.find(u => u.id === snapshot?.createdBy)
   const isHallitus = currentUser?.roles.includes('hallitus') ?? false
   const isTekstiryhma = currentUser?.roles.includes('tekstiryhma') ?? false
-  const currentUserVote = proposal?.votes.find(v => v.userId === currentUserId)
   const isResolved = !!proposal?.resolvedAt
   const isCancelled = !!proposal?.cancelledAt
   const isApproved = isResolved && tw?.status === 'hyvaksytty'
   const isRejected = isResolved && tw?.status === 'hylatty'
   const isPending = !isResolved && !isCancelled && tw?.status === 'lahetetty_hallitukselle'
-  const canVote = isHallitus && isPending && !currentUserVote
 
   // Build diff data with context
   const CONTEXT_LINES = 2
@@ -202,10 +200,6 @@ export default function ReviewPage() {
   const displayStatusColor = isCancelled
     ? 'bg-stone-100 text-stone-600 border-stone-300'
     : STATUS_COLORS[tw.status]
-
-  function handleApprove() {
-    castVote(proposalId, 'approve')
-  }
 
   function handleReject() {
     if (rejectText.trim()) {
@@ -400,6 +394,41 @@ export default function ReviewPage() {
           </div>
         )}
 
+        {/* Board decision — any board member can resolve */}
+        {isHallitus && isPending && (
+          <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 space-y-3">
+            <h2 className="text-xs font-medium text-stone-500 uppercase tracking-wide">Hallituksen päätös</h2>
+            {showReject ? (
+              <div className="space-y-3">
+                <Textarea
+                  placeholder="Perustele palautus..."
+                  value={rejectText}
+                  onChange={e => setRejectText(e.target.value)}
+                  className="min-h-[80px] text-sm resize-none"
+                  rows={3}
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setShowReject(false)}>
+                    Peruuta
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-red-700" onClick={handleReject} disabled={!rejectText.trim()}>
+                    Palauta käännettäväksi
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" className="text-red-700" onClick={() => setShowReject(true)}>
+                  Palauta käännettäväksi
+                </Button>
+                <Button size="sm" variant="outline" className="text-emerald-700" onClick={() => approveProposal(proposalId)}>
+                  Vahvista käännös
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
               {/* Document page */}
               <div
                 ref={docRef}
@@ -479,66 +508,8 @@ export default function ReviewPage() {
                 )}
               </div>
 
-              {/* Voting / status cards below the document */}
+              {/* Status cards below the document */}
               <div className="mt-6 space-y-3">
-                {/* Voting section */}
-                {canVote && (
-                  <div className="rounded-lg border border-violet-200 bg-white p-4 space-y-3">
-                    <h2 className="text-sm font-medium text-stone-700">Äänestä</h2>
-                    <div className="flex gap-3">
-                      <Button size="sm" variant="outline" className="text-red-700" onClick={() => castVote(proposalId, 'reject')}>
-                        <X className="h-4 w-4 mr-1" /> Hylkää
-                      </Button>
-                      <Button size="sm" onClick={handleApprove} className="bg-emerald-700 hover:bg-emerald-600">
-                        <Check className="h-4 w-4 mr-1" /> Hyväksy
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Board decision — any board member can resolve */}
-                {isHallitus && isPending && (
-                  <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 space-y-3">
-                    <h2 className="text-xs font-medium text-stone-500 uppercase tracking-wide">Hallituksen päätös</h2>
-                    {showReject ? (
-                      <div className="space-y-3">
-                        <Textarea
-                          placeholder="Perustele palautus..."
-                          value={rejectText}
-                          onChange={e => setRejectText(e.target.value)}
-                          className="min-h-[80px] text-sm resize-none"
-                          rows={3}
-                        />
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => setShowReject(false)}>
-                            Peruuta
-                          </Button>
-                          <Button size="sm" variant="outline" className="text-red-700" onClick={handleReject} disabled={!rejectText.trim()}>
-                            Palauta käännettäväksi
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="text-red-700" onClick={() => setShowReject(true)}>
-                          Palauta käännettäväksi
-                        </Button>
-                        <Button size="sm" variant="outline" className="text-emerald-700" onClick={() => approveProposal(proposalId)}>
-                          Vahvista käännös
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {isHallitus && currentUserVote && isPending && (
-                  <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
-                    <p className="text-sm text-violet-700 flex items-center gap-1.5">
-                      <Check className="h-4 w-4" /> Olet äänestänyt: {currentUserVote.decision === 'approve' ? 'Hyväksy' : 'Hylkää'}
-                    </p>
-                  </div>
-                )}
-
                 {isResolved && (
                   <div className={cn('rounded-lg border p-4', isApproved ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50')}>
                     <p className={cn('text-sm font-medium', isApproved ? 'text-emerald-800' : 'text-red-800')}>

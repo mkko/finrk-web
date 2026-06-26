@@ -28,7 +28,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShellContext.Provider value={{ openUserModal }}>
-      {children}
+      {needsSelection ? null : children}
       <UserSelectionModal
         open={isOpen}
         onClose={() => setManualOpen(false)}

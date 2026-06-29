@@ -15,7 +15,9 @@ const TRANSITIONS: Record<TextWorkStatus, Transition[]> = {
   lahetetty_hallitukselle: [
     // Resolved by voting, not manual transitions
   ],
-  hyvaksytty: [],
+  hyvaksytty: [
+    { target: 'luonnos', actors: ['tekstiryhma'] },
+  ],
   hylatty: [
     { target: 'luonnos', actors: ['tekstiryhma'] },
   ],
@@ -39,6 +41,7 @@ export function getAvailableTransitions(status: TextWorkStatus, roles: PersonaRo
 export function getTransitionLabel(from: TextWorkStatus, to: TextWorkStatus): string {
   if (from === 'luonnos' && to === 'julkaistu_palautteelle') return 'Julkaise'
   if (from === 'julkaistu_palautteelle' && to === 'lahetetty_hallitukselle') return 'Lähetä hallitukselle'
+  if (from === 'hyvaksytty' && to === 'luonnos') return 'Aloita uusi kierros'
   if (from === 'hylatty' && to === 'luonnos') return 'Palauta luonnokseksi'
   return ''
 }
